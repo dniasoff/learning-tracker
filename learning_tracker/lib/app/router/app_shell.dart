@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -7,16 +8,24 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/providers/active_account_firebase_provider.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart'
+    show activeLearnerScopeProvider;
 import 'package:learning_tracker/data/repositories/firestore_fcm_token_repository.dart';
+import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart'
+    show activeLearnerStateProvider;
 import 'package:learning_tracker/features/notifications/data/parent_push_receiver.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_celebration.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
+import 'package:learning_tracker/features/social/domain/social_summary_projection.dart';
+import 'package:learning_tracker/features/social/presentation/providers/social_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
     show incomingTutorGrantsProvider;
@@ -57,7 +66,8 @@ class AppShellScreen extends ConsumerStatefulWidget {
   ConsumerState<AppShellScreen> createState() => _AppShellScreenState();
 }
 
-class _AppShellScreenState extends ConsumerState<AppShellScreen> {
+class _AppShellScreenState extends ConsumerState<AppShellScreen>
+    with WidgetsBindingObserver {
   // Tracks whether we have already jumped to the Settings tab for a
   // profile-less user.  Reset when profiles become non-empty so that a user
   // who later adds a profile starts back on Dashboard.
@@ -68,10 +78,30 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
   // signed-in session rather than on every rebuild. Reset on sign-out so a
   // later sign-in re-triggers it — mirrors `_didJumpToSettings` below.
   bool _autoSelectRan = false;
+  Timer? _socialSummaryDebounce;
+  LearnerState? _pendingSocialSummary;
+  final Map<String, String> _publishedSocialSummaryFingerprints = {};
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ref.listenManual<AsyncValue<LearnerState?>>(activeLearnerStateProvider, (
+      _,
+      next,
+    ) {
+      final state = next.asData?.value;
+      if (state != null) _scheduleSocialSummaryPublish(state);
+    }, fireImmediately: true);
+    ref.listenManual<String?>(parentSessionIdProvider, (_, __) {
+      final state = ref.read(activeLearnerStateProvider).asData?.value;
+      if (state != null) _scheduleSocialSummaryPublish(state);
+    });
+    ref.listenManual(activeProfileProvider, (_, next) {
+      if (!next.hasValue || next.value == null) return;
+      final state = ref.read(activeLearnerStateProvider).asData?.value;
+      if (state != null) _scheduleSocialSummaryPublish(state);
+    });
     // DNI-515 (AC-1): a tapped tutor-change push — queued by the notification
     // tap handler, including the tap that launched the app — opens that
     // learner's Change history. fireImmediately picks up a launch tap queued
@@ -82,6 +112,75 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
         (_) => unawaited(_openPendingParentPushTap()),
       );
     }, fireImmediately: true);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    final learner = ref.read(activeLearnerStateProvider).asData?.value;
+    if (learner != null)
+      _scheduleSocialSummaryPublish(learner, immediate: true);
+  }
+
+  void _scheduleSocialSummaryPublish(
+    LearnerState state, {
+    bool immediate = false,
+  }) {
+    _pendingSocialSummary = state;
+    _socialSummaryDebounce?.cancel();
+    if (immediate) {
+      unawaited(_publishSocialSummary(state));
+      return;
+    }
+    _socialSummaryDebounce = Timer(const Duration(milliseconds: 750), () {
+      final pending = _pendingSocialSummary;
+      if (pending != null) unawaited(_publishSocialSummary(pending));
+    });
+  }
+
+  Future<void> _publishSocialSummary(LearnerState state) async {
+    try {
+      // A tutor viewing a talmid must never publish the talmid's projection.
+      if (ref.read(activeTutoredProfileSelectionProvider) != null) return;
+      final scope = await ref.read(activeLearnerScopeProvider.future);
+      final profile = await ref.read(activeProfileProvider.future);
+      final handles = await ref.read(activeAccountFirebaseProvider.future);
+      if (!mounted || scope == null || profile == null || handles == null)
+        return;
+      if (scope.ownerUid != handles.uid || handles.authUid != handles.uid)
+        return;
+
+      final parentSessionId = ref.read(parentSessionIdProvider);
+      if (profile.mode.name == 'child' && parentSessionId == null) return;
+      final payload = socialSummaryPayload(state);
+      final fingerprint = jsonEncode(payload);
+      if (_publishedSocialSummaryFingerprints[scope.profileId] == fingerprint) {
+        return;
+      }
+      await ref
+          .read(socialGraphRepositoryProvider)
+          .publishSummary(
+            profileId: scope.profileId,
+            summary: payload,
+            parentSessionId: profile.mode.name == 'child'
+                ? parentSessionId
+                : null,
+          );
+      _publishedSocialSummaryFingerprints[scope.profileId] = fingerprint;
+    } catch (error, stackTrace) {
+      AppLogger.instance.error(
+        event: 'social_summary_publish_failed',
+        exception: error,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _socialSummaryDebounce?.cancel();
+    super.dispose();
   }
 
   /// Opens the queued tutor-change push target only in the owning account,

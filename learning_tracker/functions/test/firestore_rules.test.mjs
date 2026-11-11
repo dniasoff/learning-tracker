@@ -90,6 +90,7 @@ const PAYLOADS = convertTimestamps(_rawPayloads);
 const OWNER = 'owner-uid';
 const TUTOR = 'tutor-uid';
 const STRANGER = 'stranger-uid';
+const STAFF = 'school-staff-uid';
 const PROFILE = '5';
 const PARENT_SESSION_ID = 'a'.repeat(64);
 const NEW_PROFILE_SESSION_ID = 'b'.repeat(64);
@@ -211,6 +212,7 @@ const cutoverOwner = () => env.authenticatedContext(OWNER, {
 }).firestore();
 const tutor = () => env.authenticatedContext(TUTOR).firestore();
 const stranger = () => env.authenticatedContext(STRANGER).firestore();
+const staff = () => env.authenticatedContext(STAFF).firestore();
 const anon = () => env.unauthenticatedContext().firestore();
 
 describe('phrase translation cache rules', () => {
@@ -236,7 +238,7 @@ describe('phrase translation cache rules', () => {
 describe('social graph rules', () => {
   const profileId = 'social-profile';
   const profilePath = 'social_profiles/social-card';
-  const controlsPath = 'social_parent_controls/social-controls';
+  const controlsPath = 'social_parent_controls/social-card';
   const requestPath = 'social_follow_requests/social-request';
   const followPath = 'social_follows/social-follow';
   const blockPath = 'social_blocks/social-block';
@@ -244,17 +246,42 @@ describe('social graph rules', () => {
   const auditPath = 'social_audit_logs/social-audit';
   const ratePath = 'social_rate_limits/social-rate';
   const cursorPath = 'social_search_cursors/social-cursor';
+  const summaryId = 'summary-doc';
+  const summaryPath = `social_summaries/${summaryId}`;
+  const readerPath = `${summaryPath}/readers/${STAFF}`;
+  const followerReaderPath = `${summaryPath}/readers/${TUTOR}`;
+  const summaryProfilePath = `social_profiles/${summaryId}`;
+  const summaryControlsPath = `social_parent_controls/${summaryId}`;
 
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await Promise.all([
+        setDoc(doc(db, 'schools/school-unverified'), { name: 'Unverified', verified: false }),
+        setDoc(doc(db, 'schools/school-verified'), { name: 'Verified', verified: true }),
         setDoc(doc(db, profilePath), {
           owner_uid: OWNER, profile_id: profileId, mode: 'child',
           display_name: 'Learner', display_name_search: 'learner', avatar_id: 0, paused: false,
         }),
+        setDoc(doc(db, summaryProfilePath), {
+          owner_uid: OWNER, profile_id: profileId, mode: 'adult', paused: false,
+          active_school_ids: ['school-1'],
+        }),
+        setDoc(doc(db, summaryControlsPath), {
+          owner_uid: OWNER, profile_id: profileId, allowed_school_ids: [], paused: false,
+        }),
+        setDoc(doc(db, `social_user_controls/${TUTOR}`), {
+          active_social_child_profile_ids: ['approved-profile'],
+        }),
+        setDoc(doc(db, `social_user_controls/${STAFF}`), {
+          active_staff_school_ids: ['school-1'],
+        }),
         setDoc(doc(db, controlsPath), {
-          owner_uid: OWNER, profile_id: profileId, allowed_school_ids: ['school-1'],
+          owner_uid: OWNER,
+          profile_id: profileId,
+          allowed_school_ids: ['school-1'],
+          paused: false,
+          controls_update_pending: false,
         }),
         setDoc(doc(db, requestPath), {
           from_owner_uid: OWNER, from_profile_id: profileId,
@@ -276,6 +303,30 @@ describe('social graph rules', () => {
         }),
         setDoc(doc(db, ratePath), { day: '2026-11-10', request_count: 1 }),
         setDoc(doc(db, cursorPath), { owner_uid: OWNER, profile_id: profileId, expires_at: futureTs }),
+        setDoc(doc(db, summaryPath), {
+          display_name: 'Learner',
+          avatar_id: 0,
+          streak: { by_curriculum: [] },
+          current_tracks: [],
+          weekly_learning: { week_start: '2026-11-08', by_curriculum: [] },
+          siyumim: [],
+          computed_at: pastTs,
+          schema_version: 1,
+        }),
+        setDoc(doc(db, followerReaderPath), {
+          owner_uid: OWNER,
+          profile_id: profileId,
+          follower_profile_ids: ['approved-profile'],
+          adult_follower_profile_ids: ['approved-profile'],
+          child_follower_profile_ids: [],
+          school_ids: [],
+        }),
+        setDoc(doc(db, readerPath), {
+          owner_uid: OWNER,
+          profile_id: profileId,
+          follower_profile_ids: [],
+          school_ids: ['school-1'],
+        }),
       ]);
     });
   });
@@ -286,7 +337,12 @@ describe('social graph rules', () => {
     await assertFails(getDoc(doc(anon(), profilePath)));
     await assertFails(setDoc(doc(owner(), profilePath), { forged: true }));
     await assertFails(deleteDoc(doc(owner(), profilePath)));
-    for (const path of [controlsPath, auditPath]) {
+    for (const path of [
+      controlsPath,
+      auditPath,
+      `social_user_controls/${TUTOR}`,
+      `social_summary_visibility/${summaryId}`,
+    ]) {
       await assertFails(getDoc(doc(owner(), path)), `PIN-gated data denied directly for ${path}`);
       await assertFails(getDoc(doc(stranger(), path)), `unrelated account must not read ${path}`);
       await assertFails(getDoc(doc(anon(), path)), `anonymous must not read ${path}`);
@@ -307,6 +363,8 @@ describe('social graph rules', () => {
       'social_follows/client-create',
       'social_blocks/client-create',
       'social_rate_limits/client-create',
+      'social_user_controls/client-create',
+      'social_summary_visibility/client-create',
       'social_search_cursors/client-create',
       'school_memberships/client-create',
     ]) {
@@ -341,10 +399,180 @@ describe('social graph rules', () => {
     )));
     await assertFails(getDoc(doc(owner(), membershipPath)));
     await assertFails(setDoc(doc(owner(), membershipPath), { forged: true }));
+    await assertFails(setDoc(doc(owner(), 'schools/school-1'), { name: 'Forged' }));
+    await assertFails(getDoc(doc(owner(), 'schools/school-1')));
+    await assertFails(updateDoc(doc(owner(), 'schools/school-unverified'), { verified: true }));
+    await assertFails(updateDoc(doc(owner(), 'schools/school-verified'), { verified: false }));
+    await assertFails(setDoc(doc(owner(), 'school_admins/forged'), { role: 'admin' }));
+    await assertFails(setDoc(doc(owner(), 'school_invites/forged'), { state: 'active' }));
+    await assertFails(setDoc(doc(owner(), 'school_reports/forged'), { state: 'closed' }));
+    await assertFails(getDoc(doc(owner(), readerPath)));
+    await assertFails(setDoc(doc(owner(), readerPath), { school_ids: ['forged'] }));
+    await assertFails(getDoc(doc(owner(), summaryPath)));
+    await assertSucceeds(getDoc(doc(staff(), summaryPath)));
+    await assertFails(getDoc(doc(stranger(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `social_user_controls/${STAFF}`), {
+        active_staff_school_ids: [],
+      });
+    });
+    await assertFails(getDoc(doc(staff(), summaryPath)), 'removed staff mirror denies summary reads');
+    await assertFails(setDoc(doc(owner(), summaryPath), { points: 99 }));
+    await assertFails(getDoc(doc(anon(), summaryPath)));
+    await assertFails(getDoc(doc(tutor(), 'social_summaries/summary-without-reader')));
     await assertFails(getDoc(doc(owner(), ratePath)));
     await assertFails(setDoc(doc(owner(), ratePath), { request_count: 0 }));
     await assertFails(getDoc(doc(owner(), cursorPath)));
     await assertFails(setDoc(doc(owner(), cursorPath), { forged: true }));
+  });
+
+  test('social summary reads require a follower or staff grant and deny malformed fields', async () => {
+    await assertFails(getDoc(doc(owner(), summaryPath)));
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await assertFails(getDoc(doc(stranger(), summaryPath)));
+    await assertFails(getDoc(doc(anon(), summaryPath)));
+    await assertFails(getDoc(doc(tutor(), followerReaderPath)));
+    await assertFails(setDoc(doc(owner(), summaryPath), { forged: true }));
+    await assertFails(deleteDoc(doc(owner(), summaryPath)));
+    await assertFails(getDocs(query(collection(tutor(), 'social_summaries'), limit(10))));
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), followerReaderPath), {
+        owner_uid: OWNER,
+        profile_id: profileId,
+        follower_profile_ids: [],
+        adult_follower_profile_ids: [],
+        child_follower_profile_ids: [],
+        school_ids: [],
+      });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)), 'removed grant cannot read');
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), followerReaderPath), {
+        owner_uid: OWNER,
+        profile_id: profileId,
+        follower_profile_ids: ['approved-profile'],
+        adult_follower_profile_ids: [],
+        child_follower_profile_ids: [],
+        school_ids: [],
+      });
+      await updateDoc(doc(ctx.firestore(), summaryPath), { points: 42 });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)), 'summary rejects any non-allowlisted field');
+  });
+
+  test('staff reads require a live staff mirror and current learner membership', async () => {
+    const staffControlPath = `social_user_controls/${STAFF}`;
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await Promise.all([
+        updateDoc(doc(db, summaryProfilePath), { active_school_ids: ['school-1'] }),
+        updateDoc(doc(db, readerPath), {
+          follower_profile_ids: [],
+          adult_follower_profile_ids: [],
+          child_follower_profile_ids: [],
+          school_ids: ['school-1'],
+        }),
+        setDoc(doc(db, staffControlPath), { active_staff_school_ids: ['school-1'] }),
+      ]);
+    });
+    await assertSucceeds(getDoc(doc(staff(), summaryPath)));
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), staffControlPath), { active_staff_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(staff(), summaryPath)), 'removed staff mirror denies the old ACL');
+
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), staffControlPath), { active_staff_school_ids: ['school-1'] });
+      await updateDoc(doc(ctx.firestore(), summaryProfilePath), { active_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(staff(), summaryPath)), 'learner leaving the school cuts staff access');
+  });
+
+  test('social summary rules allow omitted sections selected by the owner', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), summaryPath), {
+        display_name: 'Learner',
+        avatar_id: 0,
+        computed_at: pastTs,
+        schema_version: 1,
+      });
+    });
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+  });
+
+  async function installChildFollowerGrant() {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await Promise.all([
+        updateDoc(doc(db, summaryProfilePath), { mode: 'child', paused: false, active_school_ids: ['school-1'] }),
+        updateDoc(doc(db, summaryControlsPath), {
+          paused: false,
+          controls_update_pending: false,
+          allowed_school_ids: ['school-1'],
+        }),
+        updateDoc(doc(db, followerReaderPath), {
+          follower_profile_ids: ['approved-profile'],
+          adult_follower_profile_ids: [],
+          child_follower_profile_ids: ['approved-profile'],
+          school_ids: [],
+          child_school_ids: ['school-1'],
+          active_school_ids: ['school-1'],
+        }),
+      ]);
+    });
+  }
+
+  test('child follower read succeeds only while the child remains a school member', async () => {
+    await installChildFollowerGrant();
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), summaryProfilePath), { active_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
+  });
+
+  test('child follower read stops when the follower leaves the school', async () => {
+    await installChildFollowerGrant();
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), followerReaderPath), { active_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
+  });
+
+  test('child follower read stops when parent removes the school from the allow-list', async () => {
+    await installChildFollowerGrant();
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), summaryControlsPath), { allowed_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
+  });
+
+  test('pausing a child follower cuts reads of adult summaries immediately', async () => {
+    const childProfileDocId = 'approved-child-profile';
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await Promise.all([
+        updateDoc(doc(db, followerReaderPath), {
+          follower_profile_ids: [childProfileDocId],
+          adult_follower_profile_ids: [],
+          child_follower_profile_ids: [childProfileDocId],
+          school_ids: [],
+        }),
+        setDoc(doc(db, `social_user_controls/${TUTOR}`), {
+          active_social_child_profile_ids: [childProfileDocId],
+        }),
+      ]);
+    });
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `social_user_controls/${TUTOR}`), { active_social_child_profile_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
   });
 });
 

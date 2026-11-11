@@ -7881,4 +7881,255 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get textReaderRetryTranslation => 'הקשה כדי לנסות שוב';
+
+  @override
+  String get communityTitle => 'קהילה';
+
+  @override
+  String get communityParentControls => 'בקרת הורה על הקהילה';
+
+  @override
+  String get communityFollowers => 'עוקבים';
+
+  @override
+  String get communityFollowing => 'במעקב';
+
+  @override
+  String get communityRequests => 'בקשות';
+
+  @override
+  String get communityFindPeople => 'מציאת אנשים';
+
+  @override
+  String get communityPrivacyNotice =>
+      'עוקבים רואים רק את ההתקדמות ששותפה בפרופיל זה.';
+
+  @override
+  String get communityNoConnections => 'עדיין אין קשרים';
+
+  @override
+  String get communityNoRequests => 'אין בקשות';
+
+  @override
+  String get communityUnavailableProfile => 'הפרופיל אינו זמין';
+
+  @override
+  String get communityApprove => 'אישור';
+
+  @override
+  String get communityDecline => 'דחייה';
+
+  @override
+  String get communityRequestPending => 'הבקשה ממתינה';
+
+  @override
+  String get communityRemove => 'הסרת עוקב';
+
+  @override
+  String get communityBlock => 'חסימת פרופיל';
+
+  @override
+  String get communitySchoolId => 'מזהה בית ספר';
+
+  @override
+  String get communityExactName => 'שם מדויק של לומד';
+
+  @override
+  String get communitySearch => 'חיפוש';
+
+  @override
+  String get communitySearchOnlySchool =>
+      'חיפוש בשם מדויק בבתי ספר שבהם יש לך חברות.';
+
+  @override
+  String get communitySendRequest => 'שליחת בקשת מעקב';
+
+  @override
+  String get communityPauseSharing => 'השהיית השיתוף והגישה החברתית';
+
+  @override
+  String get communityAllowedSchools => 'בתי ספר מורשים';
+
+  @override
+  String get communityNoAllowedSchools => 'אין בתי ספר מורשים';
+
+  @override
+  String get communitySchoolIds => 'מזהי בתי ספר';
+
+  @override
+  String get communitySchoolIdsHelp =>
+      'יש להזין מזהי בתי ספר מופרדים בפסיקים ולשלוח.';
+
+  @override
+  String get communityProfile => 'פרופיל לומד';
+
+  @override
+  String get communitySummaryUnavailable => 'סיכום הפרופיל אינו זמין.';
+
+  @override
+  String get communityStreak => 'רצף לימוד';
+
+  @override
+  String get communityCurrentTracks => 'מסלולים נוכחיים ומיקום';
+
+  @override
+  String get communityThisWeek => 'השבוע';
+
+  @override
+  String communityWeekOf(String date) {
+    return 'השבוע שמתחיל ב־$date';
+  }
+
+  @override
+  String get communitySiyumim => 'סיומים';
+
+  @override
+  String get communityNoSiyumim => 'אין עדיין סיומים להצגה';
+
+  @override
+  String communityUpdatedAt(String date) {
+    return 'עודכן $date';
+  }
+
+  @override
+  String communityStreakValues(int current, int best) {
+    return '$current נוכחי · $best הטוב ביותר';
+  }
+
+  @override
+  String communityPosition(String position) {
+    return 'מיקום: $position';
+  }
+
+  @override
+  String communityWeeklyCounts(int limudim, int chazaros) {
+    return '$limudim לימוד חדש · $chazaros חזרות';
+  }
+
+  @override
+  String get schoolProfileTitle => 'בית ספר';
+
+  @override
+  String get schoolProfileUnavailable => 'פרופיל בית הספר אינו זמין.';
+
+  @override
+  String get schoolVerifiedBadge => 'מאומת';
+
+  @override
+  String schoolCreatedDate(String date) {
+    return 'נוצר בתאריך $date';
+  }
+
+  @override
+  String get schoolDateUnavailable => 'התאריך אינו זמין';
+
+  @override
+  String get schoolAdminsTitle => 'מנהלי בית הספר';
+
+  @override
+  String get schoolReportAction => 'דיווח על בית הספר';
+
+  @override
+  String get schoolReportTitle => 'מדוע מדווחים על בית הספר?';
+
+  @override
+  String get schoolReportImpersonation => 'התחזות';
+
+  @override
+  String get schoolReportAbuse => 'התנהגות פוגענית';
+
+  @override
+  String get schoolReportOther => 'בעיה אחרת';
+
+  @override
+  String get schoolReportSubmitted => 'הדיווח נשלח לבדיקה';
+
+  @override
+  String get schoolRosterTitle => 'חברי בית הספר';
+
+  @override
+  String get schoolChildMemberLabel => 'פרופיל ילד';
+
+  @override
+  String get schoolJoinTitle => 'הצטרפות לבית הספר';
+
+  @override
+  String get schoolStaffProgressNotice =>
+      'צוות בית הספר יוכל לצפות בהתקדמות הלימוד של הלומד. הצוות לא יוכל לשנות רשומות לימוד או לראות הגדרות חשבון פרטיות.';
+
+  @override
+  String get schoolProgressConsent =>
+      'אני מבין/ה ומסכים/ה שצוות בית הספר יוכל לצפות בהתקדמות שלי.';
+
+  @override
+  String get schoolParentProgressConsent =>
+      'אני מאשר/ת לילד להצטרף ומבין/ה שצוות בית הספר יוכל לצפות בהתקדמות שלו.';
+
+  @override
+  String get schoolJoinAction => 'הצטרפות לבית הספר';
+
+  @override
+  String get schoolJoinSucceeded => 'הצטרפת לבית הספר';
+
+  @override
+  String get schoolAdminMembershipRemovalBlocked =>
+      'מנהלי בית הספר צריכים להסיר או להעביר את תפקיד הניהול לפני עזיבה או הסרה כחברים.';
+
+  @override
+  String get communityOverall => 'כללי';
+
+  @override
+  String get communityVisibilityTitle => 'מה העוקבים יכולים לראות';
+
+  @override
+  String get communityVisibilityDescription =>
+      'בחירת חלקי ההתקדמות בלימוד שישותפו עם העוקבים ועם צוות בית הספר.';
+
+  @override
+  String get communityVisibilityOverallStreak => 'רצף כללי';
+
+  @override
+  String get communityVisibilityOverallWeekly =>
+      'סיכומי לימוד וחזרה שבועיים כלליים';
+
+  @override
+  String get communityVisibilityTrackStreaks => 'רצף לכל מסלול';
+
+  @override
+  String get communityVisibilityTrackWeekly =>
+      'מספרי לימוד וחזרה שבועיים לכל מסלול';
+
+  @override
+  String get communityVisibilityCurrentTracks => 'מסלולים נוכחיים ומיקום';
+
+  @override
+  String get communityVisibilitySiyumim => 'סיומים';
+
+  @override
+  String get communityVisibilityPreview => 'תצוגה מקדימה של ההתקדמות המשותפת';
+
+  @override
+  String get communityVisibilityPreviewEmpty => 'לא משותפים כרגע חלקי התקדמות.';
+
+  @override
+  String communityTrackCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count מסלולים נוכחיים',
+      one: 'מסלול נוכחי אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communitySiyumCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count סיומים',
+      one: 'סיום אחד',
+    );
+    return '$_temp0';
+  }
 }

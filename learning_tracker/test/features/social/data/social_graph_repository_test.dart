@@ -36,4 +36,37 @@ void main() {
 
     expect(result, List.filled(43, 'a').join());
   });
+
+  test(
+    'summary publication sends the strict snapshot through the callable',
+    () async {
+      final calls = <(String, Map<String, Object?>)>[];
+      final repository = SocialGraphRepository((name, data) async {
+        calls.add((name, data));
+        return {'success': true};
+      });
+      final summary = {
+        'streak': {'by_curriculum': <Object?>[]},
+        'current_tracks': <Object?>[],
+        'weekly_learning': {
+          'week_start': '2026-11-08',
+          'by_curriculum': <Object?>[],
+        },
+        'siyumim': <Object?>[],
+      };
+
+      await repository.publishSummary(
+        profileId: 'profile-ulid',
+        parentSessionId: 'session-id',
+        summary: summary,
+      );
+
+      expect(calls.single.$1, 'publishSocialSummary');
+      expect(calls.single.$2, {
+        'profileId': 'profile-ulid',
+        'parentSessionId': 'session-id',
+        'summary': summary,
+      });
+    },
+  );
 }

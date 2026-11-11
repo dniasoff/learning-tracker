@@ -210,6 +210,22 @@ class ParentSettingsScreen extends ConsumerWidget {
                     ),
                     onTap: () => context.pushRoute(const HiddenContentRoute()),
                   ),
+                  _rowDivider(context),
+                  _ManageRow(
+                    iconBackground: const Color(0xFFE7F0FF),
+                    icon: Icons.groups_outlined,
+                    iconColor: const Color(0xFF1E52D4),
+                    title: l10n.communityParentControls,
+                    subtitle: l10n.communityPrivacyNotice,
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: _chevronMuted,
+                      size: 26,
+                    ),
+                    onTap: () => context.pushRoute(
+                      SocialCommunityRoute(parentMode: true),
+                    ),
+                  ),
                   // AD-53: canEditLearning gates "Manage Tracks" for tutors.
                   if (canEditTracks) ...[
                     _ManageRow(

@@ -7968,4 +7968,257 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get textReaderRetryTranslation => 'Tap to retry';
+
+  @override
+  String get communityTitle => 'Community';
+
+  @override
+  String get communityParentControls => 'Child community controls';
+
+  @override
+  String get communityFollowers => 'Followers';
+
+  @override
+  String get communityFollowing => 'Following';
+
+  @override
+  String get communityRequests => 'Requests';
+
+  @override
+  String get communityFindPeople => 'Find people';
+
+  @override
+  String get communityPrivacyNotice =>
+      'Followers can see only the progress shared on this profile.';
+
+  @override
+  String get communityNoConnections => 'No connections yet';
+
+  @override
+  String get communityNoRequests => 'No requests';
+
+  @override
+  String get communityUnavailableProfile => 'Unavailable profile';
+
+  @override
+  String get communityApprove => 'Approve';
+
+  @override
+  String get communityDecline => 'Decline';
+
+  @override
+  String get communityRequestPending => 'Request pending';
+
+  @override
+  String get communityRemove => 'Remove follower';
+
+  @override
+  String get communityBlock => 'Block profile';
+
+  @override
+  String get communitySchoolId => 'School ID';
+
+  @override
+  String get communityExactName => 'Exact learner name';
+
+  @override
+  String get communitySearch => 'Search';
+
+  @override
+  String get communitySearchOnlySchool =>
+      'Search exact names in a school you belong to.';
+
+  @override
+  String get communitySendRequest => 'Send follow request';
+
+  @override
+  String get communityPauseSharing => 'Pause sharing and social access';
+
+  @override
+  String get communityAllowedSchools => 'Allowed schools';
+
+  @override
+  String get communityNoAllowedSchools => 'No schools allowed';
+
+  @override
+  String get communitySchoolIds => 'School IDs';
+
+  @override
+  String get communitySchoolIdsHelp =>
+      'Enter school IDs joined by commas, then submit.';
+
+  @override
+  String get communityProfile => 'Learner profile';
+
+  @override
+  String get communitySummaryUnavailable =>
+      'This profile summary is unavailable.';
+
+  @override
+  String get communityStreak => 'Streak';
+
+  @override
+  String get communityCurrentTracks => 'Current tracks and position';
+
+  @override
+  String get communityThisWeek => 'This week';
+
+  @override
+  String communityWeekOf(String date) {
+    return 'Week of $date';
+  }
+
+  @override
+  String get communitySiyumim => 'Siyumim';
+
+  @override
+  String get communityNoSiyumim => 'No siyumim to show yet';
+
+  @override
+  String communityUpdatedAt(String date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String communityStreakValues(int current, int best) {
+    return '$current current · $best best';
+  }
+
+  @override
+  String communityPosition(String position) {
+    return 'Position: $position';
+  }
+
+  @override
+  String communityWeeklyCounts(int limudim, int chazaros) {
+    return '$limudim new learning · $chazaros review';
+  }
+
+  @override
+  String get schoolProfileTitle => 'School';
+
+  @override
+  String get schoolProfileUnavailable => 'This school profile is unavailable.';
+
+  @override
+  String get schoolVerifiedBadge => 'Verified';
+
+  @override
+  String schoolCreatedDate(String date) {
+    return 'Created $date';
+  }
+
+  @override
+  String get schoolDateUnavailable => 'Date unavailable';
+
+  @override
+  String get schoolAdminsTitle => 'School administrators';
+
+  @override
+  String get schoolReportAction => 'Report school';
+
+  @override
+  String get schoolReportTitle => 'Why are you reporting this school?';
+
+  @override
+  String get schoolReportImpersonation => 'Impersonation';
+
+  @override
+  String get schoolReportAbuse => 'Abuse';
+
+  @override
+  String get schoolReportOther => 'Other concern';
+
+  @override
+  String get schoolReportSubmitted => 'Report submitted for review';
+
+  @override
+  String get schoolRosterTitle => 'School members';
+
+  @override
+  String get schoolChildMemberLabel => 'Child profile';
+
+  @override
+  String get schoolJoinTitle => 'Join school';
+
+  @override
+  String get schoolStaffProgressNotice =>
+      'School staff will be able to view this learner’s progress. They cannot change learning records or see private account settings.';
+
+  @override
+  String get schoolProgressConsent =>
+      'I understand and agree that school staff can view my progress.';
+
+  @override
+  String get schoolParentProgressConsent =>
+      'I approve this child joining and understand school staff can view the child’s progress.';
+
+  @override
+  String get schoolJoinAction => 'Join school';
+
+  @override
+  String get schoolJoinSucceeded => 'You joined the school';
+
+  @override
+  String get schoolAdminMembershipRemovalBlocked =>
+      'School administrators must remove or transfer their admin role before leaving or being removed as a member.';
+
+  @override
+  String get communityOverall => 'Overall';
+
+  @override
+  String get communityVisibilityTitle => 'What followers can see';
+
+  @override
+  String get communityVisibilityDescription =>
+      'Choose which parts of this profile’s learning progress are shared with followers and school staff.';
+
+  @override
+  String get communityVisibilityOverallStreak => 'Overall streak';
+
+  @override
+  String get communityVisibilityOverallWeekly =>
+      'Overall weekly learning and review totals';
+
+  @override
+  String get communityVisibilityTrackStreaks => 'Streak for each track';
+
+  @override
+  String get communityVisibilityTrackWeekly =>
+      'Weekly learning and review counts for each track';
+
+  @override
+  String get communityVisibilityCurrentTracks => 'Current tracks and position';
+
+  @override
+  String get communityVisibilitySiyumim => 'Siyumim';
+
+  @override
+  String get communityVisibilityPreview => 'Preview shared progress';
+
+  @override
+  String get communityVisibilityPreviewEmpty =>
+      'No progress sections are currently shared.';
+
+  @override
+  String communityTrackCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# current tracks',
+      one: '# current track',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communitySiyumCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# siyumim',
+      one: '# siyum',
+    );
+    return '$_temp0';
+  }
 }

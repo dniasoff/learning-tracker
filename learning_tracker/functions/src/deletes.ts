@@ -11,6 +11,7 @@ import {
   writeWithChangeLog,
 } from "./write_with_change_log";
 import { cleanupSocialForAccount, cleanupSocialForProfile } from "./social_graph";
+import { cleanupSchoolAccess } from "./schools";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Account & learner-data deletion
@@ -45,6 +46,7 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
   const now = admin.firestore.Timestamp.now();
   logger.info(`onUserDeleted: starting cascade for uid=${uid}`);
   await cleanupSocialForAccount(uid);
+  await cleanupSchoolAccess(uid);
 
   // ── Step 1: Delete all user data ──────────────────────────────────────────
   await db.recursiveDelete(db.collection("users").doc(uid));
@@ -153,6 +155,7 @@ export const deleteLearnerProfile = onCall(CALL_OPTS, async (request) => {
     .doc(profileId);
 
   logger.info(`deleteLearnerProfile: uid=${uid} profileId=${profileId}`);
+  await cleanupSchoolAccess(uid, profileId);
   await cleanupSocialForProfile(uid, profileId);
   await db.recursiveDelete(profileRef);
   logger.info(`deleteLearnerProfile: complete uid=${uid} profileId=${profileId}`);
@@ -223,6 +226,7 @@ export const deleteAccountData = onCall(CALL_OPTS, async (request) => {
 
   const userDocRef = db.collection("users").doc(uid);
   logger.info(`deleteAccountData: starting for uid=${uid}`);
+  await cleanupSchoolAccess(uid);
   await cleanupSocialForAccount(uid);
   await db.recursiveDelete(userDocRef);
   logger.info(`deleteAccountData: complete for uid=${uid}`);

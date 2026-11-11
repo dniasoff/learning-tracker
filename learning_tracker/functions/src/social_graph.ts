@@ -4,6 +4,7 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 import { assertActiveParentSessionInTransaction } from "./parent_session_validation";
 import { CALL_OPTS, db } from "./shared";
+import { ULID_RE } from "./write_with_change_log";
 
 const MAX_SCHOOLS = 20;
 const MAX_PENDING_REQUESTS = 30;
@@ -13,6 +14,29 @@ const MAX_INBOUND_REQUESTS_PER_DAY = 50;
 const MAX_PAGE_SIZE = 50;
 const REQUEST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const PROFILE_FIELDS = ["profileId", "displayName", "avatarId", "parentSessionId"] as const;
+const SOCIAL_CURRICULA = new Set([
+  "chumash", "nach", "tanach", "mishnayos", "bavli", "yerushalmi",
+  "shnayim_mikra", "mishneh_torah", "mishna_berurah", "mussar",
+]);
+const SOCIAL_REF_RE = /^[\p{L}\p{N}][\p{L}\p{N} ,.:;’'"״׳–—-]{0,255}$/u;
+const SOCIAL_IDENTIFIER_RE = /^[A-Za-z0-9_.-]{1,64}$/;
+const SUMMARY_VISIBILITY_DEFAULTS = {
+  overall_streak: true,
+  overall_weekly: true,
+  per_track_streaks: true,
+  per_track_weekly: true,
+  current_tracks: true,
+  siyumim: true,
+} as const;
+
+type SocialSummaryVisibility = {
+  overall_streak: boolean;
+  overall_weekly: boolean;
+  per_track_streaks: boolean;
+  per_track_weekly: boolean;
+  current_tracks: boolean;
+  siyumim: boolean;
+};
 
 type ProfileRef = { ownerUid: string; profileId: string };
 type SocialProfile = ProfileRef & {
@@ -31,8 +55,91 @@ const blocks = () => db.collection("social_blocks");
 const limits = () => db.collection("social_rate_limits");
 const memberships = () => db.collection("school_memberships");
 const controls = () => db.collection("social_parent_controls");
+const userControls = () => db.collection("social_user_controls");
 const auditLogs = () => db.collection("social_audit_logs");
 const searchCursors = () => db.collection("social_search_cursors");
+const summaries = () => db.collection("social_summaries");
+const summaryVisibility = () => db.collection("social_summary_visibility");
+const summaryRateLimits = () => db.collection("social_summary_rate_limits");
+
+function summaryVisibilityFromStorage(value: unknown): SocialSummaryVisibility {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { ...SUMMARY_VISIBILITY_DEFAULTS };
+  }
+  const source = value as Record<string, unknown>;
+  return {
+    overall_streak: typeof source.overall_streak === "boolean"
+      ? source.overall_streak : SUMMARY_VISIBILITY_DEFAULTS.overall_streak,
+    overall_weekly: typeof source.overall_weekly === "boolean"
+      ? source.overall_weekly : SUMMARY_VISIBILITY_DEFAULTS.overall_weekly,
+    per_track_streaks: typeof source.per_track_streaks === "boolean"
+      ? source.per_track_streaks : SUMMARY_VISIBILITY_DEFAULTS.per_track_streaks,
+    per_track_weekly: typeof source.per_track_weekly === "boolean"
+      ? source.per_track_weekly : SUMMARY_VISIBILITY_DEFAULTS.per_track_weekly,
+    current_tracks: typeof source.current_tracks === "boolean"
+      ? source.current_tracks : SUMMARY_VISIBILITY_DEFAULTS.current_tracks,
+    siyumim: typeof source.siyumim === "boolean"
+      ? source.siyumim : SUMMARY_VISIBILITY_DEFAULTS.siyumim,
+  };
+}
+
+function parseSummaryVisibility(value: unknown): SocialSummaryVisibility {
+  const input = summaryObject(value, [
+    "overallStreak", "overallWeekly", "perTrackStreaks", "perTrackWeekly",
+    "currentTracks", "siyumim",
+  ], "visibility");
+  if (Object.keys(input).length !== 6 ||
+      Object.values(input).some((setting) => typeof setting !== "boolean")) {
+    throw new HttpsError("invalid-argument", "Visibility choices must be boolean");
+  }
+  return {
+    overall_streak: input.overallStreak as boolean,
+    overall_weekly: input.overallWeekly as boolean,
+    per_track_streaks: input.perTrackStreaks as boolean,
+    per_track_weekly: input.perTrackWeekly as boolean,
+    current_tracks: input.currentTracks as boolean,
+    siyumim: input.siyumim as boolean,
+  };
+}
+
+function summaryVisibilityForWire(value: SocialSummaryVisibility) {
+  return {
+    overallStreak: value.overall_streak,
+    overallWeekly: value.overall_weekly,
+    perTrackStreaks: value.per_track_streaks,
+    perTrackWeekly: value.per_track_weekly,
+    currentTracks: value.current_tracks,
+    siyumim: value.siyumim,
+  };
+}
+
+function applySummaryVisibility(
+  summary: Record<string, unknown>,
+  visibility: SocialSummaryVisibility,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const streak = summary.streak as Record<string, unknown>;
+  const visibleStreak: Record<string, unknown> = {};
+  if (visibility.per_track_streaks) visibleStreak.by_curriculum = streak.by_curriculum;
+  if (visibility.overall_streak && streak.overall !== undefined) {
+    visibleStreak.overall = streak.overall;
+  }
+  if (Object.keys(visibleStreak).length > 0) result.streak = visibleStreak;
+
+  const weekly = summary.weekly_learning as Record<string, unknown>;
+  const visibleWeekly: Record<string, unknown> = {};
+  if (visibility.per_track_weekly) visibleWeekly.by_curriculum = weekly.by_curriculum;
+  if (visibility.overall_weekly && weekly.overall !== undefined) {
+    visibleWeekly.overall = weekly.overall;
+  }
+  if (Object.keys(visibleWeekly).length > 0) {
+    visibleWeekly.week_start = weekly.week_start;
+    result.weekly_learning = visibleWeekly;
+  }
+  if (visibility.current_tracks) result.current_tracks = summary.current_tracks;
+  if (visibility.siyumim) result.siyumim = summary.siyumim;
+  return result;
+}
 
 function opaqueId(...parts: string[]): string {
   return crypto.createHash("sha256").update(parts.join("\0")).digest("hex");
@@ -57,8 +164,259 @@ function requiredString(value: unknown, name: string, max = 128): string {
   return value.trim();
 }
 
+function summaryObject(value: unknown, keys: readonly string[], name: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new HttpsError("invalid-argument", `${name} must be an object`);
+  }
+  const result = value as Record<string, unknown>;
+  exactKeys(result, keys);
+  return result;
+}
+
+function summaryCount(value: unknown, name: string): number {
+  if (!Number.isInteger(value) || Number(value) < 0 || Number(value) > 100_000) {
+    throw new HttpsError("invalid-argument", `${name} is outside its allowed range`);
+  }
+  return Number(value);
+}
+
+function summaryCurriculum(value: unknown): string {
+  if (typeof value !== "string" || !SOCIAL_CURRICULA.has(value)) {
+    throw new HttpsError("invalid-argument", "Unknown curriculum_id");
+  }
+  return value;
+}
+
+function summaryRef(value: unknown, name: string): string {
+  if (typeof value !== "string" || value.length > 256 || !SOCIAL_REF_RE.test(value)) {
+    throw new HttpsError("invalid-argument", `${name} must be a canonical reference`);
+  }
+  return value;
+}
+
+function uniqueCurriculumRows<T extends { curriculum_id: string }>(
+  rows: T[], name: string,
+): T[] {
+  if (new Set(rows.map((row) => row.curriculum_id)).size !== rows.length) {
+    throw new HttpsError("invalid-argument", `${name} contains duplicate curricula`);
+  }
+  return rows;
+}
+
+function normalizeSocialSummary(value: unknown): Record<string, unknown> {
+  const input = summaryObject(value, ["streak", "current_tracks", "weekly_learning", "siyumim"], "summary");
+
+  const streak = summaryObject(input.streak, ["by_curriculum", "overall"], "streak");
+  if (!Array.isArray(streak.by_curriculum) || streak.by_curriculum.length > SOCIAL_CURRICULA.size) {
+    throw new HttpsError("invalid-argument", "Invalid streak rows");
+  }
+  const streakRows = uniqueCurriculumRows(streak.by_curriculum.map((row) => {
+    const data = summaryObject(row, ["curriculum_id", "current_days", "best_days"], "streak row");
+    return {
+      curriculum_id: summaryCurriculum(data.curriculum_id),
+      current_days: summaryCount(data.current_days, "current_days"),
+      best_days: summaryCount(data.best_days, "best_days"),
+    };
+  }), "streak");
+  let overallStreak: Record<string, number> | undefined;
+  if (streak.overall !== undefined) {
+    const data = summaryObject(streak.overall, ["current_days", "best_days"], "overall streak");
+    overallStreak = {
+      current_days: summaryCount(data.current_days, "current_days"),
+      best_days: summaryCount(data.best_days, "best_days"),
+    };
+  }
+
+  if (!Array.isArray(input.current_tracks) || input.current_tracks.length > SOCIAL_CURRICULA.size) {
+    throw new HttpsError("invalid-argument", "Invalid current_tracks");
+  }
+  const trackRows = uniqueCurriculumRows(input.current_tracks.map((row) => {
+    const data = summaryObject(row, ["curriculum_id", "position_ref"], "current track");
+    return {
+      curriculum_id: summaryCurriculum(data.curriculum_id),
+      position_ref: data.position_ref === null ? null : summaryRef(data.position_ref, "position_ref"),
+    };
+  }), "current_tracks");
+
+  const weekly = summaryObject(input.weekly_learning, ["week_start", "by_curriculum", "overall"], "weekly_learning");
+  if (typeof weekly.week_start !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(weekly.week_start) ||
+      Number.isNaN(Date.parse(`${weekly.week_start}T00:00:00Z`)) ||
+      new Date(`${weekly.week_start}T00:00:00Z`).getUTCDay() !== 0) {
+    throw new HttpsError("invalid-argument", "week_start must be a Sunday civil date");
+  }
+  if (!Array.isArray(weekly.by_curriculum) || weekly.by_curriculum.length > SOCIAL_CURRICULA.size) {
+    throw new HttpsError("invalid-argument", "Invalid weekly learning rows");
+  }
+  const weeklyRows = uniqueCurriculumRows(weekly.by_curriculum.map((row) => {
+    const data = summaryObject(row, ["curriculum_id", "limudim", "chazaros"], "weekly learning row");
+    return {
+      curriculum_id: summaryCurriculum(data.curriculum_id),
+      limudim: summaryCount(data.limudim, "limudim"),
+      chazaros: summaryCount(data.chazaros, "chazaros"),
+    };
+  }), "weekly_learning");
+  let overallWeekly: Record<string, number> | undefined;
+  if (weekly.overall !== undefined) {
+    const data = summaryObject(weekly.overall, ["limudim", "chazaros"], "overall weekly learning");
+    overallWeekly = {
+      limudim: summaryCount(data.limudim, "limudim"),
+      chazaros: summaryCount(data.chazaros, "chazaros"),
+    };
+  }
+
+  if (!Array.isArray(input.siyumim) || input.siyumim.length > 100) {
+    throw new HttpsError("invalid-argument", "Invalid siyumim");
+  }
+  const siyumim = input.siyumim.map((row) => {
+    const data = summaryObject(row, ["curriculum_id", "ref", "level"], "siyum");
+    if (typeof data.level !== "string" || !SOCIAL_IDENTIFIER_RE.test(data.level)) {
+      throw new HttpsError("invalid-argument", "siyum level must be an identifier");
+    }
+    return {
+      curriculum_id: summaryCurriculum(data.curriculum_id),
+      ref: summaryRef(data.ref, "siyum ref"),
+      level: data.level,
+    };
+  });
+
+  const result = {
+    streak: { by_curriculum: streakRows, ...(overallStreak ? { overall: overallStreak } : {}) },
+    current_tracks: trackRows,
+    weekly_learning: {
+      week_start: weekly.week_start,
+      by_curriculum: weeklyRows,
+      ...(overallWeekly ? { overall: overallWeekly } : {}),
+    },
+    siyumim,
+  };
+  if (Buffer.byteLength(JSON.stringify(result), "utf8") > 16_384) {
+    throw new HttpsError("invalid-argument", "Social summary is too large");
+  }
+  return result;
+}
+
 function profileDocId(ref: ProfileRef): string {
   return opaqueId(ref.ownerUid, ref.profileId);
+}
+
+function summaryReaderRef(summaryOwner: ProfileRef, readerUid: string) {
+  return summaries().doc(profileDocId(summaryOwner)).collection("readers").doc(readerUid);
+}
+
+type FollowerSummaryGrantChange = {
+  summaryOwner: ProfileRef;
+  follower: ProfileRef;
+  allowed: boolean;
+  followerMode?: "adult" | "child";
+  childSchoolIds?: readonly string[];
+  followerSchoolIds?: readonly string[];
+};
+
+/** Reads all affected ACL documents before applying any transaction writes. */
+async function setFollowerSummaryGrants(
+  txn: FirebaseFirestore.Transaction,
+  changes: readonly FollowerSummaryGrantChange[],
+): Promise<void> {
+  const schoolIds = [...new Set(changes.flatMap((change) => [
+    ...(change.childSchoolIds ?? []), ...(change.followerSchoolIds ?? []),
+  ]))];
+  const schoolStates = new Map<string, boolean>();
+  await Promise.all(schoolIds.map(async (schoolId) => {
+    const school = await txn.get(db.collection("schools").doc(schoolId));
+    schoolStates.set(schoolId, school.exists && school.get("status") === "active");
+  }));
+  const refs = new Map<string, FirebaseFirestore.DocumentReference>();
+  for (const change of changes) {
+    const ref = summaryReaderRef(change.summaryOwner, change.follower.ownerUid);
+    refs.set(ref.path, ref);
+  }
+  const snapshots = new Map<string, FirebaseFirestore.DocumentSnapshot>();
+  await Promise.all([...refs].map(async ([path, ref]) => {
+    snapshots.set(path, await txn.get(ref));
+  }));
+  const grants = new Map<string, {
+    ref: FirebaseFirestore.DocumentReference;
+    owner: ProfileRef;
+    ids: Set<string>;
+    adultIds: Set<string>;
+    childIds: Set<string>;
+    schools: string[];
+    childByFollower: Record<string, string[]>;
+    activeByFollower: Record<string, string[]>;
+    exists: boolean;
+  }>();
+  for (const change of changes) {
+    const childSchoolIds = [...new Set(change.childSchoolIds ?? [])]
+      .filter((schoolId) => schoolStates.get(schoolId) === true);
+    const allowed = change.allowed && (!change.childSchoolIds?.length || childSchoolIds.length > 0);
+    const ref = summaryReaderRef(change.summaryOwner, change.follower.ownerUid);
+    const existing = snapshots.get(ref.path)!;
+    const value = grants.get(ref.path) ?? {
+      ref,
+      owner: change.summaryOwner,
+      ids: new Set<string>(Array.isArray(existing.get("follower_profile_ids"))
+        ? existing.get("follower_profile_ids") as string[]
+        : []),
+      adultIds: new Set<string>(stringList(existing.get("adult_follower_profile_ids"))),
+      childIds: new Set<string>(stringList(existing.get("child_follower_profile_ids"))),
+      schools: Array.isArray(existing.get("school_ids"))
+        ? existing.get("school_ids") as string[]
+        : [],
+      childByFollower: existing.get("child_school_grants") &&
+        typeof existing.get("child_school_grants") === "object"
+        ? { ...(existing.get("child_school_grants") as Record<string, string[]>) }
+        : {},
+      activeByFollower: existing.get("follower_school_memberships") &&
+        typeof existing.get("follower_school_memberships") === "object"
+        ? { ...(existing.get("follower_school_memberships") as Record<string, string[]>) }
+        : {},
+      exists: existing.exists,
+    };
+    const followerId = profileDocId(change.follower);
+    if (allowed) {
+      value.ids.add(followerId);
+      if (change.followerMode === "child") {
+        value.childIds.add(followerId);
+        value.adultIds.delete(followerId);
+      } else if (change.followerMode === "adult") {
+        value.adultIds.add(followerId);
+        value.childIds.delete(followerId);
+      }
+      if (change.childSchoolIds?.length) {
+        value.childByFollower[followerId] = childSchoolIds.slice(0, MAX_SCHOOLS);
+        value.activeByFollower[followerId] = [...new Set(change.followerSchoolIds ?? [])]
+          .filter((schoolId) => schoolStates.get(schoolId) === true).slice(0, MAX_SCHOOLS);
+      }
+    } else {
+      value.ids.delete(followerId);
+      value.adultIds.delete(followerId);
+      value.childIds.delete(followerId);
+      delete value.childByFollower[followerId];
+      delete value.activeByFollower[followerId];
+    }
+    grants.set(ref.path, value);
+  }
+  for (const grant of grants.values()) {
+    const childSchoolIds = [...new Set(Object.values(grant.childByFollower).flat())];
+    const activeSchoolIds = [...new Set(Object.values(grant.activeByFollower).flat())];
+    if (grant.ids.size === 0 && grant.schools.length === 0) {
+      if (grant.exists) txn.delete(grant.ref);
+    } else {
+      txn.set(grant.ref, {
+        owner_uid: grant.owner.ownerUid,
+        profile_id: grant.owner.profileId,
+        follower_profile_ids: [...grant.ids],
+        adult_follower_profile_ids: [...grant.adultIds],
+        child_follower_profile_ids: [...grant.childIds],
+        school_ids: grant.schools,
+        child_school_ids: childSchoolIds,
+        active_school_ids: activeSchoolIds,
+        child_school_grants: grant.childByFollower,
+        follower_school_memberships: grant.activeByFollower,
+        updated_at: admin.firestore.Timestamp.now(),
+      });
+    }
+  }
 }
 
 function profileRef(ref: ProfileRef): FirebaseFirestore.DocumentReference {
@@ -114,20 +472,332 @@ function schoolMembershipQuery(ownerUid: string, profileId: string) {
     .where("profile_id", "==", profileId).where("state", "==", "active");
 }
 
+async function activeSchoolIds(ref: ProfileRef): Promise<string[]> {
+  const snap = await schoolMembershipQuery(ref.ownerUid, ref.profileId).get();
+  return [...new Set(snap.docs.map((doc) => doc.get("school_id"))
+    .filter((id): id is string => typeof id === "string" && id.length > 0))].slice(0, MAX_SCHOOLS);
+}
+
+async function activeSchoolIdsInTransaction(
+  txn: FirebaseFirestore.Transaction,
+  ref: ProfileRef,
+): Promise<string[]> {
+  const membershipSnap = await txn.get(schoolMembershipQuery(ref.ownerUid, ref.profileId));
+  const candidates = [...new Set(membershipSnap.docs.map((doc) => doc.get("school_id"))
+    .filter((id): id is string => typeof id === "string" && id.length > 0))].slice(0, MAX_SCHOOLS);
+  const schoolSnaps = await Promise.all(candidates.map((id) => txn.get(db.collection("schools").doc(id))));
+  return candidates.filter((_, index) => schoolSnaps[index].exists &&
+    schoolSnaps[index].get("status") === "active");
+}
+
+async function sharedAllowedSchoolIds(
+  first: ProfileRef,
+  second: ProfileRef,
+  allowedSchools: readonly string[],
+): Promise<string[]> {
+  if (allowedSchools.length === 0) return [];
+  const [firstSchools, secondSchools] = await Promise.all([
+    activeSchoolIds(first), activeSchoolIds(second),
+  ]);
+  const firstSet = new Set(firstSchools);
+  return secondSchools.filter((id) => firstSet.has(id) && allowedSchools.includes(id))
+    .slice(0, MAX_SCHOOLS);
+}
+
+async function forEachQueryPage(
+  query: FirebaseFirestore.Query,
+  visit: (docs: FirebaseFirestore.QueryDocumentSnapshot[]) => Promise<void>,
+): Promise<void> {
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  while (true) {
+    let pageQuery = query.orderBy(admin.firestore.FieldPath.documentId()).limit(MAX_PAGE_SIZE);
+    if (cursor) pageQuery = pageQuery.startAfter(cursor);
+    const page = await pageQuery.get();
+    if (page.empty) return;
+    await visit(page.docs);
+    if (page.size < MAX_PAGE_SIZE) return;
+    cursor = page.docs[page.docs.length - 1];
+  }
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === "string"))] : [];
+}
+
+function stringListMap(value: unknown): Record<string, string[]> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const result: Record<string, string[]> = {};
+  for (const [key, ids] of Object.entries(value as Record<string, unknown>)) {
+    if (Array.isArray(ids)) result[key] = stringList(ids);
+  }
+  return result;
+}
+
+function flattenSchoolMap(value: Record<string, string[]>): string[] {
+  return [...new Set(Object.values(value).flat())].slice(0, MAX_SCHOOLS);
+}
+
+async function updateFollowerMembershipMirror(
+  summaryId: string,
+  profile: ProfileRef,
+  membershipIds: readonly string[],
+  lostSchoolId?: string,
+  revokeChildGrant = false,
+): Promise<void> {
+  const query = db.collectionGroup("readers")
+    .where("follower_profile_ids", "array-contains", summaryId);
+  await forEachQueryPage(query, async (docs) => {
+    await db.runTransaction(async (txn) => {
+      const activeIds = (await activeSchoolIdsInTransaction(txn, profile))
+        .filter((id) => membershipIds.includes(id));
+      const readerSnaps = await Promise.all(docs.map((doc) => txn.get(doc.ref)));
+      readerSnaps.forEach((current, index) => {
+        if (!current.exists) return;
+        const doc = current;
+        const ids = stringList(doc.get("follower_profile_ids"));
+        const childGrants = stringListMap(doc.get("child_school_grants"));
+        const followerMemberships = stringListMap(doc.get("follower_school_memberships"));
+        followerMemberships[summaryId] = activeIds;
+        const grantSchools = childGrants[summaryId];
+        if (revokeChildGrant) {
+          delete childGrants[summaryId];
+          ids.splice(ids.indexOf(summaryId), ids.includes(summaryId) ? 1 : 0);
+        } else if (grantSchools && lostSchoolId) {
+          const remaining = grantSchools.filter((id) => id !== lostSchoolId);
+          if (remaining.length === 0) {
+            delete childGrants[summaryId];
+            ids.splice(ids.indexOf(summaryId), ids.includes(summaryId) ? 1 : 0);
+          } else {
+            childGrants[summaryId] = remaining;
+          }
+        }
+        const childSchoolIds = flattenSchoolMap(childGrants);
+        const activeSchoolIds = flattenSchoolMap(followerMemberships);
+        const schoolIds = stringList(doc.get("school_ids"));
+        if (ids.length === 0 && schoolIds.length === 0) {
+          txn.delete(docs[index].ref);
+        } else {
+          txn.set(docs[index].ref, {
+            follower_profile_ids: ids,
+            child_school_ids: childSchoolIds,
+            active_school_ids: activeSchoolIds,
+            child_school_grants: childGrants,
+            follower_school_memberships: followerMemberships,
+            updated_at: admin.firestore.Timestamp.now(),
+          }, { merge: true });
+        }
+      });
+    });
+  });
+}
+
+/** Refreshes server-owned active membership mirrors after a join or restore. */
+export async function refreshSocialMembershipMirror(summaryId: string): Promise<void> {
+  if (!/^[a-f0-9]{64}$/.test(summaryId)) throw new Error("Invalid social summary id");
+  const profileSnap = await profiles().doc(summaryId).get();
+  if (!profileSnap.exists) return;
+  const ownerUid = profileSnap.get("owner_uid");
+  const profileId = profileSnap.get("profile_id");
+  if (typeof ownerUid !== "string" || typeof profileId !== "string") {
+    throw new Error("Social profile membership identity is incomplete");
+  }
+  const profile = { ownerUid, profileId };
+  const activeIds = await db.runTransaction(async (txn) => {
+    const active = await activeSchoolIdsInTransaction(txn, profile);
+    txn.set(profileSnap.ref, { active_school_ids: active, updated_at: admin.firestore.Timestamp.now() }, { merge: true });
+    return active;
+  });
+  await updateFollowerMembershipMirror(summaryId, profile, activeIds);
+}
+
+/** Adds the server-owned live school-access mirror after staff eligibility succeeds. */
+export async function grantSocialStaffSchoolAccess(
+  authUid: string,
+  schoolId: string,
+): Promise<void> {
+  if (!authUid.trim() || authUid.length > 128 || !schoolId.trim() || schoolId.length > 128) {
+    throw new Error("Invalid social staff access identity");
+  }
+  const ref = userControls().doc(authUid);
+  await db.runTransaction(async (txn) => {
+    const staffId = opaqueId("school-staff", schoolId, authUid);
+    const [existing, school, staff] = await Promise.all([
+      txn.get(ref), txn.get(db.collection("schools").doc(schoolId)),
+      txn.get(db.collection("school_admins").doc(staffId)),
+    ]);
+    if (!school.exists || school.get("status") !== "active" ||
+        !staff.exists || staff.get("state") !== "active" || staff.get("removal_pending") === true) return;
+    const schoolIds = stringList(existing.get("active_staff_school_ids"));
+    txn.set(ref, {
+      active_staff_school_ids: [...new Set([...schoolIds, schoolId])],
+      updated_at: admin.firestore.Timestamp.now(),
+    }, { merge: true });
+  });
+}
+
+/**
+ * Deny-first staff access revocation. Clear the read-time mirror before
+ * cleaning all matching ACLs. Page cleanup is idempotent; failures propagate
+ * so callers can abort the staff membership mutation and safely retry.
+ */
+export async function revokeStaffSchoolAccess(
+  authUid: string,
+  schoolId: string,
+): Promise<void> {
+  if (!authUid.trim() || authUid.length > 128 || !schoolId.trim() || schoolId.length > 128) {
+    throw new Error("Invalid social staff access identity");
+  }
+  const userControlRef = userControls().doc(authUid);
+  await db.runTransaction(async (txn) => {
+    const existing = await txn.get(userControlRef);
+    txn.set(userControlRef, {
+      active_staff_school_ids: stringList(existing.get("active_staff_school_ids"))
+        .filter((id) => id !== schoolId),
+      updated_at: admin.firestore.Timestamp.now(),
+    }, { merge: true });
+  });
+
+  const readerQuery = db.collectionGroup("readers")
+    .where("school_ids", "array-contains", schoolId);
+  await forEachQueryPage(readerQuery, async (docs) => {
+    const batch = db.batch();
+    for (const doc of docs) {
+      const schoolIds = stringList(doc.get("school_ids")).filter((id) => id !== schoolId);
+      const followerIds = stringList(doc.get("follower_profile_ids"));
+      if (schoolIds.length === 0 && followerIds.length === 0) {
+        batch.delete(doc.ref);
+      } else {
+        batch.set(doc.ref, {
+          school_ids: schoolIds,
+          updated_at: admin.firestore.Timestamp.now(),
+        }, { merge: true });
+      }
+    }
+    await batch.commit();
+  });
+}
+
+/**
+ * Deny-first membership cleanup. Call before changing/removing the membership
+ * document. The helper is idempotent and resolves only after every ACL page
+ * commits; callers must abort their membership mutation on rejection.
+ */
+export async function revokeSocialGrantsForMembershipChange(
+  summaryId: string,
+  schoolId: string,
+): Promise<void> {
+  if (!/^[a-f0-9]{64}$/.test(summaryId) || !schoolId.trim() || schoolId.length > 128) {
+    throw new Error("Invalid social membership change identity");
+  }
+  const profileRefById = profiles().doc(summaryId);
+  const profileSnap = await profileRefById.get();
+  if (!profileSnap.exists) return;
+  const ownerUid = profileSnap.get("owner_uid");
+  const profileId = profileSnap.get("profile_id");
+  const mode = profileSnap.get("mode");
+  if (typeof ownerUid !== "string" || typeof profileId !== "string" ||
+      (mode !== "adult" && mode !== "child")) {
+    throw new Error("Social profile membership identity is incomplete");
+  }
+  const profile: ProfileRef = { ownerUid, profileId };
+  const activeIds = (await activeSchoolIds(profile)).filter((id) => id !== schoolId);
+  const now = admin.firestore.Timestamp.now();
+  const parentControlsRef = controls().doc(summaryId);
+  const ownerAccountRef = userControls().doc(ownerUid);
+  await db.runTransaction(async (txn) => {
+    const parentControls = mode === "child" ? await txn.get(parentControlsRef) : null;
+    const ownerAccount = mode === "child" ? await txn.get(ownerAccountRef) : null;
+    txn.set(profileRefById, {
+      active_school_ids: activeIds,
+      ...(mode === "child" ? { paused: true } : {}),
+      updated_at: now,
+    }, { merge: true });
+    if (mode === "child") {
+      txn.set(parentControlsRef, {
+        allowed_school_ids: stringList(parentControls?.get("allowed_school_ids"))
+          .filter((id) => id !== schoolId),
+        paused: true,
+        controls_update_pending: true,
+        updated_at: now,
+      }, { merge: true });
+      txn.set(ownerAccountRef, {
+        active_social_child_profile_ids: stringList(ownerAccount?.get("active_social_child_profile_ids"))
+          .filter((id) => id !== summaryId),
+      }, { merge: true });
+    }
+  });
+
+  // Update every summary the departing profile follows. Child grants are
+  // removed from this profile; adult-to-adult grants remain intact.
+  await updateFollowerMembershipMirror(summaryId, profile, activeIds, schoolId, mode === "child");
+
+  // Remove the lost school from staff ACLs on this profile's summary. A child
+  // summary also pauses and clears all follower grants until a parent reviews
+  // the remaining school policy and re-applies it.
+  const readersQuery = profileRefById.firestore.collection("social_summaries")
+    .doc(summaryId).collection("readers");
+  await forEachQueryPage(readersQuery, async (docs) => {
+    const batch = db.batch();
+    for (const doc of docs) {
+      const staffSchools = stringList(doc.get("school_ids")).filter((id) => id !== schoolId);
+      let followerIds = stringList(doc.get("follower_profile_ids"));
+      let childGrants = stringListMap(doc.get("child_school_grants"));
+      const followerMemberships = stringListMap(doc.get("follower_school_memberships"));
+      if (mode === "child") {
+        followerIds = [];
+        childGrants = {};
+      } else {
+        for (const [followerId, schools] of Object.entries(childGrants)) {
+          const remaining = schools.filter((id) => id !== schoolId);
+          if (remaining.length === 0) {
+            delete childGrants[followerId];
+            followerIds = followerIds.filter((id) => id !== followerId);
+          } else {
+            childGrants[followerId] = remaining;
+          }
+        }
+      }
+      const childSchoolIds = flattenSchoolMap(childGrants);
+      const activeSchoolIds = flattenSchoolMap(followerMemberships);
+      if (staffSchools.length === 0 && followerIds.length === 0) {
+        batch.delete(doc.ref);
+      } else {
+        batch.set(doc.ref, {
+          school_ids: staffSchools,
+          follower_profile_ids: followerIds,
+          child_school_ids: childSchoolIds,
+          active_school_ids: activeSchoolIds,
+          child_school_grants: childGrants,
+          updated_at: admin.firestore.Timestamp.now(),
+        }, { merge: true });
+      }
+    }
+    await batch.commit();
+  });
+}
+
 async function sharedAllowedSchool(
   txn: FirebaseFirestore.Transaction,
   from: ProfileRef,
   to: ProfileRef,
   allowedSchools: readonly string[],
-): Promise<boolean> {
-  if (allowedSchools.length === 0) return false;
+): Promise<string[]> {
+  if (allowedSchools.length === 0) return [];
   const [fromSnap, toSnap] = await Promise.all([
     txn.get(schoolMembershipQuery(from.ownerUid, from.profileId)),
     txn.get(schoolMembershipQuery(to.ownerUid, to.profileId)),
   ]);
-  const fromSchools = new Set(fromSnap.docs.map((doc) => doc.get("school_id")));
-  return toSnap.docs.some((doc) => fromSchools.has(doc.get("school_id")) &&
-    allowedSchools.includes(String(doc.get("school_id"))));
+  const fromSchools = new Set(fromSnap.docs
+    .map((doc) => doc.get("school_id"))
+    .filter((id): id is string => typeof id === "string"));
+  const sharedIds = [...new Set(toSnap.docs
+    .map((doc) => doc.get("school_id"))
+    .filter((id): id is string => typeof id === "string"))]
+    .filter((id) => fromSchools.has(id) && allowedSchools.includes(id))
+    .slice(0, MAX_SCHOOLS);
+  const activeSchools = await Promise.all(sharedIds.map((id) => txn.get(db.collection("schools").doc(id))));
+  return sharedIds.filter((_, index) => activeSchools[index].exists &&
+    activeSchools[index].get("status") === "active");
 }
 
 async function requireEligibleChildPair(
@@ -136,21 +806,34 @@ async function requireEligibleChildPair(
   fromProfile: SocialProfile,
   to: ProfileRef,
   toProfile: SocialProfile,
-): Promise<void> {
+): Promise<string[]> {
   const children = [
     ...(fromProfile.mode === "child" ? [from] : []),
     ...(toProfile.mode === "child" ? [to] : []),
   ];
+  let eligibleSchools: Set<string> | null = null;
   for (const child of children) {
     const settingsSnap = await txn.get(controls().doc(profileDocId(child)));
     const allowList = settingsSnap.get("allowed_school_ids");
     if (!Array.isArray(allowList) || allowList.some((id) => typeof id !== "string")) {
       throw new HttpsError("permission-denied", "Child school policy is unavailable");
     }
-    if (!await sharedAllowedSchool(txn, from, to, allowList as string[])) {
+    const sharedSchools = await sharedAllowedSchool(txn, from, to, allowList as string[]);
+    if (sharedSchools.length === 0) {
+      throw new HttpsError("permission-denied", "Learners are not eligible to connect");
+    }
+    const current = new Set<string>(sharedSchools);
+    if (eligibleSchools === null) {
+      eligibleSchools = current;
+    } else {
+      const previous: string[] = [...eligibleSchools];
+      eligibleSchools = new Set<string>(previous.filter((schoolId) => current.has(schoolId)));
+    }
+    if (eligibleSchools.size === 0) {
       throw new HttpsError("permission-denied", "Learners are not eligible to connect");
     }
   }
+  return [...(eligibleSchools ?? [])].slice(0, MAX_SCHOOLS);
 }
 
 async function enforceRateLimit(
@@ -215,6 +898,9 @@ export const upsertSocialProfile = onCall(CALL_OPTS, async (request) => {
     }
     const socialRef = profileRef({ ownerUid: uid, profileId });
     const existing = await txn.get(socialRef);
+    const membershipSnap = await txn.get(schoolMembershipQuery(uid, profileId));
+    const memberSchools = [...new Set(membershipSnap.docs.map((doc) => doc.get("school_id"))
+      .filter((id): id is string => typeof id === "string"))].slice(0, MAX_SCHOOLS);
     const controlsSnap = mode === "child"
       ? await txn.get(controls().doc(profileDocId({ ownerUid: uid, profileId })))
       : null;
@@ -233,11 +919,162 @@ export const upsertSocialProfile = onCall(CALL_OPTS, async (request) => {
       display_name_search: displayName.normalize("NFKC").trim().toLocaleLowerCase("en-US"),
       avatar_id: avatarId,
       paused,
+      active_school_ids: memberSchools,
       updated_at: now,
     }, { merge: true });
     return opaqueProfileId;
   });
   return { success: true, socialProfileId };
+});
+
+/** Publishes only the learner engine's sanitized, identifier-only summary. */
+export const publishSocialSummary = onCall(CALL_OPTS, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  exactKeys(data, ["profileId", "parentSessionId", "summary"]);
+  const profileId = requiredString(data.profileId, "profileId");
+  if (!ULID_RE.test(profileId)) throw new HttpsError("invalid-argument", "profileId must be a valid ULID");
+  const normalized = normalizeSocialSummary(data.summary);
+  const parentSessionId = data.parentSessionId;
+  if (parentSessionId !== undefined && typeof parentSessionId !== "string") {
+    throw new HttpsError("invalid-argument", "parentSessionId must be a string");
+  }
+
+  const profile: ProfileRef = { ownerUid: uid, profileId };
+  const learnerRef = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
+  const summaryRef = summaries().doc(profileDocId(profile));
+  const visibilityRef = summaryVisibility().doc(profileDocId(profile));
+  const rateRef = summaryRateLimits().doc(profileDocId(profile));
+  const now = admin.firestore.Timestamp.now();
+  const minute = Math.floor(now.toMillis() / 60_000);
+
+  await db.runTransaction(async (txn) => {
+    const [learner, rate, visibilitySnap] = await Promise.all([
+      txn.get(learnerRef), txn.get(rateRef), txn.get(visibilityRef),
+    ]);
+    if (!learner.exists) throw new HttpsError("not-found", "Learner profile is unavailable");
+    const mode = learner.get("mode");
+    if (mode !== "child" && mode !== "adult") {
+      throw new HttpsError("failed-precondition", "Learner mode is unavailable");
+    }
+    if (mode === "child") {
+      await assertActiveParentSessionInTransaction(txn, uid, profileId, parentSessionId);
+    } else if (parentSessionId !== undefined) {
+      throw new HttpsError("invalid-argument", "parentSessionId is only valid for a child profile");
+    }
+
+    const previousMinute = Number(rate.get("minute"));
+    const count = previousMinute === minute ? Number(rate.get("count") ?? 0) : 0;
+    if (count >= 30) throw new HttpsError("resource-exhausted", "Summary publish limit reached");
+
+    const profileName = learner.get("display_name");
+    if (typeof profileName !== "string" || !profileName.trim() || profileName.length > 60) {
+      throw new HttpsError("failed-precondition", "Profile display name is unavailable");
+    }
+    const avatarValue = learner.get("avatar");
+    const parsedAvatar = typeof avatarValue === "number" ? avatarValue : Number(avatarValue);
+    const avatarId = Number.isInteger(parsedAvatar) && parsedAvatar >= 0 && parsedAvatar <= 9
+      ? parsedAvatar
+      : 0;
+
+    txn.set(summaryRef, {
+      display_name: profileName.trim(),
+      avatar_id: avatarId,
+      ...applySummaryVisibility(normalized, summaryVisibilityFromStorage(visibilitySnap.data())),
+      computed_at: now,
+      schema_version: 1,
+    });
+    txn.set(rateRef, { minute, count: count + 1, updated_at: now });
+  });
+  return { success: true, summaryId: profileDocId(profile) };
+});
+
+/** Reads the owner's callable-only summary visibility choices. */
+export const getSocialSummaryVisibility = onCall(CALL_OPTS, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  exactKeys(data, ["profileId", "parentSessionId"]);
+  const profileId = requiredString(data.profileId, "profileId");
+  if (!ULID_RE.test(profileId)) throw new HttpsError("invalid-argument", "profileId must be a valid ULID");
+  if (data.parentSessionId !== undefined && typeof data.parentSessionId !== "string") {
+    throw new HttpsError("invalid-argument", "parentSessionId must be a string");
+  }
+  const profile: ProfileRef = { ownerUid: uid, profileId };
+  const learnerRef = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
+  const visibilityRef = summaryVisibility().doc(profileDocId(profile));
+  return db.runTransaction(async (txn) => {
+    const learner = await txn.get(learnerRef);
+    if (!learner.exists) throw new HttpsError("not-found", "Learner profile is unavailable");
+    const mode = learner.get("mode");
+    if (mode !== "child" && mode !== "adult") {
+      throw new HttpsError("failed-precondition", "Learner mode is unavailable");
+    }
+    if (mode === "child") {
+      await assertActiveParentSessionInTransaction(txn, uid, profileId, data.parentSessionId);
+    } else if (data.parentSessionId !== undefined) {
+      throw new HttpsError("invalid-argument", "parentSessionId is only valid for a child profile");
+    }
+    const choices = await txn.get(visibilityRef);
+    return { visibility: summaryVisibilityForWire(summaryVisibilityFromStorage(choices.data())) };
+  });
+});
+
+/** Saves choices and atomically republishes the current sanitized snapshot. */
+export const setSocialSummaryVisibility = onCall(CALL_OPTS, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  exactKeys(data, ["profileId", "parentSessionId", "visibility", "summary"]);
+  const profileId = requiredString(data.profileId, "profileId");
+  if (!ULID_RE.test(profileId)) throw new HttpsError("invalid-argument", "profileId must be a valid ULID");
+  const normalized = normalizeSocialSummary(data.summary);
+  const visibility = parseSummaryVisibility(data.visibility);
+  if (data.parentSessionId !== undefined && typeof data.parentSessionId !== "string") {
+    throw new HttpsError("invalid-argument", "parentSessionId must be a string");
+  }
+
+  const profile: ProfileRef = { ownerUid: uid, profileId };
+  const learnerRef = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
+  const summaryRef = summaries().doc(profileDocId(profile));
+  const visibilityRef = summaryVisibility().doc(profileDocId(profile));
+  const rateRef = summaryRateLimits().doc(profileDocId(profile));
+  const now = admin.firestore.Timestamp.now();
+  const minute = Math.floor(now.toMillis() / 60_000);
+
+  await db.runTransaction(async (txn) => {
+    const [learner, rate] = await Promise.all([txn.get(learnerRef), txn.get(rateRef)]);
+    if (!learner.exists) throw new HttpsError("not-found", "Learner profile is unavailable");
+    const mode = learner.get("mode");
+    if (mode !== "child" && mode !== "adult") {
+      throw new HttpsError("failed-precondition", "Learner mode is unavailable");
+    }
+    if (mode === "child") {
+      await assertActiveParentSessionInTransaction(txn, uid, profileId, data.parentSessionId);
+    } else if (data.parentSessionId !== undefined) {
+      throw new HttpsError("invalid-argument", "parentSessionId is only valid for a child profile");
+    }
+
+    const previousMinute = Number(rate.get("minute"));
+    const count = previousMinute === minute ? Number(rate.get("count") ?? 0) : 0;
+    if (count >= 30) throw new HttpsError("resource-exhausted", "Summary publish limit reached");
+    const profileName = learner.get("display_name");
+    if (typeof profileName !== "string" || !profileName.trim() || profileName.length > 60) {
+      throw new HttpsError("failed-precondition", "Profile display name is unavailable");
+    }
+    const avatarValue = learner.get("avatar");
+    const parsedAvatar = typeof avatarValue === "number" ? avatarValue : Number(avatarValue);
+    const avatarId = Number.isInteger(parsedAvatar) && parsedAvatar >= 0 && parsedAvatar <= 9
+      ? parsedAvatar : 0;
+    txn.set(visibilityRef, { ...visibility, updated_at: now });
+    txn.set(summaryRef, {
+      display_name: profileName.trim(),
+      avatar_id: avatarId,
+      ...applySummaryVisibility(normalized, visibility),
+      computed_at: now,
+      schema_version: 1,
+    });
+    txn.set(rateRef, { minute, count: count + 1, updated_at: now });
+  });
+  return { success: true, summaryId: profileDocId(profile) };
 });
 
 /** Parent-PIN protected child allow-list and sharing pause controls. */
@@ -253,6 +1090,11 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
     throw new HttpsError("invalid-argument", "Child social controls are invalid");
   }
   const now = admin.firestore.Timestamp.now();
+  const child: ProfileRef = { ownerUid: uid, profileId };
+  const socialRef = profileRef(child);
+  const controlsRef = controls().doc(profileDocId(child));
+  const userRef = userControls().doc(uid);
+  let joinedSchools: string[] = [];
   await db.runTransaction(async (txn) => {
     const learnerRef = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
     const learner = await txn.get(learnerRef);
@@ -261,27 +1103,119 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
     }
     await assertActiveParentSessionInTransaction(txn, uid, profileId, data.parentSessionId);
     const memberSnap = await txn.get(schoolMembershipQuery(uid, profileId));
-    const joinedSchools = new Set(memberSnap.docs.map((doc) => doc.get("school_id")));
-    if ((allowed as string[]).some((schoolId) => !joinedSchools.has(schoolId))) {
+    joinedSchools = [...new Set(memberSnap.docs.map((doc) => doc.get("school_id"))
+      .filter((id): id is string => typeof id === "string"))].slice(0, MAX_SCHOOLS);
+    if ((allowed as string[]).some((schoolId) => !joinedSchools.includes(schoolId))) {
       throw new HttpsError("failed-precondition", "Allowed schools must be active memberships");
+    }
+    const allowedSchools = await Promise.all((allowed as string[]).map((schoolId) => txn.get(db.collection("schools").doc(schoolId))));
+    if (allowedSchools.some((school) => !school.exists || school.get("status") !== "active")) {
+      throw new HttpsError("failed-precondition", "Allowed schools must be active");
     }
     const socialRef = profileRef({ ownerUid: uid, profileId });
     const social = await txn.get(socialRef);
-    txn.set(controls().doc(profileDocId({ ownerUid: uid, profileId })), {
+    const user = await txn.get(userRef);
+    // Rules check this pause directly. If a page fails below, sharing stays
+    // denied and a retry can safely restart from the first page.
+    txn.set(socialRef, { paused: true, active_school_ids: joinedSchools }, { merge: true });
+    txn.set(controlsRef, {
       owner_uid: uid,
       profile_id: profileId,
       allowed_school_ids: allowed,
-      paused: data.paused,
+      paused: true,
+      controls_update_pending: true,
       updated_at: now,
       updated_by: uid,
     });
-    if (social.exists) txn.update(socialRef, { paused: data.paused, updated_at: now });
+    txn.set(userRef, {
+      active_social_child_profile_ids: stringList(user.get("active_social_child_profile_ids"))
+        .filter((id) => id !== profileDocId(child)),
+    }, { merge: true });
+    if (!social.exists) throw new HttpsError("failed-precondition", "Child social profile is unavailable");
+  });
+
+  const applyPage = async (changes: FollowerSummaryGrantChange[]) => {
+    if (changes.length === 0) return;
+    await db.runTransaction(async (txn) => setFollowerSummaryGrants(txn, changes));
+  };
+  const outgoingQuery = follows().where("from_owner_uid", "==", uid)
+    .where("from_profile_id", "==", profileId);
+  await forEachQueryPage(outgoingQuery, async (edges) => {
+    const changes: FollowerSummaryGrantChange[] = [];
+    for (const edge of edges) {
+      const target: ProfileRef = {
+        ownerUid: String(edge.get("to_owner_uid")),
+        profileId: String(edge.get("to_profile_id")),
+      };
+      const [eligibleSchools, followerSchools] = await Promise.all([
+        sharedAllowedSchoolIds(child, target, allowed as string[]),
+        activeSchoolIds(child),
+      ]);
+      const eligible = !data.paused && eligibleSchools.length > 0;
+      changes.push({
+        summaryOwner: target,
+        follower: child,
+        allowed: eligible,
+        followerMode: "child",
+        ...(eligible ? { childSchoolIds: eligibleSchools, followerSchoolIds: followerSchools } : {}),
+      });
+    }
+    await applyPage(changes);
+  });
+  const incomingQuery = follows().where("to_owner_uid", "==", uid)
+    .where("to_profile_id", "==", profileId);
+  await forEachQueryPage(incomingQuery, async (edges) => {
+    const changes: FollowerSummaryGrantChange[] = [];
+    for (const edge of edges) {
+      const follower: ProfileRef = {
+        ownerUid: String(edge.get("from_owner_uid")),
+        profileId: String(edge.get("from_profile_id")),
+      };
+      const followerCard = await profileRef(follower).get();
+      const followerMode = followerCard.get("mode") === "adult" ? "adult" : "child";
+      const [eligibleSchools, followerSchools] = await Promise.all([
+        sharedAllowedSchoolIds(follower, child, allowed as string[]),
+        activeSchoolIds(follower),
+      ]);
+      const eligible = !data.paused && eligibleSchools.length > 0;
+      changes.push({
+        summaryOwner: child,
+        follower,
+        allowed: eligible,
+        followerMode,
+        ...(eligible ? { childSchoolIds: eligibleSchools, followerSchoolIds: followerSchools } : {}),
+      });
+    }
+    await applyPage(changes);
+  });
+
+  const completedAt = admin.firestore.Timestamp.now();
+  await db.runTransaction(async (txn) => {
+    const finalSchools = await activeSchoolIdsInTransaction(txn, child);
+    const finalAllowed = (allowed as string[]).filter((schoolId) => finalSchools.includes(schoolId));
+    const user = await txn.get(userRef);
+    const activeChildIds = stringList(user.get("active_social_child_profile_ids"))
+      .filter((id) => id !== profileDocId(child));
+    if (!data.paused) activeChildIds.push(profileDocId(child));
+    txn.set(userRef, { active_social_child_profile_ids: [...new Set(activeChildIds)] }, { merge: true });
+    txn.set(socialRef, {
+      paused: data.paused,
+      active_school_ids: finalSchools,
+      updated_at: completedAt,
+    }, { merge: true });
+    txn.set(controlsRef, {
+      allowed_school_ids: finalAllowed,
+      paused: data.paused,
+      controls_update_pending: false,
+      updated_at: completedAt,
+      updated_by: uid,
+    }, { merge: true });
     txn.set(auditLogs().doc(), {
       owner_uid: uid,
       profile_id: profileId,
       actor_uid: uid,
       action: "child_social_controls_updated",
-      at: now,
+      at: completedAt,
     });
   });
   return { success: true };
@@ -404,7 +1338,7 @@ export const reviewFollowRequest = onCall(CALL_OPTS, async (request) => {
     }
     const fromProfile = await readProfile(txn, from);
     const toProfile = await readProfile(txn, to);
-    await requireEligibleChildPair(txn, from, fromProfile, to, toProfile);
+    const eligibleSchools = await requireEligibleChildPair(txn, from, fromProfile, to, toProfile);
     const block = await txn.get(blocks().doc(blockId(from, to)));
     if (block.exists) throw new HttpsError("not-found", "Follow request is unavailable");
     if (req.get("expires_at")?.toMillis?.() <= now.toMillis()) {
@@ -412,13 +1346,46 @@ export const reviewFollowRequest = onCall(CALL_OPTS, async (request) => {
       return;
     }
     const decision = data.decision as "accept" | "decline";
+    if (decision === "accept") {
+      const followerUserRef = userControls().doc(from.ownerUid);
+      const [followerMemberships, summaryMemberships, followerUser] = await Promise.all([
+        txn.get(schoolMembershipQuery(from.ownerUid, from.profileId)),
+        txn.get(schoolMembershipQuery(to.ownerUid, to.profileId)),
+        fromProfile.mode === "child" ? txn.get(followerUserRef) : Promise.resolve(null),
+      ]);
+      const followerSchools = [...new Set(followerMemberships.docs.map((doc) => doc.get("school_id")))]
+        .filter((id): id is string => typeof id === "string").slice(0, MAX_SCHOOLS);
+      const summarySchools = [...new Set(summaryMemberships.docs.map((doc) => doc.get("school_id")))]
+        .filter((id): id is string => typeof id === "string").slice(0, MAX_SCHOOLS);
+      await setFollowerSummaryGrants(txn, [{
+        summaryOwner: to,
+        follower: from,
+        allowed: true,
+        ...(fromProfile.mode === "child" || toProfile.mode === "child"
+          ? { childSchoolIds: eligibleSchools, followerSchoolIds: followerSchools }
+          : {}),
+      }]);
+      if (toProfile.mode === "child") {
+        txn.set(profileRef(to), { active_school_ids: summarySchools }, { merge: true });
+      }
+      if (fromProfile.mode === "child") {
+        txn.set(followerUserRef, {
+          active_social_child_profile_ids: [...new Set([
+            ...stringList(followerUser?.get("active_social_child_profile_ids")),
+            profileDocId(from),
+          ])],
+        }, { merge: true });
+      }
+    }
     txn.update(reqRef, { state: decision === "accept" ? "accepted" : "declined", updated_at: now });
     if (decision === "accept") {
       txn.set(follows().doc(pairId(from, to)), {
         from_owner_uid: from.ownerUid,
         from_profile_id: from.profileId,
+        from_mode: fromProfile.mode,
         to_owner_uid: to.ownerUid,
         to_profile_id: to.profileId,
+        to_mode: toProfile.mode,
         state: "active",
         created_at: now,
       });
@@ -457,6 +1424,10 @@ export const removeFollow = onCall(CALL_OPTS, async (request) => {
     const requestIn = requests().doc(pairId(to, from));
     const [out, incoming, pendingOut, pendingIn] = await Promise.all([
       txn.get(edgeOut), txn.get(edgeIn), txn.get(requestOut), txn.get(requestIn),
+    ]);
+    await setFollowerSummaryGrants(txn, [
+      ...(out.exists ? [{ summaryOwner: to, follower: from, allowed: false }] : []),
+      ...(incoming.exists ? [{ summaryOwner: from, follower: to, allowed: false }] : []),
     ]);
     if (out.exists) txn.delete(edgeOut);
     if (incoming.exists) txn.delete(edgeIn);
@@ -499,6 +1470,10 @@ export const blockSocialProfile = onCall(CALL_OPTS, async (request) => {
     const requestIn = requests().doc(pairId(to, from));
     const [outEdge, inEdge, outRequest, inRequest] = await Promise.all([
       txn.get(edgeOut), txn.get(edgeIn), txn.get(requestOut), txn.get(requestIn),
+    ]);
+    await setFollowerSummaryGrants(txn, [
+      ...(outEdge.exists ? [{ summaryOwner: to, follower: from, allowed: false }] : []),
+      ...(inEdge.exists ? [{ summaryOwner: from, follower: to, allowed: false }] : []),
     ]);
     txn.set(blockRef, {
       left_owner_uid: from.ownerUid,
@@ -589,6 +1564,10 @@ export const searchSchoolMembers = onCall(CALL_OPTS, async (request) => {
       cursorAfter = String(cursorSnap.get("last_membership_id"));
     }
     const learner = await txn.get(db.collection("users").doc(uid).collection("learner_profiles").doc(profileId));
+    const school = await txn.get(db.collection("schools").doc(schoolId));
+    if (!school.exists || school.get("status") !== "active") {
+      throw new HttpsError("permission-denied", "School discovery is unavailable");
+    }
     if (!learner.exists) throw new HttpsError("not-found", "Learner profile is unavailable");
     if (learner.get("mode") !== "child" && learner.get("mode") !== "adult") {
       throw new HttpsError("failed-precondition", "Learner mode is unavailable");
@@ -643,6 +1622,7 @@ export const searchSchoolMembers = onCall(CALL_OPTS, async (request) => {
         socialProfileId: profile.social_profile_id,
         displayName: profile.display_name,
         avatarId: profile.avatar_id,
+        summaryId: profileDocId(profile),
       })),
       nextPageToken,
     };
@@ -709,6 +1689,12 @@ export const listSocialConnections = onCall(CALL_OPTS, async (request) => {
       id: doc.id,
       fromSocialProfileId: fromProfile.get("social_profile_id") ?? "unavailable",
       toSocialProfileId: toProfile.get("social_profile_id") ?? "unavailable",
+      fromSummaryId: profileDocId(from),
+      toSummaryId: profileDocId(to),
+      fromDisplayName: fromProfile.get("display_name") ?? "Unavailable profile",
+      fromAvatarId: fromProfile.get("avatar_id") ?? 0,
+      toDisplayName: toProfile.get("display_name") ?? "Unavailable profile",
+      toAvatarId: toProfile.get("avatar_id") ?? 0,
       state: data.state,
     };
     for (const key of ["created_at", "updated_at", "expires_at"]) {
@@ -727,6 +1713,19 @@ export const listSocialConnections = onCall(CALL_OPTS, async (request) => {
 
 /** Idempotent graph/request cleanup for profile and account deletion. */
 export async function cleanupSocialForProfile(ownerUid: string, profileId: string): Promise<void> {
+  const profile = { ownerUid, profileId };
+  const socialId = profileDocId(profile);
+  const accountControlRef = userControls().doc(ownerUid);
+  await db.runTransaction(async (txn) => {
+    const accountControls = await txn.get(accountControlRef);
+    if (accountControls.exists) {
+      txn.set(accountControlRef, {
+        active_social_child_profile_ids: stringList(accountControls.get("active_social_child_profile_ids"))
+          .filter((id) => id !== socialId),
+        updated_at: admin.firestore.Timestamp.now(),
+      }, { merge: true });
+    }
+  });
   const queries = [
     profiles().where("owner_uid", "==", ownerUid).where("profile_id", "==", profileId),
     searchCursors().where("owner_uid", "==", ownerUid).where("profile_id", "==", profileId),
@@ -747,7 +1746,43 @@ export async function cleanupSocialForProfile(ownerUid: string, profileId: strin
       await batch.commit();
     }
   }
-  await limits().doc(profileDocId({ ownerUid, profileId })).delete().catch(() => undefined);
+  const readerQuery = db.collectionGroup("readers")
+    .where("follower_profile_ids", "array-contains", socialId);
+  await forEachQueryPage(readerQuery, async (docs) => {
+    const batch = db.batch();
+    for (const doc of docs) {
+      const ids = stringList(doc.get("follower_profile_ids")).filter((id) => id !== socialId);
+      const adultIds = stringList(doc.get("adult_follower_profile_ids"))
+        .filter((id) => id !== socialId);
+      const childIds = stringList(doc.get("child_follower_profile_ids"))
+        .filter((id) => id !== socialId);
+      const childGrants = stringListMap(doc.get("child_school_grants"));
+      const followerMemberships = stringListMap(doc.get("follower_school_memberships"));
+      delete childGrants[socialId];
+      delete followerMemberships[socialId];
+      const schoolIds = stringList(doc.get("school_ids"));
+      if (ids.length === 0 && schoolIds.length === 0) {
+        batch.delete(doc.ref);
+      } else {
+        batch.set(doc.ref, {
+          follower_profile_ids: ids,
+          adult_follower_profile_ids: adultIds,
+          child_follower_profile_ids: childIds,
+          child_school_ids: flattenSchoolMap(childGrants),
+          active_school_ids: flattenSchoolMap(followerMemberships),
+          child_school_grants: childGrants,
+          follower_school_memberships: followerMemberships,
+          updated_at: admin.firestore.Timestamp.now(),
+        }, { merge: true });
+      }
+    }
+    await batch.commit();
+  });
+  await summaryVisibility().doc(socialId).delete();
+  // Profile/account deletion must not claim completion while summary data or
+  // nested reader grants remain. Let Admin SDK failures propagate to caller.
+  await db.recursiveDelete(summaries().doc(socialId));
+  await limits().doc(socialId).delete().catch(() => undefined);
 }
 
 export async function cleanupSocialForAccount(ownerUid: string): Promise<void> {

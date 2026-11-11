@@ -3675,7 +3675,9 @@
   "trackSubTrackCount": "{count} sub-tracks",
   "@trackSubTrackCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "@subTrackHubHeader": {
@@ -4226,10 +4228,22 @@
   "chazaraPlanEditorTitle": "Review intervals",
   "chazaraPlanEditorHint": "Enter the number of days between learning and each review.",
   "chazaraIntervalFieldLabel": "Review interval {number}",
-  "@chazaraIntervalFieldLabel": { "placeholders": { "number": { "type": "int" } } },
+  "@chazaraIntervalFieldLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "chazaraDaysUnit": "days",
   "chazaraRemoveIntervalLabel": "Remove review interval {number}",
-  "@chazaraRemoveIntervalLabel": { "placeholders": { "number": { "type": "int" } } },
+  "@chazaraRemoveIntervalLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
   "chazaraAddInterval": "Add interval",
   "chazaraIntervalPositiveError": "Enter a positive whole number of days.",
   "chazaraIntervalWholeNumberError": "Enter a whole number of days.",
@@ -5722,16 +5736,24 @@
   "@sacredTimeLockStartedAt": {
     "description": "Start time of the current Sacred-Time lock window, shown on the lock overlay in the locked person's configured time zone.",
     "placeholders": {
-      "day": { "type": "String" },
-      "time": { "type": "String" }
+      "day": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
     }
   },
   "sacredTimeLockUnlocksAt": "Unlocks {day} at {time}",
   "@sacredTimeLockUnlocksAt": {
     "description": "Prominent final end time of the current Sacred-Time lock window (including chained holidays), shown in the locked person's configured time zone.",
     "placeholders": {
-      "day": { "type": "String" },
-      "time": { "type": "String" }
+      "day": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
     }
   },
   "tutorCaptureNoEditAccess": "{learner}'s parent hasn't given you editing access",
@@ -6516,18 +6538,30 @@
   "shnayimMikraTodayAliyahDone": "Today's aliyah is done. {remaining} aliyot remain this week.",
   "@shnayimMikraTodayAliyahDone": {
     "description": "Daily aliyah pacing completion message while the parsha still has unfinished aliyot.",
-    "placeholders": { "remaining": { "type": "int" } }
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
   },
   "@shnayimMikraReaderWeekComplete": {
     "description": "Completion message after all assigned Shnayim Mikra reading units are marked complete.",
-    "placeholders": { "portion": { "type": "String" } }
+    "placeholders": {
+      "portion": {
+        "type": "String"
+      }
+    }
   },
   "shnayimMikraUnitProgress": "Section {current} of {total}",
   "@shnayimMikraUnitProgress": {
     "description": "Progress through the current parsha, aliyah, or pasuk task list.",
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "shnayimMikraFirstReading": "First reading",
@@ -6540,19 +6574,31 @@
   "shnayimMikraDueBeforeShabbos": "Due before Shabbos · {date}",
   "@shnayimMikraDueBeforeShabbos": {
     "description": "Due date line for the current weekly Shnayim Mikra assignment.",
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "shnayimMikraCatchUp": "Overdue · {portion}",
   "@shnayimMikraCatchUp": {
     "description": "Label for an unfinished prior weekly parsha available for catch-up.",
-    "placeholders": { "portion": { "type": "String" } }
+    "placeholders": {
+      "portion": {
+        "type": "String"
+      }
+    }
   },
   "shnayimMikraProgressVerses": "{current} of {total} pesukim complete",
   "@shnayimMikraProgressVerses": {
     "description": "Number of verses completed in the current weekly Shnayim Mikra assignment.",
     "placeholders": {
-      "current": { "type": "int" },
-      "total": { "type": "int" }
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "textReaderTranslationLanguage": "Translation language",
@@ -6564,5 +6610,130 @@
   "textReaderLoadingTranslation": "Loading translation…",
   "textReaderTranslationUnavailable": "Translation unavailable offline or right now",
   "textReaderMachineTranslated": "Machine translated",
-  "textReaderRetryTranslation": "Tap to retry"
+  "textReaderRetryTranslation": "Tap to retry",
+  "communityTitle": "Community",
+  "communityParentControls": "Child community controls",
+  "communityFollowers": "Followers",
+  "communityFollowing": "Following",
+  "communityRequests": "Requests",
+  "communityFindPeople": "Find people",
+  "communityPrivacyNotice": "Followers can see only the progress shared on this profile.",
+  "communityNoConnections": "No connections yet",
+  "communityNoRequests": "No requests",
+  "communityUnavailableProfile": "Unavailable profile",
+  "communityApprove": "Approve",
+  "communityDecline": "Decline",
+  "communityRequestPending": "Request pending",
+  "communityRemove": "Remove follower",
+  "communityBlock": "Block profile",
+  "communitySchoolId": "School ID",
+  "communityExactName": "Exact learner name",
+  "communitySearch": "Search",
+  "communitySearchOnlySchool": "Search exact names in a school you belong to.",
+  "communitySendRequest": "Send follow request",
+  "communityPauseSharing": "Pause sharing and social access",
+  "communityAllowedSchools": "Allowed schools",
+  "communityNoAllowedSchools": "No schools allowed",
+  "communitySchoolIds": "School IDs",
+  "communitySchoolIdsHelp": "Enter school IDs joined by commas, then submit.",
+  "communityProfile": "Learner profile",
+  "communitySummaryUnavailable": "This profile summary is unavailable.",
+  "communityStreak": "Streak",
+  "communityCurrentTracks": "Current tracks and position",
+  "communityThisWeek": "This week",
+  "communityWeekOf": "Week of {date}",
+  "@communityWeekOf": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "communitySiyumim": "Siyumim",
+  "communityNoSiyumim": "No siyumim to show yet",
+  "communityUpdatedAt": "Updated {date}",
+  "@communityUpdatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "communityStreakValues": "{current} current · {best} best",
+  "@communityStreakValues": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "best": {
+        "type": "int"
+      }
+    }
+  },
+  "communityPosition": "Position: {position}",
+  "@communityPosition": {
+    "placeholders": {
+      "position": {
+        "type": "String"
+      }
+    }
+  },
+  "communityWeeklyCounts": "{limudim} new learning · {chazaros} review",
+  "@communityWeeklyCounts": {
+    "placeholders": {
+      "limudim": {
+        "type": "int"
+      },
+      "chazaros": {
+        "type": "int"
+      }
+    }
+  },
+  "schoolProfileTitle": "School",
+  "schoolProfileUnavailable": "This school profile is unavailable.",
+  "schoolVerifiedBadge": "Verified",
+  "schoolCreatedDate": "Created {date}",
+  "@schoolCreatedDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "schoolDateUnavailable": "Date unavailable",
+  "schoolAdminsTitle": "School administrators",
+  "schoolReportAction": "Report school",
+  "schoolReportTitle": "Why are you reporting this school?",
+  "schoolReportImpersonation": "Impersonation",
+  "schoolReportAbuse": "Abuse",
+  "schoolReportOther": "Other concern",
+  "schoolReportSubmitted": "Report submitted for review",
+  "schoolRosterTitle": "School members",
+  "schoolChildMemberLabel": "Child profile",
+  "schoolJoinTitle": "Join school",
+  "schoolStaffProgressNotice": "School staff will be able to view this learner’s progress. They cannot change learning records or see private account settings.",
+  "schoolProgressConsent": "I understand and agree that school staff can view my progress.",
+  "schoolParentProgressConsent": "I approve this child joining and understand school staff can view the child’s progress.",
+  "schoolJoinAction": "Join school",
+  "schoolJoinSucceeded": "You joined the school",
+  "schoolAdminMembershipRemovalBlocked": "School administrators must remove or transfer their admin role before leaving or being removed as a member.",
+  "communityOverall": "Overall",
+  "communityVisibilityTitle": "What followers can see",
+  "communityVisibilityDescription": "Choose which parts of this profile’s learning progress are shared with followers and school staff.",
+  "communityVisibilityOverallStreak": "Overall streak",
+  "communityVisibilityOverallWeekly": "Overall weekly learning and review totals",
+  "communityVisibilityTrackStreaks": "Streak for each track",
+  "communityVisibilityTrackWeekly": "Weekly learning and review counts for each track",
+  "communityVisibilityCurrentTracks": "Current tracks and position",
+  "communityVisibilitySiyumim": "Siyumim",
+  "communityVisibilityPreview": "Preview shared progress",
+  "communityVisibilityPreviewEmpty": "No progress sections are currently shared.",
+  "communityTrackCount": "{count, plural, =1{# current track} other{# current tracks}}",
+  "@communityTrackCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communitySiyumCount": "{count, plural, =1{# siyum} other{# siyumim}}",
+  "@communitySiyumCount": {
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

@@ -101,6 +101,68 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Shared read boundary for follower and school-staff progress. The
+    // per-viewer ACL is server-maintained; follower and school grants occupy
+    // separate arrays so either lane can revoke its grant independently.
+    function socialFollowerGrantIsActive(readerPath) {
+      let reader = get(readerPath).data;
+      let accountPath = /databases/$(database)/documents/social_user_controls/$(request.auth.uid);
+      return (reader.adult_follower_profile_ids is list
+              && reader.adult_follower_profile_ids.size() > 0)
+          || (reader.child_follower_profile_ids is list
+              && reader.child_follower_profile_ids.size() > 0
+              && exists(accountPath)
+              && get(accountPath).data.active_social_child_profile_ids is list
+              && reader.child_follower_profile_ids.hasAny(
+                get(accountPath).data.active_social_child_profile_ids));
+    }
+
+    function socialChildFollowerSchoolAccess(summaryId, readerPath) {
+      let childPath = /databases/$(database)/documents/social_profiles/$(summaryId);
+      let parentPath = /databases/$(database)/documents/social_parent_controls/$(summaryId);
+      let reader = get(readerPath).data;
+      return exists(childPath)
+          && exists(parentPath)
+          && get(childPath).data.mode == 'child'
+          && get(childPath).data.paused != true
+          && get(parentPath).data.paused != true
+          && get(parentPath).data.controls_update_pending != true
+          && reader.child_school_ids is list
+          && reader.child_school_ids.size() > 0
+          && reader.child_school_ids[0] is string
+          && get(childPath).data.active_school_ids is list
+          && get(childPath).data.active_school_ids.hasAny([reader.child_school_ids[0]])
+          && get(parentPath).data.allowed_school_ids is list
+          && get(parentPath).data.allowed_school_ids.hasAny([reader.child_school_ids[0]])
+          && reader.active_school_ids is list
+          && reader.active_school_ids.hasAny([reader.child_school_ids[0]]);
+    }
+
+    function socialStaffGrantIsActive(readerPath, summaryProfilePath) {
+      let staffControlPath = /databases/$(database)/documents/social_user_controls/$(request.auth.uid);
+      let reader = get(readerPath).data;
+      let summaryProfile = get(summaryProfilePath).data;
+      return exists(staffControlPath)
+          && reader.school_ids is list
+          && reader.school_ids.size() > 0
+          && summaryProfile.active_school_ids is list
+          && summaryProfile.active_school_ids.size() > 0
+          && get(staffControlPath).data.active_staff_school_ids is list
+          && reader.school_ids.hasAny(get(staffControlPath).data.active_staff_school_ids)
+          && reader.school_ids.hasAny(summaryProfile.active_school_ids);
+    }
+
+    function socialSummaryMayRead(summaryId) {
+      let readerPath = /databases/$(database)/documents/social_summaries/$(summaryId)/readers/$(request.auth.uid);
+      let summaryProfilePath = /databases/$(database)/documents/social_profiles/$(summaryId);
+      return isSignedIn() && exists(readerPath)
+            && exists(summaryProfilePath)
+            && ((socialFollowerGrantIsActive(readerPath)
+                  && (get(summaryProfilePath).data.mode != 'child'
+                    || socialChildFollowerSchoolAccess(summaryId, readerPath)))
+              || socialStaffGrantIsActive(readerPath, summaryProfilePath));
+    }
+
     // Server-controlled rollout claim. It remains absent/false until the
     // minimum-version client rollout is complete, preserving old-client
     // behavior while new clients learn to send a parent session id.
@@ -565,8 +627,58 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // One whitelisted projection per learner profile. Raw events, points,
+    // settings, tutor data and change history are never reachable here.
+    match /social_summaries/{summaryId} {
+      allow get: if socialSummaryMayRead(summaryId)
+        && resource.data.keys().hasOnly([
+          'display_name', 'avatar_id', 'streak',
+          'current_tracks', 'weekly_learning', 'siyumim', 'computed_at',
+          'schema_version'
+        ])
+        && resource.data.display_name is string
+        && resource.data.avatar_id is int
+        && (!('streak' in resource.data)
+          || (resource.data.streak is map
+            && resource.data.streak.keys().hasOnly(['by_curriculum', 'overall'])
+            && (!('by_curriculum' in resource.data.streak)
+              || resource.data.streak.by_curriculum is list)
+            && (!('overall' in resource.data.streak)
+              || (resource.data.streak.overall is map
+                && resource.data.streak.overall.keys().hasOnly(['current_days', 'best_days'])))))
+        && (!('current_tracks' in resource.data) || resource.data.current_tracks is list)
+        && (!('weekly_learning' in resource.data)
+          || (resource.data.weekly_learning is map
+            && resource.data.weekly_learning.keys().hasOnly(['week_start', 'by_curriculum', 'overall'])
+            && resource.data.weekly_learning.week_start is string
+            && (!('by_curriculum' in resource.data.weekly_learning)
+              || resource.data.weekly_learning.by_curriculum is list)
+            && (!('overall' in resource.data.weekly_learning)
+              || (resource.data.weekly_learning.overall is map
+                && resource.data.weekly_learning.overall.keys().hasOnly(['limudim', 'chazaros'])))))
+        && (!('siyumim' in resource.data) || resource.data.siyumim is list)
+        && resource.data.computed_at is timestamp
+        && resource.data.schema_version is int;
+      allow list: if false;
+      allow create, update, delete: if false;
+
+      match /readers/{readerUid} {
+        allow read, write: if false;
+      }
+    }
+
     match /social_parent_controls/{controlId} {
       // Reads as well as writes stay behind PIN-verified callables.
+      allow read, write: if false;
+    }
+
+    match /social_summary_visibility/{summaryId} {
+      // Visibility choices are server-owned and accessed only by callables.
+      allow read, write: if false;
+    }
+
+    match /social_user_controls/{uid} {
+      // Server-maintained child-follower pause gate used by summary rules.
       allow read, write: if false;
     }
 
@@ -599,6 +711,28 @@ service cloud.firestore {
     // Read-model interface owned by the school-membership implementation
     // bead. This bead consumes active memberships from Admin SDK only.
     match /school_memberships/{membershipId} {
+      allow read, write: if false;
+    }
+
+    // Publicly presentable school metadata is returned through callables so
+    // internal creator UIDs, admin identities, and moderation state are never
+    // exposed through a direct Firestore document read.
+    match /schools/{schoolId} {
+      allow read, write: if false;
+    }
+    match /school_admins/{staffId} {
+      allow read, write: if false;
+    }
+    match /school_invites/{inviteId} {
+      allow read, write: if false;
+    }
+    match /school_audit_logs/{entryId} {
+      allow read, write: if false;
+    }
+    match /school_reports/{reportId} {
+      allow read, write: if false;
+    }
+    match /school_rate_limits/{limitId} {
       allow read, write: if false;
     }
 

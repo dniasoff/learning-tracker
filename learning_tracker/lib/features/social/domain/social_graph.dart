@@ -4,23 +4,31 @@ final class SocialProfileCard {
     required this.socialProfileId,
     required this.displayName,
     required this.avatarId,
+    this.summaryId,
   });
 
   final String socialProfileId;
   final String displayName;
   final int avatarId;
+  final String? summaryId;
 
   factory SocialProfileCard.fromWire(Object? value) {
-    final data = _strictMap(value, const {
-      'socialProfileId',
-      'displayName',
-      'avatarId',
-    });
+    final data = _strictMap(
+      value,
+      const {'socialProfileId', 'displayName', 'avatarId', 'summaryId'},
+      requiredKeys: const {'socialProfileId', 'displayName', 'avatarId'},
+    );
     final avatar = data['avatarId'];
     if (avatar is! int || avatar < 0 || avatar > 9) {
       throw const FormatException(
         'avatarId must be one of the catalog indexes',
       );
+    }
+    final summaryId = data['summaryId'];
+    if (summaryId != null &&
+        (summaryId is! String ||
+            !RegExp(r'^[a-f0-9]{64}$').hasMatch(summaryId))) {
+      throw const FormatException('summaryId must be a profile summary id');
     }
     return SocialProfileCard(
       socialProfileId: _opaqueSocialId(
@@ -29,6 +37,7 @@ final class SocialProfileCard {
       ),
       displayName: _requiredString(data['displayName'], 'displayName'),
       avatarId: avatar,
+      summaryId: summaryId as String?,
     );
   }
 }
@@ -68,12 +77,24 @@ final class SocialRelationship {
     required this.fromSocialProfileId,
     required this.toSocialProfileId,
     required this.state,
+    this.fromDisplayName,
+    this.fromAvatarId,
+    this.toDisplayName,
+    this.toAvatarId,
+    this.fromSummaryId,
+    this.toSummaryId,
   });
 
   final String id;
   final String fromSocialProfileId;
   final String toSocialProfileId;
   final FollowRequestState state;
+  final String? fromDisplayName;
+  final int? fromAvatarId;
+  final String? toDisplayName;
+  final int? toAvatarId;
+  final String? fromSummaryId;
+  final String? toSummaryId;
 
   factory SocialRelationship.fromWire(Object? value) {
     final data = _strictMap(
@@ -86,6 +107,12 @@ final class SocialRelationship {
         'created_at',
         'updated_at',
         'expires_at',
+        'fromDisplayName',
+        'fromAvatarId',
+        'toDisplayName',
+        'toAvatarId',
+        'fromSummaryId',
+        'toSummaryId',
       },
       requiredKeys: const {
         'id',
@@ -107,6 +134,27 @@ final class SocialRelationship {
         throw FormatException('$key must be a server timestamp');
       }
     }
+    for (final key in const ['fromDisplayName', 'toDisplayName']) {
+      if (data.containsKey(key) &&
+          (data[key] is! String || (data[key] as String).trim().isEmpty)) {
+        throw FormatException('$key must be a non-empty string');
+      }
+    }
+    for (final key in const ['fromAvatarId', 'toAvatarId']) {
+      if (data.containsKey(key) &&
+          (data[key] is! int ||
+              (data[key] as int) < 0 ||
+              (data[key] as int) > 9)) {
+        throw FormatException('$key must be a catalog avatar id');
+      }
+    }
+    for (final key in const ['fromSummaryId', 'toSummaryId']) {
+      if (data.containsKey(key) &&
+          (data[key] is! String ||
+              !RegExp(r'^[a-f0-9]{64}$').hasMatch(data[key] as String))) {
+        throw FormatException('$key must be a profile summary id');
+      }
+    }
     return SocialRelationship(
       id: _requiredString(data['id'], 'id'),
       fromSocialProfileId: _opaqueSocialId(
@@ -118,6 +166,12 @@ final class SocialRelationship {
         'toSocialProfileId',
       ),
       state: state,
+      fromDisplayName: data['fromDisplayName'] as String?,
+      fromAvatarId: data['fromAvatarId'] as int?,
+      toDisplayName: data['toDisplayName'] as String?,
+      toAvatarId: data['toAvatarId'] as int?,
+      fromSummaryId: data['fromSummaryId'] as String?,
+      toSummaryId: data['toSummaryId'] as String?,
     );
   }
 }

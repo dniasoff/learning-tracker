@@ -1,5 +1,6 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:learning_tracker/features/social/domain/social_graph.dart';
+import 'package:learning_tracker/features/social/domain/social_summary_visibility.dart';
 
 typedef SocialCallableInvoker =
     Future<Object?> Function(String name, Map<String, Object?> data);
@@ -44,6 +45,46 @@ final class SocialGraphRepository {
       'parentSessionId': parentSessionId,
       'allowedSchoolIds': allowedSchoolIds,
       'paused': paused,
+    });
+  }
+
+  Future<void> publishSummary({
+    required String profileId,
+    required Map<String, Object?> summary,
+    String? parentSessionId,
+  }) async {
+    await _invoke('publishSocialSummary', {
+      'profileId': profileId,
+      if (parentSessionId != null) 'parentSessionId': parentSessionId,
+      'summary': summary,
+    });
+  }
+
+  Future<SocialSummaryVisibility> getSummaryVisibility({
+    required String profileId,
+    String? parentSessionId,
+  }) async {
+    final result = await _invoke('getSocialSummaryVisibility', {
+      'profileId': profileId,
+      if (parentSessionId != null) 'parentSessionId': parentSessionId,
+    });
+    if (result is! Map) {
+      throw const FormatException('Invalid social visibility response');
+    }
+    return SocialSummaryVisibility.fromWire(result['visibility']);
+  }
+
+  Future<void> setSummaryVisibility({
+    required String profileId,
+    required SocialSummaryVisibility visibility,
+    required Map<String, Object?> summary,
+    String? parentSessionId,
+  }) async {
+    await _invoke('setSocialSummaryVisibility', {
+      'profileId': profileId,
+      if (parentSessionId != null) 'parentSessionId': parentSessionId,
+      'visibility': visibility.toWire(),
+      'summary': summary,
     });
   }
 
