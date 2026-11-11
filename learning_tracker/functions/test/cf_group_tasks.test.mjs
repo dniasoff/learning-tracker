@@ -72,11 +72,14 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
   beforeEach(async () => clearFirestore());
   afterEach(() => notifications.setPushMessagingForTests(null));
 
-  test('scheduled collection-group sweep has its production composite index', () => {
+  test('scheduled collection-group sweep has its production single-field index', () => {
     const config = JSON.parse(readFileSync(new URL('../../firestore.indexes.json', import.meta.url), 'utf8'));
-    assert.ok(config.indexes.some((index) => index.collectionGroup === 'tasks' && index.queryScope === 'COLLECTION_GROUP' &&
-      index.fields.some((field) => field.fieldPath === 'status' && field.order === 'ASCENDING') &&
-      index.fields.some((field) => field.fieldPath === '__name__' && field.order === 'ASCENDING')));
+    // Firestore rejects a (status, __name__) composite as unnecessary; the
+    // collection-group scope must come from a single-field override.
+    assert.ok(!config.indexes.some((index) => index.collectionGroup === 'tasks'));
+    const override = (config.fieldOverrides ?? []).find((o) => o.collectionGroup === 'tasks' && o.fieldPath === 'status');
+    assert.ok(override?.indexes.some((i) => i.queryScope === 'COLLECTION_GROUP' && i.order === 'ASCENDING'));
+    assert.ok(override?.indexes.some((i) => i.queryScope === 'COLLECTION' && i.order === 'ASCENDING'));
   });
 
   test('posting sends one generic data-only invite push per account with registered FCM tokens', async () => {
