@@ -3,10 +3,9 @@
 // AUD-firebase-15: this file used to hold five unrelated concerns (account
 // deletion, the scheduled audit-log purge, the learning callables, the
 // tutor invite/grant lifecycle, and the tutor CRUD write-paths) in one
-// 2000+ line god-file. It is now a barrel that only re-exports the deployed
-// Cloud Functions from their focused modules below — deployed function
-// names and functions/test imports (`import('../lib/index.js')`) are
-// unaffected because every export name is preserved exactly.
+// 2000+ line god-file. It is now a barrel that re-exports deployed Cloud
+// Functions from focused modules. Phrase translation is an opt-in export,
+// controlled by PHRASE_TRANSLATION_ENABLED.
 //
 // Line budget: stays under 300 lines — it should never again accumulate
 // function bodies. Add new Cloud Functions to (or alongside) one of the
@@ -66,8 +65,13 @@ export { onChangeLogCreated } from "./notifications";
 // Per-child content visibility policy (server-only writes; tutor grant checked).
 export { setProfileHiddenContent } from "./hidden_content";
 
-// Server generated, cached phrase-by-phrase translations for the reader.
-export { translatePhrases } from "./phrase_translations";
+// The translation module declares ANTHROPIC_API_KEY at module scope. Load it
+// only when explicitly enabled so deploy discovery never registers that secret
+// for a release that does not include the callable.
+if (process.env.PHRASE_TRANSLATION_ENABLED === "true") {
+  const { translatePhrases } = require("./phrase_translations") as typeof import("./phrase_translations");
+  exports.translatePhrases = translatePhrases;
+}
 
 // Parent PIN authority and short-lived server sessions (7vx).
 export { setParentPin, createParentSession, revokeParentSession } from "./parent_sessions";

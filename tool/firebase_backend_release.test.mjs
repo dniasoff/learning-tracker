@@ -11,11 +11,13 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
 import {
   DEPLOY_TARGETS,
+  PRODUCTION_PROJECT,
   RELEASE_WORKFLOW,
   RETIRED_CALLABLES,
   ReleaseError,
@@ -24,6 +26,7 @@ import {
   parseFunctionsList,
   runBackendRelease,
   validateReleaseWorkflow,
+  writeProjectEnvironmentFile,
 } from './firebase_backend_release.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -195,6 +198,25 @@ test('AC-6: a failed deploy fails the release and is not retried', () => {
     (e) => e.step === 'deploy' && /rules compile error/.test(e.message),
   );
   assert.equal(fb.kinds().filter((k) => k === 'deploy').length, 1);
+});
+
+test('project env file configures translation without touching emulator .env.local', () => {
+  const root = mkdtempSync(join(tmpdir(), 'firebase-release-env-'));
+  const functionsDir = join(root, 'functions');
+  mkdirSync(functionsDir);
+  const localEnv = join(functionsDir, '.env.local');
+  const localEnvContents = `LOCAL_TEST_VALUE=preserve${String.fromCharCode(10)}`;
+  writeFileSync(localEnv, localEnvContents);
+  try {
+    const path = writeProjectEnvironmentFile(functionsDir, PRODUCTION_PROJECT, false);
+    assert.equal(path, join(functionsDir, '.env.torah-study-tracker'));
+    assert.equal(readFileSync(path, 'utf8'), 'PHRASE_TRANSLATION_ENABLED=false\n');
+    assert.equal(readFileSync(localEnv, 'utf8'), localEnvContents);
+    writeProjectEnvironmentFile(functionsDir, PRODUCTION_PROJECT, true);
+    assert.equal(readFileSync(path, 'utf8'), 'PHRASE_TRANSLATION_ENABLED=true\n');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('parseFunctionsList reads ids and tolerates a log line before the JSON', () => {

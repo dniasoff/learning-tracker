@@ -19,6 +19,11 @@ import functionsTestInit from 'firebase-functions-test';
 export const PROJECT = process.env.GCLOUD_PROJECT || 'demo-cf';
 export const fft = functionsTestInit(); // offline mode — no real project
 
+// The function suite exercises the optional translation callable, so load its
+// module and declared secret only in this test process. The manifest regression
+// test runs in a child process with the flag removed.
+process.env.PHRASE_TRANSLATION_ENABLED = 'true';
+
 // Import AFTER the emulator env is in place (index.js calls
 // admin.initializeApp() at import time). One init per node:test child process.
 export const fns = await import('../lib/index.js');

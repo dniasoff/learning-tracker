@@ -39,7 +39,7 @@
 //   node --test tool/firebase_backend_release.test.mjs
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -84,10 +84,19 @@ export function deployArgs(project, functionNames = null) {
 /** Export names from the built Firebase Functions entry point. */
 export function exportedFunctionNames(entryPath) {
   const require = createRequire(import.meta.url);
-  const exports = require(entryPath);
+  const exports = require(resolve(entryPath));
   return Object.entries(exports)
     .filter(([name, value]) => name !== '__esModule' && typeof value === 'function')
     .map(([name]) => name);
+}
+
+export function writeProjectEnvironmentFile(functionsDir, project, phraseTranslationEnabled) {
+  const path = join(functionsDir, `.env.${project}`);
+  writeFileSync(
+    path,
+    `PHRASE_TRANSLATION_ENABLED=${phraseTranslationEnabled ? 'true' : 'false'}\n`,
+  );
+  return path;
 }
 
 export function listArgs(project) {
@@ -297,6 +306,11 @@ function main(argv) {
     console.error('::error::No production deploy credential: set the FIREBASE_TOKEN repo secret (rulings B5) or GOOGLE_APPLICATION_CREDENTIALS.');
     return 1;
   }
+  writeProjectEnvironmentFile(
+    join(projectDir, 'functions'),
+    project,
+    phraseTranslationEnabled,
+  );
   const run = (args) => spawnSync('firebase', [...args, '--non-interactive'], {
     cwd: projectDir,
     encoding: 'utf8',
