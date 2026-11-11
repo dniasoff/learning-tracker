@@ -24,10 +24,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _Creation extends Mock implements TrackCreationService {}
 
-const _kChumashScopeContent = <ContentItem>[
+const _kTanachScopeContent = <ContentItem>[
   ContentItem(
-    curriculumId: 'chumash',
-    level1: 'Bereshit',
+    curriculumId: 'tanach',
+    level1: 'Torah',
+    level2: 'Bereshit',
+    level3: 'Bereshit 1',
+    level4: 'Bereshit 1:1',
     displayNameHe: 'בראשית',
     displayNameEn: 'Bereshit',
     sefariaRef: 'Bereshit',
@@ -35,13 +38,28 @@ const _kChumashScopeContent = <ContentItem>[
     isLeaf: false,
   ),
   ContentItem(
-    curriculumId: 'chumash',
-    level1: 'Shemot',
+    curriculumId: 'tanach',
+    level1: 'Torah',
+    level2: 'Shemot',
+    level3: 'Shemot 1',
+    level4: 'Shemot 1:1',
     displayNameHe: 'שמות',
     displayNameEn: 'Shemot',
     sefariaRef: 'Shemot',
     sortOrder: 1,
     isLeaf: false,
+  ),
+  ContentItem(
+    curriculumId: 'tanach',
+    level1: 'Neviim',
+    level2: 'Yehoshua',
+    level3: 'Yehoshua 1',
+    level4: 'Yehoshua 1:1',
+    displayNameHe: 'יהושע',
+    displayNameEn: 'Yehoshua',
+    sefariaRef: 'Yehoshua 1:1',
+    sortOrder: 2,
+    isLeaf: true,
   ),
 ];
 
@@ -62,8 +80,8 @@ Widget _app({
     overrides: [
       trackCreationServiceProvider.overrideWithValue(creation),
       if (withContent)
-        curriculumContentProvider(CurriculumId.chumash).overrideWithValue(
-          const AsyncData<List<ContentItem>>(_kChumashScopeContent),
+        curriculumContentProvider(CurriculumId.tanach).overrideWithValue(
+          const AsyncData<List<ContentItem>>(_kTanachScopeContent),
         ),
       dashboardActiveCurriculaProvider.overrideWith(
         (ref) async => activeCurricula,
@@ -95,6 +113,13 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
+Future<void> _chooseSelfPaced(WidgetTester tester) async {
+  await tester.drag(find.byType(ListView).first, const Offset(0, -300));
+  await _settle(tester);
+  await tester.tap(find.byIcon(Icons.directions_walk_rounded));
+  await _settle(tester);
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
@@ -113,6 +138,8 @@ void main() {
     await _settle(tester);
     expect(find.text('Select a Curriculum'), findsOneWidget);
     expect(find.text('Mishnayos'), findsOneWidget);
+    expect(find.text('Tanach'), findsOneWidget);
+    expect(find.text('Chumash'), findsNothing);
   });
 
   testWidgets('curriculum picker has no track-type labels', (tester) async {
@@ -124,47 +151,27 @@ void main() {
     expect(find.text('אישי'), findsNothing);
   });
 
-  testWidgets('selecting Chumash advances to the scope step', (tester) async {
+  testWidgets('selecting Tanach advances to the program step', (tester) async {
     await tester.pumpWidget(_app(creation: _Creation()));
     await _settle(tester);
-    await tester.tap(find.text('Chumash'));
+    await tester.tap(find.text('Tanach'));
     await _settle(tester);
     expect(find.textContaining('STEP 2'), findsOneWidget);
   });
 
-  testWidgets('back navigation does not invoke cancellation after step one', (
+  testWidgets('back from Tanach program selection returns to picker', (
     tester,
   ) async {
     var cancelled = false;
     await tester.pumpWidget(
-      _app(
-        creation: _Creation(),
-        withContent: true,
-        onCancel: () => cancelled = true,
-      ),
+      _app(creation: _Creation(), onCancel: () => cancelled = true),
     );
     await _settle(tester);
-    await tester.tap(find.text('Chumash'));
+    await tester.tap(find.text('Tanach'));
     await _settle(tester);
-    // The top-level scope view has no back affordance; enter the hierarchy
-    // through its rendered drill control, where the breadcrumb back control
-    // is then provided by ScopeHierarchyView. Target the control rather than
-    // coupling this navigation test to a localized content-name spelling.
-    final bereshitTile = find.ancestor(
-      of: find.text('Bereshit'),
-      matching: find.byType(ScopeLevelTile),
-    );
-    expect(bereshitTile, findsOneWidget);
-    final drill = find.descendant(
-      of: bereshitTile,
-      matching: find.byIcon(Icons.chevron_right_rounded),
-    );
-    expect(drill, findsOneWidget);
-    await tester.tap(drill);
+    await tester.binding.handlePopRoute();
     await _settle(tester);
-    final back = find.byIcon(Icons.arrow_back);
-    expect(back, findsOneWidget);
-    await tester.tap(back);
+    expect(find.text('Select a Curriculum'), findsOneWidget);
     expect(cancelled, isFalse);
   });
 
@@ -195,17 +202,23 @@ void main() {
       },
     );
 
-    testWidgets('self-paced Chumash exposes all six wizard steps', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_app(creation: _Creation()));
+    testWidgets('self-paced Tanach opens its scope step', (tester) async {
+      await tester.pumpWidget(_app(creation: _Creation(), withContent: true));
       await _settle(tester);
-      await tester.tap(find.text('Chumash'));
+      await tester.tap(find.text('Tanach'));
       await _settle(tester);
+      await _chooseSelfPaced(tester);
       final step = find.textContaining('STEP').first;
       expect(step, findsOneWidget);
       expect(step.evaluate().single.widget, isA<Text>());
-      expect(find.textContaining('STEP 2 OF 6'), findsOneWidget);
+      expect(find.textContaining('STEP 3 OF 7'), findsOneWidget);
+      expect(
+        find.ancestor(
+          of: find.text('Torah'),
+          matching: find.byType(ScopeLevelTile),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('progress increases when advancing from curriculum step', (
@@ -216,7 +229,7 @@ void main() {
       final before = tester
           .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
           .value!;
-      await tester.tap(find.text('Chumash'));
+      await tester.tap(find.text('Tanach'));
       await _settle(tester);
       final after = tester
           .widget<LinearProgressIndicator>(find.byType(LinearProgressIndicator))
@@ -224,7 +237,7 @@ void main() {
       expect(after, greaterThan(before));
     });
 
-    testWidgets('back from scope returns to step one without cancelling', (
+    testWidgets('back from scope returns to program step without cancelling', (
       tester,
     ) async {
       var cancelled = false;
@@ -236,11 +249,12 @@ void main() {
         ),
       );
       await _settle(tester);
-      await tester.tap(find.text('Chumash'));
+      await tester.tap(find.text('Tanach'));
       await _settle(tester);
+      await _chooseSelfPaced(tester);
       await tester.binding.handlePopRoute();
       await _settle(tester);
-      expect(find.textContaining('STEP 1 OF'), findsOneWidget);
+      expect(find.textContaining('STEP 2 OF'), findsOneWidget);
       expect(cancelled, isFalse);
     });
 

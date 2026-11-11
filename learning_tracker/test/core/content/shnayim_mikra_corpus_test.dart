@@ -70,6 +70,7 @@ void main() {
       curriculumId: CurriculumId.shnayimMikra.storageKey,
       ref: 'Genesis 1:1',
       source: LearningEvent.sourceMain,
+      assignmentKey: '2026-09-01:BERESHIT:israel',
       dateState: DateState.dated,
       learnedOn: '2026-09-01',
       recordedAt: engineAt(1),

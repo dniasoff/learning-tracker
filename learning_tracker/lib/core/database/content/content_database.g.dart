@@ -1075,8 +1075,7 @@ class $SeedMetadataTable extends SeedMetadata
     aliasedName,
     false,
     type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _parshaAliyahCountMeta = const VerificationMeta(
     'parshaAliyahCount',
@@ -1087,8 +1086,7 @@ class $SeedMetadataTable extends SeedMetadata
     aliasedName,
     false,
     type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _contentHashMeta = const VerificationMeta(
     'contentHash',
@@ -1189,6 +1187,8 @@ class $SeedMetadataTable extends SeedMetadata
           _parallelTextCountMeta,
         ),
       );
+    } else if (isInserting) {
+      context.missing(_parallelTextCountMeta);
     }
     if (data.containsKey('parsha_aliyah_count')) {
       context.handle(
@@ -1198,6 +1198,8 @@ class $SeedMetadataTable extends SeedMetadata
           _parshaAliyahCountMeta,
         ),
       );
+    } else if (isInserting) {
+      context.missing(_parshaAliyahCountMeta);
     }
     if (data.containsKey('content_hash')) {
       context.handle(
@@ -1494,14 +1496,16 @@ class SeedMetadataCompanion extends UpdateCompanion<SeedMetadataData> {
     required String buildId,
     required int textCacheCount,
     required int calendarCycleCount,
-    this.parallelTextCount = const Value.absent(),
-    this.parshaAliyahCount = const Value.absent(),
+    required int parallelTextCount,
+    required int parshaAliyahCount,
     this.contentHash = const Value.absent(),
     this.minAppVersion = const Value.absent(),
   }) : builtAt = Value(builtAt),
        buildId = Value(buildId),
        textCacheCount = Value(textCacheCount),
-       calendarCycleCount = Value(calendarCycleCount);
+       calendarCycleCount = Value(calendarCycleCount),
+       parallelTextCount = Value(parallelTextCount),
+       parshaAliyahCount = Value(parshaAliyahCount);
   static Insertable<SeedMetadataData> custom({
     Expression<int>? version,
     Expression<String>? builtAt,
@@ -3080,8 +3084,8 @@ typedef $$SeedMetadataTableCreateCompanionBuilder =
       required String buildId,
       required int textCacheCount,
       required int calendarCycleCount,
-      Value<int> parallelTextCount,
-      Value<int> parshaAliyahCount,
+      required int parallelTextCount,
+      required int parshaAliyahCount,
       Value<String?> contentHash,
       Value<String> minAppVersion,
     });
@@ -3321,8 +3325,8 @@ class $$SeedMetadataTableTableManager
                 required String buildId,
                 required int textCacheCount,
                 required int calendarCycleCount,
-                Value<int> parallelTextCount = const Value.absent(),
-                Value<int> parshaAliyahCount = const Value.absent(),
+                required int parallelTextCount,
+                required int parshaAliyahCount,
                 Value<String?> contentHash = const Value.absent(),
                 Value<String> minAppVersion = const Value.absent(),
               }) => SeedMetadataCompanion.insert(
