@@ -2,8 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
+import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/social/domain/social_graph.dart';
 import 'package:learning_tracker/features/social/presentation/providers/social_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -80,6 +79,17 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
     });
   }
 
+  Future<void> _openGroups(String profileId) async {
+    final profile = await ref.read(activeProfileProvider.future);
+    if (!mounted) return;
+    await context.router.push(
+      LearningGroupsRoute(
+        profileId: profileId,
+        isAdult: profile?.mode.name == 'adult',
+      ),
+    );
+  }
+
   Future<void> _sendRequest(SocialProfileCard target) async {
     final scope = await _scope();
     final profile = await ref.read(activeProfileProvider.future);
@@ -126,6 +136,12 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
               : l10n.communityTitle,
         ),
         actions: [
+          if (profileId != null)
+            IconButton(
+              tooltip: l10n.groupTitle,
+              onPressed: () => _openGroups(profileId),
+              icon: const Icon(Icons.groups_outlined),
+            ),
           IconButton(
             tooltip: l10n.communityVisibilityTitle,
             onPressed: () =>

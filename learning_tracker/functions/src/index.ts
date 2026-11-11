@@ -107,3 +107,19 @@ export {
   setSchoolSuspended,
   deleteSchool,
 } from "./schools";
+
+// Private and school-hosted groups with parent-controlled child summary access.
+export {
+  createLearningGroup,
+  createLearningGroupInvite,
+  getLearningGroupInvite,
+  joinLearningGroup,
+  listMyLearningGroups,
+  getLearningGroup,
+  listGroupParentApprovals,
+  setGroupMemberApproval,
+  removeLearningGroupMember,
+  leaveLearningGroup,
+  transferLearningGroupAdmin,
+  deleteLearningGroup,
+} from "./groups";

@@ -8132,4 +8132,83 @@ class AppLocalizationsHe extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get groupTitle => 'קבוצות לימוד';
+
+  @override
+  String get groupCreate => 'יצירת קבוצה';
+
+  @override
+  String get groupName => 'שם הקבוצה';
+
+  @override
+  String get groupSchoolIdOptional => 'מזהה בית ספר (השאירו ריק לקבוצה פרטית)';
+
+  @override
+  String get groupCreateSuccess => 'הקבוצה נוצרה';
+
+  @override
+  String get groupInvite => 'יצירת הזמנה';
+
+  @override
+  String get groupInviteCode => 'קוד הזמנה';
+
+  @override
+  String get groupJoin => 'הצטרפות עם הזמנה';
+
+  @override
+  String get groupInviteEntry => 'הזנת קוד הזמנה';
+
+  @override
+  String get groupJoinConfirm => 'בדיקה והצטרפות';
+
+  @override
+  String get groupJoinConsent =>
+      'חברי הקבוצה האלה יוכלו לראות את חלקי הפרופיל שתבחרו לשתף עבור הילד הזה.';
+
+  @override
+  String get groupMembers => 'חברים';
+
+  @override
+  String get groupAdmin => 'מנהל';
+
+  @override
+  String get groupPrivate => 'קבוצה פרטית';
+
+  @override
+  String get groupSchoolHosted => 'קבוצת בית ספר';
+
+  @override
+  String get groupLeave => 'עזיבת הקבוצה';
+
+  @override
+  String get groupTransferAdmin => 'העברה לתפקיד מנהל';
+
+  @override
+  String get groupRemoveMember => 'הסרת חבר';
+
+  @override
+  String get groupDelete => 'מחיקת הקבוצה';
+
+  @override
+  String get groupParentApprovals => 'אישורי פרופיל בקבוצה';
+
+  @override
+  String get groupApproveMember =>
+      'לאפשר לחבר הזה לראות את הפרופיל המשותף של הילד';
+
+  @override
+  String get groupRevokeMember => 'ביטול האישור';
+
+  @override
+  String get groupNoGroups => 'אין עדיין קבוצות';
+
+  @override
+  String get groupNoApprovals => 'אין אישורים קבוצתיים לבדיקה';
+
+  @override
+  String groupInvitationCreated(String code) {
+    return 'קוד הזמנה: $code';
+  }
 }

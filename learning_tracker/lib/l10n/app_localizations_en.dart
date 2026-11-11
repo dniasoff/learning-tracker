@@ -8221,4 +8221,84 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get groupTitle => 'Learning groups';
+
+  @override
+  String get groupCreate => 'Create group';
+
+  @override
+  String get groupName => 'Group name';
+
+  @override
+  String get groupSchoolIdOptional =>
+      'School ID (leave blank for a private group)';
+
+  @override
+  String get groupCreateSuccess => 'Group created';
+
+  @override
+  String get groupInvite => 'Create invite';
+
+  @override
+  String get groupInviteCode => 'Invite code';
+
+  @override
+  String get groupJoin => 'Join with invite';
+
+  @override
+  String get groupInviteEntry => 'Enter invite code';
+
+  @override
+  String get groupJoinConfirm => 'Review and join';
+
+  @override
+  String get groupJoinConsent =>
+      'These members will be able to see the profile parts you choose to share for this child.';
+
+  @override
+  String get groupMembers => 'Members';
+
+  @override
+  String get groupAdmin => 'Admin';
+
+  @override
+  String get groupPrivate => 'Private group';
+
+  @override
+  String get groupSchoolHosted => 'School group';
+
+  @override
+  String get groupLeave => 'Leave group';
+
+  @override
+  String get groupTransferAdmin => 'Make admin';
+
+  @override
+  String get groupRemoveMember => 'Remove member';
+
+  @override
+  String get groupDelete => 'Delete group';
+
+  @override
+  String get groupParentApprovals => 'Group profile approvals';
+
+  @override
+  String get groupApproveMember =>
+      'Allow this member to see the child’s shared profile';
+
+  @override
+  String get groupRevokeMember => 'Remove approval';
+
+  @override
+  String get groupNoGroups => 'No groups yet';
+
+  @override
+  String get groupNoApprovals => 'No group approvals to review';
+
+  @override
+  String groupInvitationCreated(String code) {
+    return 'Invite code: $code';
+  }
 }

@@ -47,6 +47,7 @@ import 'package:learning_tracker/features/settings/presentation/screens/curricul
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/social/presentation/screens/join_school_screen.dart';
+import 'package:learning_tracker/features/social/presentation/screens/learning_groups_screen.dart';
 import 'package:learning_tracker/features/social/presentation/screens/school_profile_screen.dart';
 import 'package:learning_tracker/features/social/presentation/screens/school_roster_screen.dart';
 import 'package:learning_tracker/features/social/presentation/screens/social_community_screen.dart';
@@ -221,6 +222,11 @@ class AppRouter extends RootStackRouter {
       path: '/community/visibility',
       page: SocialSummaryVisibilityRoute.page,
       guards: [authGuard, profileSelectionGuard, parentSessionGuard],
+    ),
+    AutoRoute(
+      path: '/community/groups',
+      page: LearningGroupsRoute.page,
+      guards: [authGuard, profileSelectionGuard],
     ),
     // Lifetime report (Story 5.2, DNI-517): a parent surface. A child, a
     // PIN-locked or a tutor session — a deep link included — lands on

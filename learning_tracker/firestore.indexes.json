@@ -301,6 +301,91 @@
         { "fieldPath": "owner_uid", "order": "ASCENDING" },
         { "fieldPath": "profile_id", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "group_profiles",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "profile_id", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "group_profiles",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "group_id", "order": "ASCENDING" },
+        { "fieldPath": "member_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "group_profiles",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "owner_uid", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "group_profiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mode", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "readers",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "reader_uid", "order": "ASCENDING" },
+        { "fieldPath": "group_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "learning_group_parent_approvals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "child_uid", "order": "ASCENDING" },
+        { "fieldPath": "child_profile_id", "order": "ASCENDING" },
+        { "fieldPath": "state", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "learning_group_parent_approvals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "group_id", "order": "ASCENDING" },
+        { "fieldPath": "reader_uid", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "learning_group_parent_approvals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "group_id", "order": "ASCENDING" },
+        { "fieldPath": "child_uid", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "learning_group_parent_approvals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "group_id", "order": "ASCENDING" },
+        { "fieldPath": "child_uid", "order": "ASCENDING" },
+        { "fieldPath": "child_profile_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "learning_groups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "created_by_uid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [
