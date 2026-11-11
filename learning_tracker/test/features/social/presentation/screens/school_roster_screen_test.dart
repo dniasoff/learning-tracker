@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/social/domain/school.dart';
 import 'package:learning_tracker/features/social/presentation/providers/school_providers.dart';
 import 'package:learning_tracker/features/social/presentation/screens/school_roster_screen.dart';
@@ -20,7 +21,7 @@ void main() {
                 summaryId: 'profile-summary-id',
                 displayName: 'Learner',
                 avatarId: 1,
-                mode: 'child',
+                mode: ProfileMode.child,
               ),
             ],
           ),

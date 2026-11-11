@@ -36,7 +36,7 @@ class SchoolRosterScreen extends ConsumerWidget {
                   child: Text(member.displayName.characters.firstOrNull ?? '?'),
                 ),
                 title: Text(member.displayName),
-                subtitle: member.mode == 'child'
+                subtitle: member.mode.isChild
                     ? Text(l10n.schoolChildMemberLabel)
                     : null,
                 trailing: const Icon(Icons.chevron_right),

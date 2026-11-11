@@ -1,3 +1,5 @@
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+
 /// School identity fields intentionally omit account IDs and moderation data.
 final class SchoolProfile {
   const SchoolProfile({
@@ -113,7 +115,7 @@ final class SchoolRosterEntry {
   final String summaryId;
   final String displayName;
   final int avatarId;
-  final String mode;
+  final ProfileMode mode;
 
   factory SchoolRosterEntry.fromWire(Object? raw) {
     if (raw is! Map ||
@@ -128,14 +130,15 @@ final class SchoolRosterEntry {
         raw['summaryId'] is! String ||
         raw['displayName'] is! String ||
         raw['avatarId'] is! int ||
-        !const {'adult', 'child'}.contains(raw['mode'])) {
+        raw['mode'] is! String ||
+        ProfileMode.tryFromStorageKey(raw['mode'] as String) == null) {
       throw const FormatException('Invalid school roster response');
     }
     return SchoolRosterEntry(
       summaryId: raw['summaryId'] as String,
       displayName: raw['displayName'] as String,
       avatarId: raw['avatarId'] as int,
-      mode: raw['mode'] as String,
+      mode: ProfileMode.fromStorageKey(raw['mode'] as String),
     );
   }
 }
