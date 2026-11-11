@@ -84,7 +84,8 @@ describe('school profile and membership callables', () => {
     const created = await call(fns.createSchool, { name: 'Staff Access School', profileId: 'owner-profile' }, parentAuth);
     const invite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
     await call(fns.joinSchoolWithInvite, { inviteCode: invite.inviteCode, profileId: 'owner-profile', progressConsent: true }, parentAuth);
-    await call(fns.joinSchoolWithInvite, { inviteCode: invite.inviteCode, profileId: 'member-profile', progressConsent: true }, strangerAuth);
+    const memberInvite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+    await call(fns.joinSchoolWithInvite, { inviteCode: memberInvite.inviteCode, profileId: 'member-profile', progressConsent: true }, strangerAuth);
     await call(fns.addSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'member-profile' }, parentAuth);
     const summary = db.collection('social_summaries').doc(summaryId(parentAuth.uid, 'owner-profile'));
     assert.deepEqual((await summary.collection('readers').doc(strangerAuth.uid).get()).get('school_ids'), [created.schoolId]);

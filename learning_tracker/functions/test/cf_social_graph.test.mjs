@@ -15,6 +15,7 @@ import {
   socialProfileId,
   strangerAuth,
 } from './_cf_helpers.mjs';
+const { revokeSocialGrantsForMembershipChange } = await import('../lib/social_graph.js');
 
 const SCHOOL = 'school-1';
 const CHILD = 'child-profile';
@@ -330,6 +331,9 @@ describe('social graph callable state', () => {
       paused: false,
     });
     const summaryId = socialProfileDocId(parentAuth.uid, CHILD);
+    await db.collection('social_user_controls').doc(parentAuth.uid).set({
+      active_social_child_profile_ids: [summaryId],
+    });
     const summaryReaders = db.collection('social_summaries').doc(summaryId).collection('readers');
     for (let i = 0; i < 55; i++) {
       const ownerUid = `follower-${i}`;
@@ -364,6 +368,11 @@ describe('social graph callable state', () => {
 
     assert.equal((await summaryReaders.get()).size, 0);
     assert.equal((await db.collection('social_profiles').doc(summaryId).get()).get('paused'), true);
+    assert.deepEqual(
+      (await db.collection('social_user_controls').doc(parentAuth.uid).get())
+        .get('active_social_child_profile_ids'),
+      [],
+    );
   });
 
   test('profile upsert returns a stable opaque id and cannot clear the parent pause', async () => {
@@ -577,6 +586,9 @@ describe('social graph callable state', () => {
 
   test('learner profile deletion removes its graph, requests, and private card', async () => {
     await seedAdultPair();
+    const readerRef = db.collection('social_summaries')
+      .doc(socialProfileDocId(strangerAuth.uid, OTHER))
+      .collection('readers').doc(parentAuth.uid);
     const sent = await call(fns.sendFollowRequest, {
       fromProfileId: CHILD,
       toSocialProfileId: socialProfileId(strangerAuth.uid, OTHER),
@@ -592,6 +604,7 @@ describe('social graph callable state', () => {
     assert.equal((await db.collection('social_follows').get()).size, 0);
     assert.equal((await db.collection('social_follow_requests').get()).size, 0);
     assert.equal((await db.collection('social_profiles').where('owner_uid', '==', parentAuth.uid).get()).size, 0);
+    assert.equal((await readerRef.get()).exists, false);
   });
 
   test('account data deletion removes all of its social edges and profile cards', async () => {
@@ -611,6 +624,70 @@ describe('social graph callable state', () => {
     assert.equal((await db.collection('social_follows').get()).size, 0);
     assert.equal((await db.collection('social_follow_requests').get()).size, 0);
     assert.equal((await db.collection('social_profiles').where('owner_uid', '==', parentAuth.uid).get()).size, 0);
+  });
+
+  test('membership revocation clears child and follower grants before membership removal', async () => {
+    await seedSocialProfile(parentAuth.uid, CHILD, 'child');
+    await member(parentAuth.uid, CHILD);
+    const childId = socialProfileDocId(parentAuth.uid, CHILD);
+    await db.collection('social_parent_controls').doc(childId).set({
+      owner_uid: parentAuth.uid,
+      profile_id: CHILD,
+      allowed_school_ids: [SCHOOL],
+      paused: false,
+    });
+    const childSummaryReaders = db.collection('social_summaries').doc(childId).collection('readers');
+    await childSummaryReaders.doc(strangerAuth.uid).set({
+      owner_uid: parentAuth.uid,
+      profile_id: CHILD,
+      follower_profile_ids: ['adult-follower-profile'],
+      school_ids: [SCHOOL],
+      child_school_ids: [SCHOOL],
+      active_school_ids: [SCHOOL],
+      child_school_grants: { 'adult-follower-profile': [SCHOOL] },
+      follower_school_memberships: { 'adult-follower-profile': [SCHOOL] },
+    });
+
+    await revokeSocialGrantsForMembershipChange(childId, SCHOOL);
+
+    const profile = await db.collection('social_profiles').doc(childId).get();
+    assert.equal(profile.get('paused'), true);
+    assert.deepEqual(profile.get('active_school_ids'), []);
+    const controls = await db.collection('social_parent_controls').doc(childId).get();
+    assert.deepEqual(controls.get('allowed_school_ids'), []);
+    assert.equal(controls.get('paused'), true);
+    assert.equal((await childSummaryReaders.doc(strangerAuth.uid).get()).exists, false);
+  });
+
+  test('membership revocation removes a departed follower from child ACLs', async () => {
+    await seedSocialProfile(parentAuth.uid, CHILD, 'child');
+    await seedSocialProfile(strangerAuth.uid, OTHER, 'adult');
+    await member(strangerAuth.uid, OTHER);
+    const childId = socialProfileDocId(parentAuth.uid, CHILD);
+    const followerId = socialProfileDocId(strangerAuth.uid, OTHER);
+    const childSummaryReader = db.collection('social_summaries').doc(childId)
+      .collection('readers').doc(strangerAuth.uid);
+    await db.collection('social_profiles').doc(childId).set({ active_school_ids: [SCHOOL] }, { merge: true });
+    await db.collection('social_parent_controls').doc(childId).set({
+      owner_uid: parentAuth.uid,
+      profile_id: CHILD,
+      allowed_school_ids: [SCHOOL],
+      paused: false,
+    });
+    await childSummaryReader.set({
+      owner_uid: parentAuth.uid,
+      profile_id: CHILD,
+      follower_profile_ids: [followerId],
+      school_ids: [],
+      child_school_ids: [SCHOOL],
+      active_school_ids: [SCHOOL],
+      child_school_grants: { [followerId]: [SCHOOL] },
+      follower_school_memberships: { [followerId]: [SCHOOL] },
+    });
+
+    await revokeSocialGrantsForMembershipChange(followerId, SCHOOL);
+
+    assert.equal((await childSummaryReader.get()).exists, false);
   });
 
   test('profile deletion fails if the social summary recursive delete fails', async () => {
@@ -639,7 +716,8 @@ describe('social graph callable state', () => {
       firestorePrototype.recursiveDelete = originalRecursiveDelete;
     }
     assert.equal((await summaryRef.get()).exists, true);
-    assert.equal((await summaryRef.collection('readers').doc(strangerAuth.uid).get()).exists, true);
+    assert.equal((await summaryRef.collection('readers').doc(strangerAuth.uid).get()).exists, false,
+      'reader grants are revoked even though failed projection deletion blocks completion');
     assert.equal((await learnerRef.get()).exists, true);
   });
 });
