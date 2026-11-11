@@ -59,7 +59,11 @@ class GroupTaskProgressSlot extends ConsumerWidget {
                         if (member['progress']
                             case final Map<Object?, Object?> progress)
                           Text(
-                            '${member['displayName']}: ${l10n.groupTaskProgressCount((progress['completed'] as num?)?.toInt() ?? 0, (progress['total'] as num?)?.toInt() ?? 0)}',
+                            l10n.groupTaskMemberProgress(
+                              member['displayName'] as String? ?? '',
+                              (progress['completed'] as num?)?.toInt() ?? 0,
+                              (progress['total'] as num?)?.toInt() ?? 0,
+                            ),
                           ),
                     ],
                   ),

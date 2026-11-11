@@ -19,14 +19,14 @@ void main() {
   ) async {
     const profileId = 'profile-a';
     const onDate = '2026-11-11';
-    final task = LearningGroupTaskCard(
+    const task = LearningGroupTaskCard(
       taskId: 'task-1',
       taskName: 'Tamid',
       curriculumId: 'mishnayos',
       status: 'published',
       memberState: 'accepted',
-      scopeUnits: const [],
-      allocationMembers: const [
+      scopeUnits: [],
+      allocationMembers: [
         {
           'memberId': 'member-1',
           'displayName': 'Ari',
@@ -35,7 +35,7 @@ void main() {
           'progress': {'completed': 2, 'total': 5},
         },
       ],
-      joinRequests: const [],
+      joinRequests: [],
     );
 
     await tester.pumpWidget(

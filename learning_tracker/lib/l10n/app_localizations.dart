@@ -13710,6 +13710,12 @@ abstract class AppLocalizations {
   /// **'{completed} of {total} units complete'**
   String groupTaskProgressCount(int completed, int total);
 
+  /// No description provided for @groupTaskMemberProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{member}: {completed} of {total} units complete'**
+  String groupTaskMemberProgress(String member, int completed, int total);
+
   /// No description provided for @groupTaskNoDeadline.
   ///
   /// In en, this message translates to:

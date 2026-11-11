@@ -8298,6 +8298,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String groupTaskMemberProgress(String member, int completed, int total) {
+    return '$member: הושלמו $completed מתוך $total יחידות';
+  }
+
+  @override
   String get groupTaskNoDeadline => 'ללא מועד סיום';
 
   @override

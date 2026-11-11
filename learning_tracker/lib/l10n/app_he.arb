@@ -4638,6 +4638,14 @@
       "total": { "type": "int" }
     }
   },
+  "groupTaskMemberProgress": "{member}: הושלמו {completed} מתוך {total} יחידות",
+  "@groupTaskMemberProgress": {
+    "placeholders": {
+      "member": { "type": "String" },
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "groupTaskNoDeadline": "ללא מועד סיום",
   "groupTaskStatusLine": "{status} · {deadline}",
   "@groupTaskStatusLine": {

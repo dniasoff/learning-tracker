@@ -6797,6 +6797,14 @@
       "total": { "type": "int" }
     }
   },
+  "groupTaskMemberProgress": "{member}: {completed} of {total} units complete",
+  "@groupTaskMemberProgress": {
+    "placeholders": {
+      "member": { "type": "String" },
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "groupTaskNoDeadline": "No deadline",
   "groupTaskStatusLine": "{status} · {deadline}",
   "@groupTaskStatusLine": {
