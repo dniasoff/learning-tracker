@@ -138,6 +138,20 @@ service cloud.firestore {
           && reader.active_school_ids.hasAny([reader.child_school_ids[0]]);
     }
 
+    function socialStaffGrantIsActive(readerPath, summaryProfilePath) {
+      let staffControlPath = /databases/$(database)/documents/social_user_controls/$(request.auth.uid);
+      let reader = get(readerPath).data;
+      let summaryProfile = get(summaryProfilePath).data;
+      return exists(staffControlPath)
+          && reader.school_ids is list
+          && reader.school_ids.size() > 0
+          && summaryProfile.active_school_ids is list
+          && summaryProfile.active_school_ids.size() > 0
+          && get(staffControlPath).data.active_staff_school_ids is list
+          && reader.school_ids.hasAny(get(staffControlPath).data.active_staff_school_ids)
+          && reader.school_ids.hasAny(summaryProfile.active_school_ids);
+    }
+
     function socialSummaryMayRead(summaryId) {
       let readerPath = /databases/$(database)/documents/social_summaries/$(summaryId)/readers/$(request.auth.uid);
       let summaryProfilePath = /databases/$(database)/documents/social_profiles/$(summaryId);
@@ -146,8 +160,7 @@ service cloud.firestore {
             && ((socialFollowerGrantIsActive(readerPath)
                   && (get(summaryProfilePath).data.mode != 'child'
                     || socialChildFollowerSchoolAccess(summaryId, readerPath)))
-              || (get(readerPath).data.school_ids is list
-                  && get(readerPath).data.school_ids.size() > 0));
+              || socialStaffGrantIsActive(readerPath, summaryProfilePath));
     }
 
     // Server-controlled rollout claim. It remains absent/false until the

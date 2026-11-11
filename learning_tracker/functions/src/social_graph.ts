@@ -479,6 +479,67 @@ export async function refreshSocialMembershipMirror(summaryId: string): Promise<
   await updateFollowerMembershipMirror(summaryId, activeIds);
 }
 
+/** Adds the server-owned live school-access mirror after staff eligibility succeeds. */
+export async function grantSocialStaffSchoolAccess(
+  authUid: string,
+  schoolId: string,
+): Promise<void> {
+  if (!authUid.trim() || authUid.length > 128 || !schoolId.trim() || schoolId.length > 128) {
+    throw new Error("Invalid social staff access identity");
+  }
+  const ref = userControls().doc(authUid);
+  await db.runTransaction(async (txn) => {
+    const existing = await txn.get(ref);
+    const schoolIds = stringList(existing.get("active_staff_school_ids"));
+    txn.set(ref, {
+      active_staff_school_ids: [...new Set([...schoolIds, schoolId])],
+      updated_at: admin.firestore.Timestamp.now(),
+    }, { merge: true });
+  });
+}
+
+/**
+ * Deny-first staff access revocation. Clear the read-time mirror before
+ * cleaning all matching ACLs. Page cleanup is idempotent; failures propagate
+ * so callers can abort the staff membership mutation and safely retry.
+ */
+export async function revokeStaffSchoolAccess(
+  authUid: string,
+  schoolId: string,
+): Promise<void> {
+  if (!authUid.trim() || authUid.length > 128 || !schoolId.trim() || schoolId.length > 128) {
+    throw new Error("Invalid social staff access identity");
+  }
+  const userControlRef = userControls().doc(authUid);
+  await db.runTransaction(async (txn) => {
+    const existing = await txn.get(userControlRef);
+    txn.set(userControlRef, {
+      active_staff_school_ids: stringList(existing.get("active_staff_school_ids"))
+        .filter((id) => id !== schoolId),
+      updated_at: admin.firestore.Timestamp.now(),
+    }, { merge: true });
+  });
+
+  const readerQuery = db.collectionGroup("readers")
+    .where("school_ids", "array-contains", schoolId);
+  await forEachQueryPage(readerQuery, async (docs) => {
+    const batch = db.batch();
+    for (const doc of docs) {
+      const schoolIds = stringList(doc.get("school_ids")).filter((id) => id !== schoolId);
+      const followerIds = stringList(doc.get("follower_profile_ids"));
+      if (schoolIds.length === 0 && followerIds.length === 0) {
+        batch.delete(doc.ref);
+      } else {
+        batch.set(doc.ref, {
+          school_ids: schoolIds,
+          updated_at: admin.firestore.Timestamp.now(),
+        }, { merge: true });
+      }
+    }
+    await batch.commit();
+  });
+}
+
 /**
  * Deny-first membership cleanup. Call before changing/removing the membership
  * document. The helper is idempotent and resolves only after every ACL page
