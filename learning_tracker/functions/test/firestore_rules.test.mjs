@@ -246,6 +246,8 @@ describe('social graph rules', () => {
   const cursorPath = 'social_search_cursors/social-cursor';
   const summaryId = 'summary-doc';
   const summaryPath = `social_summaries/${summaryId}`;
+  const summaryProfilePath = `social_profiles/${summaryId}`;
+  const summaryControlsPath = `social_parent_controls/${summaryId}`;
   const readerPath = `${summaryPath}/readers/${TUTOR}`;
 
   beforeEach(async () => {
@@ -255,6 +257,12 @@ describe('social graph rules', () => {
         setDoc(doc(db, profilePath), {
           owner_uid: OWNER, profile_id: profileId, mode: 'child',
           display_name: 'Learner', display_name_search: 'learner', avatar_id: 0, paused: false,
+        }),
+        setDoc(doc(db, summaryProfilePath), {
+          owner_uid: OWNER, profile_id: profileId, mode: 'adult', paused: false,
+        }),
+        setDoc(doc(db, summaryControlsPath), {
+          owner_uid: OWNER, profile_id: profileId, allowed_school_ids: [], paused: false,
         }),
         setDoc(doc(db, controlsPath), {
           owner_uid: OWNER, profile_id: profileId, allowed_school_ids: ['school-1'],
@@ -402,8 +410,8 @@ describe('social graph rules', () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await Promise.all([
-        updateDoc(doc(db, profilePath), { mode: 'child', paused: false, active_school_ids: ['school-1'] }),
-        updateDoc(doc(db, controlsPath), {
+        updateDoc(doc(db, summaryProfilePath), { mode: 'child', paused: false, active_school_ids: ['school-1'] }),
+        updateDoc(doc(db, summaryControlsPath), {
           paused: false,
           controls_update_pending: false,
           allowed_school_ids: ['school-1'],
@@ -422,7 +430,7 @@ describe('social graph rules', () => {
     await installChildFollowerGrant();
     await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await updateDoc(doc(ctx.firestore(), profilePath), { active_school_ids: [] });
+      await updateDoc(doc(ctx.firestore(), summaryProfilePath), { active_school_ids: [] });
     });
     await assertFails(getDoc(doc(tutor(), summaryPath)));
   });
@@ -440,7 +448,7 @@ describe('social graph rules', () => {
     await installChildFollowerGrant();
     await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await updateDoc(doc(ctx.firestore(), controlsPath), { allowed_school_ids: [] });
+      await updateDoc(doc(ctx.firestore(), summaryControlsPath), { allowed_school_ids: [] });
     });
     await assertFails(getDoc(doc(tutor(), summaryPath)));
   });

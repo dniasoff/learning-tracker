@@ -489,15 +489,15 @@ export async function revokeSocialGrantsForMembershipChange(
   const now = admin.firestore.Timestamp.now();
   const parentControlsRef = controls().doc(summaryId);
   await db.runTransaction(async (txn) => {
+    const parentControls = mode === "child" ? await txn.get(parentControlsRef) : null;
     txn.set(profileRefById, {
       active_school_ids: activeIds,
       ...(mode === "child" ? { paused: true } : {}),
       updated_at: now,
     }, { merge: true });
     if (mode === "child") {
-      const parentControls = await txn.get(parentControlsRef);
       txn.set(parentControlsRef, {
-        allowed_school_ids: stringList(parentControls.get("allowed_school_ids"))
+        allowed_school_ids: stringList(parentControls?.get("allowed_school_ids"))
           .filter((id) => id !== schoolId),
         paused: true,
         controls_update_pending: true,
@@ -1018,9 +1018,6 @@ export const reviewFollowRequest = onCall(CALL_OPTS, async (request) => {
         .filter((id): id is string => typeof id === "string").slice(0, MAX_SCHOOLS);
       const summarySchools = [...new Set(summaryMemberships.docs.map((doc) => doc.get("school_id")))]
         .filter((id): id is string => typeof id === "string").slice(0, MAX_SCHOOLS);
-      if (toProfile.mode === "child") {
-        txn.set(profileRef(to), { active_school_ids: summarySchools }, { merge: true });
-      }
       await setFollowerSummaryGrants(txn, [{
         summaryOwner: to,
         follower: from,
@@ -1029,6 +1026,9 @@ export const reviewFollowRequest = onCall(CALL_OPTS, async (request) => {
           ? { childSchoolIds: eligibleSchools, followerSchoolIds: followerSchools }
           : {}),
       }]);
+      if (toProfile.mode === "child") {
+        txn.set(profileRef(to), { active_school_ids: summarySchools }, { merge: true });
+      }
     }
     txn.update(reqRef, { state: decision === "accept" ? "accepted" : "declined", updated_at: now });
     if (decision === "accept") {
