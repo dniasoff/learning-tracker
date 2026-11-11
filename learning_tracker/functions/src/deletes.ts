@@ -155,8 +155,8 @@ export const deleteLearnerProfile = onCall(CALL_OPTS, async (request) => {
     .doc(profileId);
 
   logger.info(`deleteLearnerProfile: uid=${uid} profileId=${profileId}`);
-  await cleanupSocialForProfile(uid, profileId);
   await cleanupSchoolAccess(uid, profileId);
+  await cleanupSocialForProfile(uid, profileId);
   await db.recursiveDelete(profileRef);
   logger.info(`deleteLearnerProfile: complete uid=${uid} profileId=${profileId}`);
 
@@ -226,8 +226,8 @@ export const deleteAccountData = onCall(CALL_OPTS, async (request) => {
 
   const userDocRef = db.collection("users").doc(uid);
   logger.info(`deleteAccountData: starting for uid=${uid}`);
-  await cleanupSocialForAccount(uid);
   await cleanupSchoolAccess(uid);
+  await cleanupSocialForAccount(uid);
   await db.recursiveDelete(userDocRef);
   logger.info(`deleteAccountData: complete for uid=${uid}`);
   return { success: true };

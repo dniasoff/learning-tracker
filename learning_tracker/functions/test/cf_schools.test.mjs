@@ -10,6 +10,26 @@ const digest = (...parts) => createHash('sha256').update(parts.join('\0')).diges
 const summaryId = (uid, profileId) => digest(uid, profileId);
 const memberId = (schoolId, uid, profileId) => digest('school-member', schoolId, uid, profileId);
 const staffId = (schoolId, uid) => digest('school-staff', schoolId, uid);
+const { grantSocialStaffSchoolAccess, refreshSocialMembershipMirror } = await import('../lib/social_graph.js');
+
+async function seedLastAdminSchool() {
+  await db.collection('users').doc(parentAuth.uid).set({ email: 'admin@example.com' });
+  await seedSocialProfile(parentAuth.uid, 'owner-profile', 'adult');
+  await seedSocialProfile(strangerAuth.uid, 'member-profile', 'adult');
+  const created = await call(fns.createSchool, {
+    name: 'Account Deletion School', profileId: 'owner-profile',
+  }, parentAuth);
+  const ownerInvite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+  await call(fns.joinSchoolWithInvite, {
+    inviteCode: ownerInvite.inviteCode, profileId: 'owner-profile', progressConsent: true,
+  }, parentAuth);
+  const memberInvite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+  await call(fns.joinSchoolWithInvite, {
+    inviteCode: memberInvite.inviteCode, profileId: 'member-profile', progressConsent: true,
+  }, strangerAuth);
+  const unusedInvite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+  return { schoolId: created.schoolId, inviteCode: unusedInvite.inviteCode };
+}
 
 describe('school profile and membership callables', () => {
   beforeEach(async () => clearFirestore());
@@ -193,6 +213,119 @@ describe('school profile and membership callables', () => {
     assert.deepEqual((await db.collection('social_profiles').doc(summaryId(strangerAuth.uid, 'member-profile')).get()).get('active_school_ids'), []);
     assert.equal((await db.collection('school_memberships').doc(memberId(created.schoolId, strangerAuth.uid, 'member-profile')).get()).get('state'), 'deleted');
     assert.equal((await db.collection('schools').doc(created.schoolId).get()).get('status'), 'deleted');
+  });
+
+  test('deleting the last admin fences the school, revokes invites, and removes staff reads', async () => {
+    const { schoolId, inviteCode } = await seedLastAdminSchool();
+    const memberSummary = db.collection('social_summaries').doc(summaryId(strangerAuth.uid, 'member-profile'));
+    assert.deepEqual((await memberSummary.collection('readers').doc(parentAuth.uid).get()).get('school_ids'), [schoolId]);
+
+    await call(fns.deleteAccountData, {}, parentAuth);
+
+    const school = await db.collection('schools').doc(schoolId).get();
+    assert.equal(school.get('status'), 'suspended');
+    assert.equal(school.get('cleanup_pending'), false);
+    assert.equal((await db.collection('school_admins').doc(staffId(schoolId, parentAuth.uid)).get()).get('state'), 'removed');
+    assert.equal((await memberSummary.collection('readers').doc(parentAuth.uid).get()).exists, false);
+    assert.equal((await db.collection('social_user_controls').doc(parentAuth.uid).get())
+      .get('active_staff_school_ids')?.includes(schoolId) ?? false, false);
+    const inviteRef = db.collection('school_invites').doc(digest('school-invite', inviteCode));
+    assert.equal((await inviteRef.get()).get('state'), 'revoked');
+    await expectHttpsError(call(fns.joinSchoolWithInvite, {
+      inviteCode, profileId: 'member-profile', progressConsent: true,
+    }, strangerAuth), 'not-found');
+  });
+
+  test('a last-admin status transaction failure aborts account deletion before cleanup', async () => {
+    const { schoolId } = await seedLastAdminSchool();
+    const schoolRef = db.collection('schools').doc(schoolId);
+    const adminRef = db.collection('school_admins').doc(staffId(schoolId, parentAuth.uid));
+    const originalRunTransaction = db.runTransaction;
+    db.runTransaction = async () => { throw new Error('injected school status transaction failure'); };
+    try {
+      await assert.rejects(call(fns.deleteAccountData, {}, parentAuth));
+    } finally {
+      db.runTransaction = originalRunTransaction;
+    }
+    assert.equal((await schoolRef.get()).get('status'), 'active');
+    assert.equal((await schoolRef.get()).get('cleanup_pending'), undefined);
+    assert.equal((await adminRef.get()).get('state'), 'active');
+    assert.equal((await db.collection('users').doc(parentAuth.uid).get()).exists, true);
+  });
+
+  test('a failed cleanup resumes from the fence when account deletion is retried', async () => {
+    const { schoolId, inviteCode } = await seedLastAdminSchool();
+    const schoolRef = db.collection('schools').doc(schoolId);
+    const originalRunTransaction = db.runTransaction;
+    let transactionCount = 0;
+    db.runTransaction = function (...args) {
+      transactionCount += 1;
+      if (transactionCount === 2) return Promise.reject(new Error('injected ACL revoke failure'));
+      return originalRunTransaction.apply(this, args);
+    };
+    try {
+      await assert.rejects(call(fns.deleteAccountData, {}, parentAuth));
+    } finally {
+      db.runTransaction = originalRunTransaction;
+    }
+    assert.equal((await schoolRef.get()).get('status'), 'suspended');
+    assert.equal((await schoolRef.get()).get('cleanup_pending'), true);
+    assert.equal((await db.collection('school_admins').doc(staffId(schoolId, parentAuth.uid)).get()).get('state'), 'active');
+    assert.equal((await db.collection('school_invites').doc(digest('school-invite', inviteCode)).get()).get('state'), 'active');
+
+    await call(fns.deleteAccountData, {}, parentAuth);
+
+    assert.equal((await schoolRef.get()).get('status'), 'suspended');
+    assert.equal((await schoolRef.get()).get('cleanup_pending'), false);
+    assert.equal((await db.collection('school_admins').doc(staffId(schoolId, parentAuth.uid)).get()).get('state'), 'removed');
+    assert.equal((await db.collection('school_invites').doc(digest('school-invite', inviteCode)).get()).get('state'), 'revoked');
+  });
+
+  test('staff and membership refresh grants after the deletion fence cannot survive cleanup', async () => {
+    const { schoolId } = await seedLastAdminSchool();
+    let releaseFence;
+    let signalFence;
+    const fenceCommitted = new Promise((resolve) => { signalFence = resolve; });
+    const waitAtFence = new Promise((resolve) => { releaseFence = resolve; });
+    const originalRunTransaction = db.runTransaction;
+    let pauseAfterFirstTransaction = true;
+    db.runTransaction = async function (...args) {
+      const result = await originalRunTransaction.apply(this, args);
+      if (pauseAfterFirstTransaction) {
+        pauseAfterFirstTransaction = false;
+        signalFence();
+        await waitAtFence;
+      }
+      return result;
+    };
+    try {
+      const deletion = call(fns.deleteAccountData, {}, parentAuth);
+      await Promise.race([
+        fenceCommitted,
+        deletion.then(() => { throw new Error('deletion completed without fencing the school'); }),
+      ]);
+      const school = await db.collection('schools').doc(schoolId).get();
+      assert.equal(school.get('status'), 'suspended');
+      assert.equal(school.get('cleanup_pending'), true);
+      assert.equal((await db.collection('school_admins').doc(staffId(schoolId, parentAuth.uid)).get()).get('state'), 'active');
+
+      await Promise.all([
+        grantSocialStaffSchoolAccess(parentAuth.uid, schoolId),
+        refreshSocialMembershipMirror(summaryId(strangerAuth.uid, 'member-profile')),
+      ]);
+      releaseFence();
+      await deletion;
+    } finally {
+      releaseFence();
+      db.runTransaction = originalRunTransaction;
+    }
+    const reader = await db.collection('social_summaries').doc(summaryId(strangerAuth.uid, 'member-profile'))
+      .collection('readers').doc(parentAuth.uid).get();
+    assert.equal(reader.exists, false);
+    assert.deepEqual((await db.collection('social_user_controls').doc(parentAuth.uid).get())
+      .get('active_staff_school_ids') ?? [], []);
+    assert.deepEqual((await db.collection('social_profiles').doc(summaryId(strangerAuth.uid, 'member-profile')).get())
+      .get('active_school_ids'), []);
   });
 
   test('school reports are bounded categories and stored for owner review', async () => {

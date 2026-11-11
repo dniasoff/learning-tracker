@@ -162,6 +162,88 @@ async function revokeSchoolReaderForUid(schoolId: string, uid: string) {
   }
 }
 
+/** Fence schools whose last active administrator is being deleted. */
+async function beginLastAdminCleanup(schoolId: string, ownerUid: string): Promise<boolean> {
+  const schoolRef = schools().doc(schoolId);
+  const adminRef = admins().doc(staffId(schoolId, ownerUid));
+  return db.runTransaction(async (txn) => {
+    const [school, staff] = await Promise.all([txn.get(schoolRef), txn.get(adminRef)]);
+    if (!school.exists || school.get("status") === "deleted") return false;
+    if (school.get("cleanup_pending") === true) {
+      if (school.get("status") !== "suspended") {
+        throw new HttpsError("failed-precondition", "School cleanup is pending in an invalid state");
+      }
+      return true;
+    }
+    if (!staff.exists || staff.get("state") !== "active") return false;
+    if (!["active", "suspended"].includes(String(school.get("status")))) {
+      throw new HttpsError("failed-precondition", "School cannot be cleaned up in its current state");
+    }
+    const activeAdmins = await txn.get(admins().where("school_id", "==", schoolId).where("state", "==", "active"));
+    if (activeAdmins.size !== 1 || activeAdmins.docs[0].id !== adminRef.id) return false;
+    txn.update(schoolRef, {
+      status: "suspended",
+      cleanup_pending: true,
+      updated_at: admin.firestore.Timestamp.now(),
+    });
+    return true;
+  });
+}
+
+async function revokeActiveSchoolInvites(schoolId: string): Promise<void> {
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  while (true) {
+    let query = invites().where("school_id", "==", schoolId).where("state", "==", "active")
+      .orderBy(admin.firestore.FieldPath.documentId()).limit(400);
+    if (cursor) query = query.startAfter(cursor);
+    const page = await query.get();
+    if (page.empty) return;
+    const batch = db.batch();
+    page.docs.forEach((doc) => batch.update(doc.ref, {
+      state: "revoked", updated_at: admin.firestore.Timestamp.now(),
+    }));
+    await batch.commit();
+    if (page.size < 400) return;
+    cursor = page.docs[page.docs.length - 1];
+  }
+}
+
+/** Complete a fenced last-admin cleanup; repeated calls safely resume it. */
+async function finishLastAdminCleanup(schoolId: string, ownerUid: string): Promise<void> {
+  const staff = await admins().where("school_id", "==", schoolId).get();
+  await Promise.all(staff.docs.map((doc) =>
+    revokeStaffSchoolAccess(String(doc.get("owner_uid")), schoolId),
+  ));
+  await revokeActiveSchoolInvites(schoolId);
+
+  const schoolMembers = await memberships().where("school_id", "==", schoolId).get();
+  const revokeFollowerGrants = async () => {
+    for (const member of schoolMembers.docs) {
+      await revokeSchoolDependentSocial({
+        ownerUid: String(member.get("owner_uid")),
+        profileId: String(member.get("profile_id")),
+      }, schoolId);
+    }
+  };
+  await revokeFollowerGrants();
+  await refreshSchoolReaders(schoolId, true);
+  // Re-run follower revocation after the staff/summary ACL sweep. This is the
+  // final pass before the cleanup marker is cleared.
+  await revokeFollowerGrants();
+
+  await db.runTransaction(async (txn) => {
+    const schoolRef = schools().doc(schoolId);
+    const adminRef = admins().doc(staffId(schoolId, ownerUid));
+    const [school, target] = await Promise.all([txn.get(schoolRef), txn.get(adminRef)]);
+    if (!school.exists || school.get("status") !== "suspended" || school.get("cleanup_pending") !== true ||
+        !target.exists || target.get("state") !== "active") {
+      throw new HttpsError("aborted", "School cleanup state changed; retry account deletion");
+    }
+    txn.update(schoolRef, { cleanup_pending: false, updated_at: admin.firestore.Timestamp.now() });
+    txn.update(adminRef, { state: "removed", ended_at: admin.firestore.Timestamp.now() });
+  });
+}
+
 /** Any signed-in adult account can create a school identity immediately. */
 export const createSchool = onCall(CALL_OPTS, async (request) => {
   const uid = requireAuth(request);
@@ -616,6 +698,15 @@ export async function cleanupSchoolAccess(ownerUid: string, profileId?: string):
   let adminQuery: FirebaseFirestore.Query = admins().where("owner_uid", "==", ownerUid);
   if (profileId) adminQuery = adminQuery.where("profile_id", "==", profileId);
   const adminSnap = await adminQuery.get();
+  // Fence every school for which this account is the last active admin before
+  // revoking any staff/member ACL or changing any membership row.
+  const lastAdminCleanup = new Set<string>();
+  for (const doc of adminSnap.docs) {
+    const schoolId = String(doc.get("school_id"));
+    if (doc.get("state") === "active" && await beginLastAdminCleanup(schoolId, ownerUid)) {
+      lastAdminCleanup.add(schoolId);
+    }
+  }
   await Promise.all(adminSnap.docs.map((doc) =>
     revokeStaffSchoolAccess(ownerUid, String(doc.get("school_id"))),
   ));
@@ -631,22 +722,18 @@ export async function cleanupSchoolAccess(ownerUid: string, profileId?: string):
   }
   for (const doc of adminSnap.docs) {
     const schoolId = String(doc.get("school_id"));
-    const active = await admins().where("school_id", "==", schoolId).where("state", "==", "active").get();
-    if (active.size > 1) {
-      await revokeSchoolReaderForUid(schoolId, ownerUid);
-      await doc.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now() });
+    if (lastAdminCleanup.has(schoolId)) {
+      await finishLastAdminCleanup(schoolId, ownerUid);
     } else {
-      const schoolMembers = await memberships().where("school_id", "==", schoolId).get();
-      for (const member of schoolMembers.docs) {
-        await revokeSchoolDependentSocial({
-          ownerUid: String(member.get("owner_uid")),
-          profileId: String(member.get("profile_id")),
-        }, schoolId);
+      const active = await admins().where("school_id", "==", schoolId).where("state", "==", "active").get();
+      if (doc.get("state") === "active" && active.size <= 1) {
+        throw new HttpsError("aborted", "Last administrator cleanup was not fenced; retry account deletion");
       }
-      await refreshSchoolReaders(schoolId, true);
-      await doc.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now() });
-      await schools().doc(schoolId).update({ status: "suspended", updated_at: admin.firestore.Timestamp.now() }).catch(() => undefined);
+      await revokeSchoolReaderForUid(schoolId, ownerUid);
+      if (doc.get("state") === "active") {
+        await doc.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now() });
+      }
+      await refreshSchoolReaders(schoolId);
     }
-    await refreshSchoolReaders(schoolId);
   }
 }
