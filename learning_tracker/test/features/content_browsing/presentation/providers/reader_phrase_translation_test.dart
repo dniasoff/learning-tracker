@@ -35,6 +35,45 @@ void main() {
     expect(prefs.getString('text_display_language_pprofile-1'), 'es');
   });
 
+  test('missing or unavailable callable resolves without retrying', () async {
+    for (final code in ['not-found', 'unavailable']) {
+      final functions = _MockFunctions();
+      final callable = _MockCallable();
+      when(
+        () => functions.httpsCallable('translatePhrases'),
+      ).thenReturn(callable);
+      when(
+        () => callable.call<Map<String, dynamic>>({
+          'sefariaRef': 'Mishnah Berakhot 1:1',
+          'targetLanguage': 'es',
+        }),
+      ).thenThrow(
+        FirebaseFunctionsException(
+          code: code,
+          message: 'translation endpoint unavailable',
+        ),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          accountFunctionsProvider.overrideWithValue(() async => functions),
+        ],
+      );
+      addTearDown(container.dispose);
+      const key = PhraseTranslationKey('Mishnah Berakhot 1:1', 'es');
+
+      expect(
+        await container.read(phraseTranslationProvider(key).future),
+        isEmpty,
+      );
+      verify(
+        () => callable.call<Map<String, dynamic>>({
+          'sefariaRef': 'Mishnah Berakhot 1:1',
+          'targetLanguage': 'es',
+        }),
+      ).called(1);
+    }
+  });
+
   test(
     'phrase translations are reused from local storage without another callable',
     () async {

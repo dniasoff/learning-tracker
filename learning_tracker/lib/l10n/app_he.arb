@@ -4449,6 +4449,7 @@
   "textReaderOfflineLabel": "לא מקוון",
   "textReaderClose": "סגירה",
   "textReaderLoadingTranslation": "התרגום בטעינה…",
+  "textReaderTranslationNotAvailableYet": "התרגום עדיין אינו זמין",
   "textReaderTranslationUnavailable": "התרגום אינו זמין במצב לא מקוון או כרגע",
   "textReaderMachineTranslated": "תרגום מכונה",
   "textReaderRetryTranslation": "הקשה כדי לנסות שוב",

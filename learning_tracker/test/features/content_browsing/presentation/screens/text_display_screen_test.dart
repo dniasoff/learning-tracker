@@ -667,6 +667,28 @@ void main() {
     },
   );
 
+  testWidgets('missing translation endpoint shows a non-retrying notice', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        textState: AsyncData(_content()),
+        translationLanguage: 'fr',
+        phraseTranslations: Future.value(const <PhraseTranslation>[]),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 30));
+
+    expect(find.text('Translation not available yet'), findsOneWidget);
+    expect(find.text('From when may one recite'), findsOneWidget);
+    expect(find.text('Loading translation…'), findsNothing);
+    expect(find.text('Tap to retry'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets(
     'AI translation loading and unavailable states retain Sefaria English',
     (tester) async {

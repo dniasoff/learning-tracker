@@ -6608,6 +6608,7 @@
   "textReaderOfflineLabel": "Offline",
   "textReaderClose": "Close",
   "textReaderLoadingTranslation": "Loading translation…",
+  "textReaderTranslationNotAvailableYet": "Translation not available yet",
   "textReaderTranslationUnavailable": "Translation unavailable offline or right now",
   "textReaderMachineTranslated": "Machine translated",
   "textReaderRetryTranslation": "Tap to retry",

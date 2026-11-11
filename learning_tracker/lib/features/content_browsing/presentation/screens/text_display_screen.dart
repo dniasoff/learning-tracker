@@ -649,6 +649,25 @@ class _ReaderSegmentCard extends ConsumerWidget {
     final async = ref.watch(phraseTranslationProvider(key));
     final l10n = AppLocalizations.of(context)!;
     final values = <SegmentGloss>[];
+    if (async.hasValue && async.requireValue.isEmpty) {
+      values.add(
+        SegmentGloss(
+          text: l10n.textReaderTranslationNotAvailableYet,
+          direction: TextDirection.ltr,
+          style: style,
+        ),
+      );
+      if (segment.englishText.isNotEmpty) {
+        values.add(
+          SegmentGloss(
+            text: segment.englishText,
+            direction: TextDirection.ltr,
+            style: style,
+          ),
+        );
+      }
+      return values;
+    }
     if (async.hasValue) {
       for (final phrase in async.requireValue) {
         values.add(

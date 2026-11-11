@@ -7873,6 +7873,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get textReaderLoadingTranslation => 'התרגום בטעינה…';
 
   @override
+  String get textReaderTranslationNotAvailableYet => 'התרגום עדיין אינו זמין';
+
+  @override
   String get textReaderTranslationUnavailable =>
       'התרגום אינו זמין במצב לא מקוון או כרגע';
 

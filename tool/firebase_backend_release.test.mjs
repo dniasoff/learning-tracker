@@ -74,6 +74,10 @@ test('the delete and deploy commands are the AC-3 / AC-6 commands verbatim', () 
     deployArgs(PROJECT).join(' '),
     'deploy --only firestore:rules,firestore:indexes,functions --project demo-release',
   );
+  assert.equal(
+    deployArgs(PROJECT, ['alpha', 'translatePhrases', 'beta']).join(' '),
+    'deploy --only firestore:rules,firestore:indexes,functions:alpha,functions:beta --project demo-release',
+  );
 });
 
 test('happy path: list, delete the four, verify absent, deploy once', () => {
@@ -85,6 +89,35 @@ test('happy path: list, delete the four, verify absent, deploy once', () => {
   assert.deepEqual(fb.calls[1], deleteArgs(PROJECT));
   assert.deepEqual(fb.calls[3], deployArgs(PROJECT));
   assert.deepEqual(steps.map((s) => s.step), ['list-before', 'undeploy', 'verify-undeploy', 'deploy']);
+});
+
+test('phrase translation disabled deploys every built export except translatePhrases', () => {
+  const exports = ['inviteTutor', 'translatePhrases', 'dailySummary'];
+  const fb = fakeFirebase({ lists: [listed(...RETIRED_CALLABLES), listed()] });
+  runBackendRelease({
+    run: fb.run,
+    project: PROJECT,
+    phraseTranslationEnabled: false,
+    deployFunctionNames: exports,
+  });
+  assert.deepEqual(fb.calls.at(-1), [
+    'deploy',
+    '--only',
+    'firestore:rules,firestore:indexes,functions:inviteTutor,functions:dailySummary',
+    '--project',
+    PROJECT,
+  ]);
+});
+
+test('enabled phrase translation retains the original all-functions deploy', () => {
+  const fb = fakeFirebase({ lists: [listed(), listed()] });
+  runBackendRelease({
+    run: fb.run,
+    project: PROJECT,
+    phraseTranslationEnabled: true,
+    deployFunctionNames: ['inviteTutor', 'translatePhrases'],
+  });
+  assert.deepEqual(fb.calls.at(-1), deployArgs(PROJECT));
 });
 
 test('a partial earlier delete still runs the exact four-name command', () => {
@@ -185,7 +218,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Comments may mention firebase deploy and functions:delete.
-      - run: node tool/firebase_backend_release.mjs --mode deploy --project torah-study-tracker
+      - env:
+          PHRASE_TRANSLATION_ENABLED: \${{ vars.PHRASE_TRANSLATION_ENABLED }}
+        run: node tool/firebase_backend_release.mjs --mode deploy --project torah-study-tracker
   perf-gate:
     needs: gate-ci-status
     runs-on: ubuntu-latest

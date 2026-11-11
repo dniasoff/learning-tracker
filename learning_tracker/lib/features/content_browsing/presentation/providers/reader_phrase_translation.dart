@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart'
     show kNoProfilePreferenceSentinel;
@@ -176,12 +177,20 @@ final phraseTranslationProvider =
       }
       final resolver = ref.read(accountFunctionsProvider);
       final functions = await resolver();
-      final result = await functions
-          .httpsCallable('translatePhrases')
-          .call<Map<String, dynamic>>({
-            'sefariaRef': key.ref,
-            'targetLanguage': key.language,
-          });
+      late final HttpsCallableResult<Map<String, dynamic>> result;
+      try {
+        result = await functions
+            .httpsCallable('translatePhrases')
+            .call<Map<String, dynamic>>({
+              'sefariaRef': key.ref,
+              'targetLanguage': key.language,
+            });
+      } on FirebaseFunctionsException catch (error) {
+        if (error.code == 'not-found' || error.code == 'unavailable') {
+          return const <PhraseTranslation>[];
+        }
+        rethrow;
+      }
       final phrases = (result.data['phrases'] as List)
           .cast<Map<dynamic, dynamic>>()
           .map(

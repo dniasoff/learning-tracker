@@ -12954,6 +12954,12 @@ abstract class AppLocalizations {
   /// **'Loading translation…'**
   String get textReaderLoadingTranslation;
 
+  /// No description provided for @textReaderTranslationNotAvailableYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation not available yet'**
+  String get textReaderTranslationNotAvailableYet;
+
   /// No description provided for @textReaderTranslationUnavailable.
   ///
   /// In en, this message translates to:

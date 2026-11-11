@@ -7960,6 +7960,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get textReaderLoadingTranslation => 'Loading translation…';
 
   @override
+  String get textReaderTranslationNotAvailableYet =>
+      'Translation not available yet';
+
+  @override
   String get textReaderTranslationUnavailable =>
       'Translation unavailable offline or right now';
 

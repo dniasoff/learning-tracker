@@ -40,6 +40,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { extractJob, jobNeeds, validateDeployTargets } from './check_backend_deploy_gate.mjs';
@@ -67,8 +68,26 @@ export function deleteArgs(project) {
 }
 
 /** `firebase deploy --only firestore:rules,firestore:indexes,functions`. */
-export function deployArgs(project) {
-  return ['deploy', '--only', DEPLOY_TARGETS, '--project', project];
+export function deployArgs(project, functionNames = null) {
+  const targets = functionNames == null
+    ? DEPLOY_TARGETS
+    : [
+        'firestore:rules',
+        'firestore:indexes',
+        ...functionNames
+          .filter((name) => name !== 'translatePhrases')
+          .map((name) => `functions:${name}`),
+      ].join(',');
+  return ['deploy', '--only', targets, '--project', project];
+}
+
+/** Export names from the built Firebase Functions entry point. */
+export function exportedFunctionNames(entryPath) {
+  const require = createRequire(import.meta.url);
+  const exports = require(entryPath);
+  return Object.entries(exports)
+    .filter(([name, value]) => name !== '__esModule' && typeof value === 'function')
+    .map(([name]) => name);
 }
 
 export function listArgs(project) {
@@ -117,7 +136,13 @@ export class ReleaseError extends Error {
  * firebase-tools invocation). Returns the steps it ran; throws ReleaseError
  * (naming the failed step) on the first failure, before any later step.
  */
-export function runBackendRelease({ run, project, log = () => {} }) {
+export function runBackendRelease({
+  run,
+  project,
+  log = () => {},
+  phraseTranslationEnabled = true,
+  deployFunctionNames,
+}) {
   if (!project) throw new ReleaseError('args', '--project is required');
   const steps = [];
   const invoke = (step, args) => {
@@ -153,7 +178,10 @@ export function runBackendRelease({ run, project, log = () => {} }) {
     throw new ReleaseError('verify-undeploy', `still deployed after delete: ${remaining.join(', ')}`);
   }
   log(`Verified absent: ${RETIRED_CALLABLES.join(', ')}`);
-  invoke('deploy', deployArgs(project));
+  invoke(
+    'deploy',
+    deployArgs(project, phraseTranslationEnabled ? null : deployFunctionNames),
+  );
   return steps;
 }
 
@@ -206,7 +234,11 @@ export function validateReleaseWorkflow(text) {
     if (/^ {4}if:/m.test(job)) errors.push(`\`${name}\` must not be conditional (no job-level if:)`);
   }
   const code = (s) => s.replace(/^\s*#.*$/gm, '');
-  const runs = code(backend).match(/node tool\/firebase_backend_release\.mjs[^\n]*/g) ?? [];
+  const backendCode = code(backend);
+  const runs = backendCode.match(/node tool\/firebase_backend_release\.mjs[^\n]*/g) ?? [];
+  if (!/PHRASE_TRANSLATION_ENABLED:\s*\$\{\{\s*vars\.PHRASE_TRANSLATION_ENABLED\s*\}\}/.test(backendCode)) {
+    errors.push(`\`${BACKEND_JOB}\` must pass vars.PHRASE_TRANSLATION_ENABLED to the release script`);
+  }
   if (runs.length !== 1 || !/--mode deploy\b/.test(runs[0]) || !runs[0].includes(`--project ${PRODUCTION_PROJECT}`)) {
     errors.push(`\`${BACKEND_JOB}\` must run \`node tool/firebase_backend_release.mjs --mode deploy --project ${PRODUCTION_PROJECT}\` exactly once`);
   }
@@ -248,12 +280,17 @@ function main(argv) {
     for (const e of errors) console.error(`::error::${e}`);
     return 1;
   }
+  const phraseTranslationEnabled = process.env.PHRASE_TRANSLATION_ENABLED === 'true';
+  const deployFunctionNames = phraseTranslationEnabled
+    ? undefined
+    : exportedFunctionNames(join(projectDir, 'functions', 'lib', 'index.js'));
+  const deployTargetArgs = deployArgs(project, phraseTranslationEnabled ? null : deployFunctionNames);
   if (mode === 'dry-run') {
     console.log('DRY-RUN — the release would run, in order:');
     console.log(`  firebase ${listArgs(project).join(' ')}`);
     console.log(`  firebase ${deleteArgs(project).join(' ')}   (only if any is deployed)`);
     console.log(`  firebase ${listArgs(project).join(' ')}   (fail if any remains)`);
-    console.log(`  firebase ${deployArgs(project).join(' ')}   (once)`);
+    console.log(`  firebase ${deployTargetArgs.join(' ')}   (once)`);
     return 0;
   }
   if (!process.env.FIREBASE_TOKEN && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
@@ -275,6 +312,8 @@ function main(argv) {
         return r;
       },
       project,
+      phraseTranslationEnabled,
+      deployFunctionNames,
       log: (m) => console.log(m),
     });
   } catch (e) {

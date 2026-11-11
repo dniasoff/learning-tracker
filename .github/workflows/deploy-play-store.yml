@@ -135,6 +135,7 @@ jobs:
       - name: Undeploy the retired callables, verify, then release rules, indexes and functions once
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PHRASE_TRANSLATION_ENABLED: ${{ vars.PHRASE_TRANSLATION_ENABLED }}
         run: node tool/firebase_backend_release.mjs --mode deploy --project torah-study-tracker
 
   # ── perf-gate (DNI-490 AC-5; AD-54 perf gate, ruling B12) ─────────────────
