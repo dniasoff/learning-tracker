@@ -397,6 +397,53 @@ describe('social graph rules', () => {
     });
     await assertFails(getDoc(doc(tutor(), summaryPath)), 'summary rejects any non-allowlisted field');
   });
+
+  async function installChildFollowerGrant() {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await Promise.all([
+        updateDoc(doc(db, profilePath), { mode: 'child', paused: false, active_school_ids: ['school-1'] }),
+        updateDoc(doc(db, controlsPath), {
+          paused: false,
+          controls_update_pending: false,
+          allowed_school_ids: ['school-1'],
+        }),
+        updateDoc(doc(db, readerPath), {
+          follower_profile_ids: ['approved-profile'],
+          school_ids: [],
+          child_school_ids: ['school-1'],
+          active_school_ids: ['school-1'],
+        }),
+      ]);
+    });
+  }
+
+  test('child follower read succeeds only while the child remains a school member', async () => {
+    await installChildFollowerGrant();
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), profilePath), { active_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
+  });
+
+  test('child follower read stops when the follower leaves the school', async () => {
+    await installChildFollowerGrant();
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), readerPath), { active_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
+  });
+
+  test('child follower read stops when parent removes the school from the allow-list', async () => {
+    await installChildFollowerGrant();
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), controlsPath), { allowed_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
+  });
 });
 
 // ── Helper: assert the standard owner-write / tutor-read / stranger-deny matrix.

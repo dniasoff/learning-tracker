@@ -318,6 +318,53 @@ describe('social graph callable state', () => {
     assert.equal((await db.collection('social_profiles').doc(cardId).get()).get('paused'), true);
   });
 
+  test('child control revocation paginates beyond fifty incoming followers', async () => {
+    await seedSocialProfile(parentAuth.uid, CHILD, 'child');
+    await member(parentAuth.uid, CHILD);
+    const sessionId = await seedParentSession(parentAuth.uid, CHILD);
+    await db.collection('social_parent_controls').doc(socialProfileDocId(parentAuth.uid, CHILD)).set({
+      owner_uid: parentAuth.uid,
+      profile_id: CHILD,
+      allowed_school_ids: [SCHOOL],
+      paused: false,
+    });
+    const summaryId = socialProfileDocId(parentAuth.uid, CHILD);
+    const summaryReaders = db.collection('social_summaries').doc(summaryId).collection('readers');
+    for (let i = 0; i < 55; i++) {
+      const ownerUid = `follower-${i}`;
+      const profileId = `follower-profile-${i}`;
+      const followerId = socialProfileDocId(ownerUid, profileId);
+      await member(ownerUid, profileId);
+      await db.collection('social_follows').doc(pairDocId(ownerUid, profileId, parentAuth.uid, CHILD)).set({
+        from_owner_uid: ownerUid,
+        from_profile_id: profileId,
+        to_owner_uid: parentAuth.uid,
+        to_profile_id: CHILD,
+        state: 'active',
+      });
+      await summaryReaders.doc(ownerUid).set({
+        owner_uid: parentAuth.uid,
+        profile_id: CHILD,
+        follower_profile_ids: [followerId],
+        school_ids: [],
+        child_school_ids: [SCHOOL],
+        active_school_ids: [SCHOOL],
+        child_school_grants: { [followerId]: [SCHOOL] },
+        follower_school_memberships: { [followerId]: [SCHOOL] },
+      });
+    }
+
+    await call(fns.setChildSocialControls, {
+      profileId: CHILD,
+      parentSessionId: sessionId,
+      allowedSchoolIds: [SCHOOL],
+      paused: true,
+    }, parentAuth);
+
+    assert.equal((await summaryReaders.get()).size, 0);
+    assert.equal((await db.collection('social_profiles').doc(summaryId).get()).get('paused'), true);
+  });
+
   test('profile upsert returns a stable opaque id and cannot clear the parent pause', async () => {
     await seedSocialProfile(parentAuth.uid, CHILD, 'child');
     const sessionId = await seedParentSession(parentAuth.uid, CHILD);
@@ -563,5 +610,35 @@ describe('social graph callable state', () => {
     assert.equal((await db.collection('social_follows').get()).size, 0);
     assert.equal((await db.collection('social_follow_requests').get()).size, 0);
     assert.equal((await db.collection('social_profiles').where('owner_uid', '==', parentAuth.uid).get()).size, 0);
+  });
+
+  test('profile deletion fails if the social summary recursive delete fails', async () => {
+    await seedAdultPair();
+    const summaryId = socialProfileDocId(parentAuth.uid, CHILD);
+    const summaryRef = db.collection('social_summaries').doc(summaryId);
+    await summaryRef.set({ computed_at: new Date() });
+    await summaryRef.collection('readers').doc(strangerAuth.uid).set({
+      follower_profile_ids: [summaryId],
+      school_ids: [],
+    });
+    const learnerRef = db.collection('users').doc(parentAuth.uid)
+      .collection('learner_profiles').doc(CHILD);
+    await learnerRef.set({ mode: 'adult' }, { merge: true });
+
+    const firestorePrototype = Object.getPrototypeOf(db);
+    const originalRecursiveDelete = firestorePrototype.recursiveDelete;
+    firestorePrototype.recursiveDelete = async function (ref, ...args) {
+      if (ref.path === summaryRef.path) throw new Error('injected summary recursiveDelete failure');
+      return originalRecursiveDelete.call(this, ref, ...args);
+    };
+    try {
+      await assert.rejects(call(fns.deleteLearnerProfile, { profileId: CHILD }, parentAuth),
+        /injected summary recursiveDelete failure/);
+    } finally {
+      firestorePrototype.recursiveDelete = originalRecursiveDelete;
+    }
+    assert.equal((await summaryRef.get()).exists, true);
+    assert.equal((await summaryRef.collection('readers').doc(strangerAuth.uid).get()).exists, true);
+    assert.equal((await learnerRef.get()).exists, true);
   });
 });

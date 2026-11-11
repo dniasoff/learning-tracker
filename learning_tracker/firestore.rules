@@ -104,11 +104,32 @@ service cloud.firestore {
     // Shared read boundary for follower and school-staff progress. The
     // per-viewer ACL is server-maintained; follower and school grants occupy
     // separate arrays so either lane can revoke its grant independently.
+    function socialChildFollowerSchoolAccess(summaryId, readerPath) {
+      let child = get(/databases/$(database)/documents/social_profiles/$(summaryId)).data;
+      let parent = get(/databases/$(database)/documents/social_parent_controls/$(summaryId)).data;
+      let reader = get(readerPath).data;
+      return child.mode == 'child'
+          && child.paused != true
+          && parent.paused != true
+          && parent.controls_update_pending != true
+          && reader.child_school_ids is list
+          && reader.child_school_ids.size() > 0
+          && reader.child_school_ids[0] is string
+          && child.active_school_ids is list
+          && child.active_school_ids.hasAny([reader.child_school_ids[0]])
+          && parent.allowed_school_ids is list
+          && parent.allowed_school_ids.hasAny([reader.child_school_ids[0]])
+          && reader.active_school_ids is list
+          && reader.active_school_ids.hasAny([reader.child_school_ids[0]]);
+    }
+
     function socialSummaryMayRead(summaryId) {
       let readerPath = /databases/$(database)/documents/social_summaries/$(summaryId)/readers/$(request.auth.uid);
       return isSignedIn() && exists(readerPath)
             && ((get(readerPath).data.follower_profile_ids is list
-                  && get(readerPath).data.follower_profile_ids.size() > 0)
+                  && get(readerPath).data.follower_profile_ids.size() > 0
+                  && (get(/databases/$(database)/documents/social_profiles/$(summaryId)).data.mode != 'child'
+                    || socialChildFollowerSchoolAccess(summaryId, readerPath)))
               || (get(readerPath).data.school_ids is list
                   && get(readerPath).data.school_ids.size() > 0));
     }
