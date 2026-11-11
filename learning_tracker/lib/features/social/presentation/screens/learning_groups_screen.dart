@@ -7,6 +7,7 @@ import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/social/data/learning_group_repository.dart';
 import 'package:learning_tracker/features/social/domain/learning_group.dart';
 import 'package:learning_tracker/features/social/presentation/providers/learning_group_providers.dart';
+import 'package:learning_tracker/features/social/presentation/widgets/group_tasks_section.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -15,10 +16,14 @@ class LearningGroupsScreen extends ConsumerStatefulWidget {
     super.key,
     required this.profileId,
     required this.isAdult,
+    this.initialGroupId,
+    this.initialTaskId,
   });
 
   final String profileId;
   final bool isAdult;
+  final String? initialGroupId;
+  final String? initialTaskId;
 
   @override
   ConsumerState<LearningGroupsScreen> createState() =>
@@ -27,6 +32,30 @@ class LearningGroupsScreen extends ConsumerStatefulWidget {
 
 class _LearningGroupsScreenState extends ConsumerState<LearningGroupsScreen> {
   bool _busy = false;
+  bool _openedInitialGroup = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialGroupId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialGroup());
+    }
+  }
+
+  Future<void> _openInitialGroup() async {
+    if (_openedInitialGroup || !mounted) return;
+    _openedInitialGroup = true;
+    try {
+      final details = await _repo.getGroup(
+        groupId: widget.initialGroupId!,
+        profileId: widget.profileId,
+        parentSessionId: _parentSessionId,
+      );
+      if (mounted) await _showGroupDetails(details);
+    } catch (_) {
+      if (mounted) _error(AppLocalizations.of(context)!.errorWithMessage);
+    }
+  }
 
   String _groupTypeLabel(LearningGroupSummary group, AppLocalizations l10n) =>
       group.groupType == 'school' ? l10n.groupSchoolHosted : l10n.groupPrivate;
@@ -198,6 +227,11 @@ class _LearningGroupsScreenState extends ConsumerState<LearningGroupsScreen> {
       return;
     }
     if (!mounted) return;
+    await _showGroupDetails(details);
+  }
+
+  Future<void> _showGroupDetails(LearningGroupDetails details) async {
+    final l10n = AppLocalizations.of(context)!;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -257,6 +291,15 @@ class _LearningGroupsScreenState extends ConsumerState<LearningGroupsScreen> {
                         )
                       : null,
                 ),
+              const Divider(),
+              GroupTasksSection(
+                group: details,
+                profileId: widget.profileId,
+                parentSessionId: _parentSessionId,
+                repository: _repo,
+                onError: () => _error(l10n.errorWithMessage),
+                initialTaskId: widget.initialTaskId,
+              ),
               const Divider(),
               if (details.role == 'admin') ...[
                 ListTile(

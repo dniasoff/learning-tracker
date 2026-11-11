@@ -13547,6 +13547,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invite code: {code}'**
   String groupInvitationCreated(String code);
+
+  /// No description provided for @groupTaskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Group tasks'**
+  String get groupTaskTitle;
+
+  /// No description provided for @groupTaskCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Post a learning task'**
+  String get groupTaskCreate;
+
+  /// No description provided for @groupTaskCurriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'Curriculum'**
+  String get groupTaskCurriculum;
+
+  /// No description provided for @groupTaskSupportedCurricula.
+  ///
+  /// In en, this message translates to:
+  /// **'Group tasks can use curricula with a canonical hierarchy. Tanach combines the Chumash and Nach sefarim.'**
+  String get groupTaskSupportedCurricula;
+
+  /// No description provided for @groupTaskPushTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New group learning task'**
+  String get groupTaskPushTitle;
+
+  /// No description provided for @groupTaskPushBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A group task is waiting for your response.'**
+  String get groupTaskPushBody;
+
+  /// No description provided for @groupTaskApproveJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get groupTaskApproveJoin;
+
+  /// No description provided for @groupTaskDeclineJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline request'**
+  String get groupTaskDeclineJoin;
+
+  /// No description provided for @groupTaskScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose sections (leave all unchecked for the full curriculum)'**
+  String get groupTaskScope;
+
+  /// No description provided for @groupTaskReplyBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept or decline by'**
+  String get groupTaskReplyBy;
+
+  /// No description provided for @groupTaskDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish by'**
+  String get groupTaskDeadline;
+
+  /// No description provided for @groupTaskCreateSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Task posted to the group'**
+  String get groupTaskCreateSuccess;
+
+  /// No description provided for @groupTaskNoTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'No group tasks yet'**
+  String get groupTaskNoTasks;
+
+  /// No description provided for @groupTaskAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get groupTaskAccept;
+
+  /// No description provided for @groupTaskDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get groupTaskDecline;
+
+  /// No description provided for @groupTaskPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Set preferences and capacity'**
+  String get groupTaskPreferences;
+
+  /// No description provided for @groupTaskAllocate.
+  ///
+  /// In en, this message translates to:
+  /// **'Allocate task'**
+  String get groupTaskAllocate;
+
+  /// No description provided for @groupTaskRequestJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the admin to join'**
+  String get groupTaskRequestJoin;
+
+  /// No description provided for @groupTaskCapacity.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount per study day'**
+  String get groupTaskCapacity;
+
+  /// No description provided for @groupTaskStudyDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Study days'**
+  String get groupTaskStudyDays;
+
+  /// No description provided for @groupTaskPaceUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Pace unit'**
+  String get groupTaskPaceUnit;
+
+  /// No description provided for @groupTaskWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for responses and preferences'**
+  String get groupTaskWaiting;
+
+  /// No description provided for @groupTaskPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Assignments published'**
+  String get groupTaskPublished;
+
+  /// No description provided for @groupTaskAssignments.
+  ///
+  /// In en, this message translates to:
+  /// **'Member shares'**
+  String get groupTaskAssignments;
+
+  /// No description provided for @groupTaskNoDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'No deadline'**
+  String get groupTaskNoDeadline;
+
+  /// No description provided for @groupTaskStatusLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{status} · {deadline}'**
+  String groupTaskStatusLine(String status, String deadline);
+
+  /// No description provided for @groupTaskJoinRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'{memberName} · wants to join'**
+  String groupTaskJoinRequest(String memberName);
+
+  /// No description provided for @groupTaskInfeasible.
+  ///
+  /// In en, this message translates to:
+  /// **'Current capacity is short by {amount} workload units'**
+  String groupTaskInfeasible(int amount);
 }
 
 class _AppLocalizationsDelegate

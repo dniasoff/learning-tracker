@@ -123,3 +123,16 @@ export {
   transferLearningGroupAdmin,
   deleteLearningGroup,
 } from "./groups";
+
+export {
+  listGroupTaskCurricula,
+  listLearningGroupTasks,
+  listGroupTaskScopesForCurriculum,
+  createLearningGroupTask,
+  respondToLearningGroupTask,
+  submitLearningGroupTaskPreferences,
+  allocateLearningGroupTask,
+  requestLateLearningGroupTaskJoin,
+  reviewLateLearningGroupTaskJoin,
+  listMyLearningGroupDailyTasks,
+} from "./group_tasks";

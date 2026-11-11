@@ -64,6 +64,21 @@ void main() {
       expect(m.tutorName, '');
       expect(m.learnerName, '');
     });
+
+    test('parses generic group task invites without learner progress', () {
+      final message = ParentPushMessage.tryParse({
+        'type': kGroupTaskPushType,
+        'owner_uid': 'owner-uid',
+        'profile_id': _profile,
+        'group_id': 'group1234',
+        'task_id': 'task1234',
+        'is_adult': 'false',
+      })!;
+      expect(message.isGroupTask, isTrue);
+      expect(message.tap.groupId, 'group1234');
+      expect(message.tap.taskId, 'task1234');
+      expect(message.tap.isAdult, isFalse);
+    });
   });
 
   group('ParentPushTap', () {
@@ -71,6 +86,14 @@ void main() {
       const tap = ParentPushTap(ownerUid: 'owner-uid', profileId: _profile);
       expect(ParentPushTap.tryParsePayload(tap.toPayload()), tap);
       expect(ParentPushMessage.tryParse(_data())!.tap, tap);
+      const taskTap = ParentPushTap(
+        ownerUid: 'owner-uid',
+        profileId: _profile,
+        groupId: 'group1234',
+        taskId: 'task1234',
+        isAdult: false,
+      );
+      expect(ParentPushTap.tryParsePayload(taskTap.toPayload()), taskTap);
     });
 
     test('foreign or malformed payloads are not parent push taps', () {

@@ -211,6 +211,21 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen>
       AppLogger.instance.info(event: 'parent_push_tap_not_opened');
       return;
     }
+    if (tap.groupId != null && tap.taskId != null && tap.isAdult != null) {
+      unawaited(
+        ref
+            .read(routerProvider)
+            .push(
+              LearningGroupsRoute(
+                profileId: tap.profileId,
+                isAdult: tap.isAdult!,
+                initialGroupId: tap.groupId,
+                initialTaskId: tap.taskId,
+              ),
+            ),
+      );
+      return;
+    }
     unawaited(ref.read(routerProvider).push(const ChangeHistoryRoute()));
   }
 

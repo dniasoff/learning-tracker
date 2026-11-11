@@ -722,6 +722,15 @@ describe('social graph rules', () => {
     });
     await assertFails(getDoc(doc(tutor(), summaryPath)), 'social-user child pause overrides group grants');
   });
+
+  test('group task invitations, preferences, allocations and join requests are callable-only', async () => {
+    const base = 'learning_groups/group-private/tasks/task-one';
+    await assertFails(getDoc(doc(tutor(), base)));
+    await assertFails(setDoc(doc(tutor(), `${base}/members/${TUTOR}`), { state: 'accepted' }));
+    await assertFails(getDoc(doc(tutor(), `${base}/allocations/v1`)));
+    await assertFails(setDoc(doc(tutor(), `${base}/allocations/v1/members/${TUTOR}`), { state: 'active' }));
+    await assertFails(getDoc(doc(tutor(), `${base}/join_requests/${TUTOR}`)));
+  });
 });
 
 // ── Helper: assert the standard owner-write / tutor-read / stranger-deny matrix.

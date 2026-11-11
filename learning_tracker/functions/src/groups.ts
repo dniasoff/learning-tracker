@@ -33,10 +33,10 @@ function hash(...values: string[]): string {
 function profileKey(ref: Pick<ProfileRef, "ownerUid" | "profileId">): string {
   return hash(ref.ownerUid, ref.profileId);
 }
-function memberRef(groupId: string, uid: string) {
+export function memberRef(groupId: string, uid: string) {
   return groups().doc(groupId).collection("members").doc(uid);
 }
-function profileMemberRef(groupId: string, uid: string, profileId: string) {
+export function profileMemberRef(groupId: string, uid: string, profileId: string) {
   return memberRef(groupId, uid).collection("group_profiles").doc(profileId);
 }
 function summaryRef(ref: Pick<ProfileRef, "ownerUid" | "profileId">) {
@@ -45,22 +45,22 @@ function summaryRef(ref: Pick<ProfileRef, "ownerUid" | "profileId">) {
 function approvalId(groupId: string, childUid: string, childProfileId: string, readerUid: string) {
   return hash("group-parent-approval", groupId, childUid, childProfileId, readerUid);
 }
-function requireAuth(request: { auth?: { uid: string } | null }): string {
+export function requireAuth(request: { auth?: { uid: string } | null }): string {
   if (!request.auth?.uid) throw new HttpsError("unauthenticated", "Must be signed in");
   return request.auth.uid;
 }
-function exactKeys(data: Record<string, unknown>, allowed: readonly string[]): void {
+export function exactKeys(data: Record<string, unknown>, allowed: readonly string[]): void {
   if (Object.keys(data).some((key) => !allowed.includes(key))) {
     throw new HttpsError("invalid-argument", "Request contains unsupported fields");
   }
 }
-function requiredString(value: unknown, name: string, max = 128): string {
+export function requiredString(value: unknown, name: string, max = 128): string {
   if (typeof value !== "string" || !value.trim() || value.length > max) {
     throw new HttpsError("invalid-argument", `${name} must be a non-empty string`);
   }
   return value.trim();
 }
-function groupRef(value: unknown) {
+export function groupRef(value: unknown) {
   const id = requiredString(value, "groupId", 64);
   if (!/^[A-Za-z0-9_-]{8,64}$/.test(id)) throw new HttpsError("invalid-argument", "groupId is invalid");
   return groups().doc(id);
@@ -77,7 +77,7 @@ export function groupProfileMembershipIds(path: string): { groupId: string; uid:
   }
   return { groupId, uid, profileId };
 }
-function memberFrom(uid: string, snap: FirebaseFirestore.DocumentSnapshot): GroupMember {
+export function memberFrom(uid: string, snap: FirebaseFirestore.DocumentSnapshot): GroupMember {
   const mode = snap.get("mode");
   if (mode !== "adult" && mode !== "child") throw new Error("Group member mode is invalid");
   return {
@@ -89,7 +89,7 @@ function memberFrom(uid: string, snap: FirebaseFirestore.DocumentSnapshot): Grou
     state: String(snap.get("state")),
   };
 }
-async function requireActiveGroup(txn: FirebaseFirestore.Transaction, ref: FirebaseFirestore.DocumentReference) {
+export async function requireActiveGroup(txn: FirebaseFirestore.Transaction, ref: FirebaseFirestore.DocumentReference) {
   const snap = await txn.get(ref);
   if (!snap.exists || snap.get("status") !== "active") throw new HttpsError("not-found", "Group is unavailable");
   if (snap.get("group_type") === "school") {
@@ -98,7 +98,7 @@ async function requireActiveGroup(txn: FirebaseFirestore.Transaction, ref: Fireb
   }
   return snap;
 }
-async function requireAdmin(txn: FirebaseFirestore.Transaction, groupId: string, uid: string) {
+export async function requireAdmin(txn: FirebaseFirestore.Transaction, groupId: string, uid: string) {
   const group = await txn.get(groups().doc(groupId));
   const account = await txn.get(memberRef(groupId, uid));
   const adminProfileId = String(group.get("admin_profile_id") ?? "");
@@ -134,7 +134,7 @@ async function activeSchoolMembership(txn: FirebaseFirestore.Transaction, school
   const snap = await txn.get(ref);
   return snap.exists && snap.get("state") === "active";
 }
-async function assertGroupProfileEligibility(
+export async function assertGroupProfileEligibility(
   txn: FirebaseFirestore.Transaction,
   group: FirebaseFirestore.DocumentSnapshot,
   uid: string,
@@ -818,6 +818,9 @@ async function finishGroupDeletion(groupId: string): Promise<void> {
     for (const reader of roster) if (reader.uid !== member.uid) await revokeGroupSummary(groupId, member, reader.uid);
     for (const owner of roster) if (owner.uid !== member.uid) await revokeGroupSummary(groupId, owner, member.uid);
   }
+  // Task invitations, preferences, allocations, and late-join requests are
+  // group-private and follow the same deny-first resumable deletion fence.
+  await db.recursiveDelete(ref.collection("tasks"));
   let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
   while (true) {
     let query = invites().where("group_id", "==", groupId).limit(PAGE_SIZE);

@@ -111,6 +111,54 @@ export function setPushMessagingForTests(fake: PushMessaging | null): void {
   messagingOverride = fake;
 }
 
+/** Sends a generic, data-only invite push once per account for a group task. */
+export async function sendGroupTaskPostedPush(args: {
+  groupId: string;
+  taskId: string;
+  invitees: Array<{ uid: string; profileId: string; mode: string }>;
+}): Promise<{ accountCount: number; tokenCount: number; successCount: number }> {
+  const byAccount = new Map<string, { profileId: string; mode: string }>();
+  for (const invitee of args.invitees) {
+    const prior = byAccount.get(invitee.uid);
+    if (!prior || (prior.mode !== "adult" && invitee.mode === "adult")) {
+      byAccount.set(invitee.uid, { profileId: invitee.profileId, mode: invitee.mode });
+    }
+  }
+  const messages: admin.messaging.Message[] = [];
+  for (const [uid, invitee] of [...byAccount.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const account = await db.collection("users").doc(uid).get();
+    // FCM token presence is the existing opt-in boundary: tokens are added
+    // only after notification permission is granted and removed on lock.
+    for (const { token } of readTokens(account.get("fcm_tokens"))) {
+      messages.push({
+        token,
+        data: {
+          type: "group_task_invite",
+          owner_uid: uid,
+          profile_id: invitee.profileId,
+          group_id: args.groupId,
+          task_id: args.taskId,
+          is_adult: invitee.mode === "adult" ? "true" : "false",
+        },
+        android: { priority: "high" },
+        apns: { headers: { "apns-push-type": "background", "apns-priority": "5" }, payload: { aps: { contentAvailable: true } } },
+      });
+    }
+  }
+  if (messages.length === 0) return { accountCount: byAccount.size, tokenCount: 0, successCount: 0 };
+  const response = await messaging().sendEach(messages);
+  const deadByUid = new Map<string, Array<{ installId: string; token: string }>>();
+  let index = 0;
+  for (const [uid] of [...byAccount.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const account = await db.collection("users").doc(uid).get();
+    const tokens = readTokens(account.get("fcm_tokens"));
+    const dead = tokens.filter((token) => response.responses[index++]?.error?.code && DEAD_TOKEN_CODES.has(response.responses[index - 1].error!.code!));
+    if (dead.length > 0) deadByUid.set(uid, dead);
+  }
+  await Promise.all([...deadByUid].map(([uid, dead]) => pruneTokens(uid, dead)));
+  return { accountCount: byAccount.size, tokenCount: messages.length, successCount: response.successCount };
+}
+
 function messaging(): PushMessaging {
   return messagingOverride ?? admin.messaging();
 }

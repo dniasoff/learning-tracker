@@ -94,6 +94,28 @@ void main() {
       },
     );
 
+    test(
+      'an unlocked invited account receives a generic group task message',
+      () async {
+        final shown = await deliverParentPush(
+          {
+            'type': 'group_task_invite',
+            'owner_uid': 'owner-uid',
+            'profile_id': _profile,
+            'group_id': 'group1234',
+            'task_id': 'task1234',
+            'is_adult': 'false',
+          },
+          session: _session,
+          notifier: notifier,
+        );
+        expect(shown, isTrue);
+        expect(notifier.shown.single.isGroupTask, isTrue);
+        expect(notifier.shown.single.tap.groupId, 'group1234');
+        expect(notifier.shown.single.tap.taskId, 'task1234');
+      },
+    );
+
     test('child role (no marker) never shows it (AC-5)', () async {
       expect(
         await deliverParentPush(_push(), session: null, notifier: notifier),

@@ -91,8 +91,12 @@ class LocalParentPushNotifier implements ParentPushNotifier {
     );
     await _plugin.show(
       id: parentPushNotificationId(message.actionId),
-      title: l10n.parentPushTitle,
-      body: parentPushBody(l10n, message),
+      title: message.isGroupTask
+          ? l10n.groupTaskPushTitle
+          : l10n.parentPushTitle,
+      body: message.isGroupTask
+          ? l10n.groupTaskPushBody
+          : parentPushBody(l10n, message),
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           kParentPushChannelId,

@@ -25,6 +25,7 @@ enum ParentPushKind {
 
 /// The data payload `type` of a tutor-change push.
 const String kParentPushType = 'tutor_change';
+const String kGroupTaskPushType = 'group_task_invite';
 
 /// A parsed tutor-change push.
 final class ParentPushMessage {
@@ -36,18 +37,29 @@ final class ParentPushMessage {
     required this.kind,
     required this.tutorName,
     required this.learnerName,
+    this.groupId,
+    this.taskId,
+    this.isGroupTask = false,
+    this.isAdult,
   });
 
   /// Parses an FCM data map, or returns null when it is not a well-formed
   /// tutor-change push (any other data message is ignored).
   static ParentPushMessage? tryParse(Map<String, dynamic> data) {
-    if (data['type'] != kParentPushType) return null;
+    final type = data['type'];
+    if (type != kParentPushType && type != kGroupTaskPushType) return null;
     final owner = data['owner_uid'];
     final profile = data['profile_id'];
-    final action = data['action_id'];
+    final action = type == kGroupTaskPushType
+        ? data['task_id']
+        : data['action_id'];
     if (owner is! String || owner.isEmpty) return null;
     if (profile is! String || profile.isEmpty) return null;
     if (action is! String || action.isEmpty) return null;
+    final groupId = data['group_id'];
+    if (type == kGroupTaskPushType && (groupId is! String || groupId.isEmpty)) {
+      return null;
+    }
     final tutor = data['tutor_name'];
     final learner = data['learner_name'];
     return ParentPushMessage(
@@ -57,6 +69,14 @@ final class ParentPushMessage {
       kind: ParentPushKind.fromWire(data['kind'] as String?),
       tutorName: tutor is String ? tutor : '',
       learnerName: learner is String ? learner : '',
+      groupId: groupId is String ? groupId : null,
+      taskId: type == kGroupTaskPushType ? action : null,
+      isGroupTask: type == kGroupTaskPushType,
+      isAdult: data['is_adult'] == 'true'
+          ? true
+          : data['is_adult'] == 'false'
+          ? false
+          : null,
     );
   }
 
@@ -78,16 +98,32 @@ final class ParentPushMessage {
   /// The learner's display name (may be empty).
   final String learnerName;
 
+  final String? groupId;
+  final String? taskId;
+  final bool isGroupTask;
+  final bool? isAdult;
+
   /// The tap payload of the local notification posted for this message.
-  ParentPushTap get tap =>
-      ParentPushTap(ownerUid: ownerUid, profileId: profileId);
+  ParentPushTap get tap => ParentPushTap(
+    ownerUid: ownerUid,
+    profileId: profileId,
+    groupId: groupId,
+    taskId: taskId,
+    isAdult: isAdult,
+  );
 }
 
 /// Where a tapped parent push leads: the Change history of [profileId] in
 /// the account [ownerUid] — still behind the route's parent PIN gate.
 final class ParentPushTap {
   /// Creates a tap target.
-  const ParentPushTap({required this.ownerUid, required this.profileId});
+  const ParentPushTap({
+    required this.ownerUid,
+    required this.profileId,
+    this.groupId,
+    this.taskId,
+    this.isAdult,
+  });
 
   /// Prefix that marks a local-notification payload as a parent push.
   static const String payloadPrefix = 'parent_push:';
@@ -101,9 +137,22 @@ final class ParentPushTap {
       if (map is! Map) return null;
       final owner = map['o'];
       final profile = map['p'];
+      final group = map['g'];
+      final task = map['t'];
+      final adult = map['a'];
       if (owner is! String || owner.isEmpty) return null;
       if (profile is! String || profile.isEmpty) return null;
-      return ParentPushTap(ownerUid: owner, profileId: profile);
+      if ((group == null) != (task == null) ||
+          (group != null && (group is! String || task is! String)))
+        return null;
+      if (adult != null && adult is! bool) return null;
+      return ParentPushTap(
+        ownerUid: owner,
+        profileId: profile,
+        groupId: group as String?,
+        taskId: task as String?,
+        isAdult: adult as bool?,
+      );
     } on FormatException {
       return null;
     }
@@ -115,9 +164,13 @@ final class ParentPushTap {
   /// Learner profile id.
   final String profileId;
 
+  final String? groupId;
+  final String? taskId;
+  final bool? isAdult;
+
   /// The local-notification payload string.
   String toPayload() =>
-      '$payloadPrefix${jsonEncode({'o': ownerUid, 'p': profileId})}';
+      '$payloadPrefix${jsonEncode({'o': ownerUid, 'p': profileId, if (groupId != null) 'g': groupId, if (taskId != null) 't': taskId, if (isAdult != null) 'a': isAdult})}';
 
   /// Whether this tap may open the Change history right now: only in the
   /// owning account, in an own (not tutored) session, with this learner
@@ -135,10 +188,14 @@ final class ParentPushTap {
   bool operator ==(Object other) =>
       other is ParentPushTap &&
       other.ownerUid == ownerUid &&
-      other.profileId == profileId;
+      other.profileId == profileId &&
+      other.groupId == groupId &&
+      other.taskId == taskId &&
+      other.isAdult == isAdult;
 
   @override
-  int get hashCode => Object.hash(ownerUid, profileId);
+  int get hashCode =>
+      Object.hash(ownerUid, profileId, groupId, taskId, isAdult);
 }
 
 /// The durable local marker of an unlocked parent PIN session on this

@@ -8301,4 +8301,96 @@ class AppLocalizationsEn extends AppLocalizations {
   String groupInvitationCreated(String code) {
     return 'Invite code: $code';
   }
+
+  @override
+  String get groupTaskTitle => 'Group tasks';
+
+  @override
+  String get groupTaskCreate => 'Post a learning task';
+
+  @override
+  String get groupTaskCurriculum => 'Curriculum';
+
+  @override
+  String get groupTaskSupportedCurricula =>
+      'Group tasks can use curricula with a canonical hierarchy. Tanach combines the Chumash and Nach sefarim.';
+
+  @override
+  String get groupTaskPushTitle => 'New group learning task';
+
+  @override
+  String get groupTaskPushBody => 'A group task is waiting for your response.';
+
+  @override
+  String get groupTaskApproveJoin => 'Approve';
+
+  @override
+  String get groupTaskDeclineJoin => 'Decline request';
+
+  @override
+  String get groupTaskScope =>
+      'Choose sections (leave all unchecked for the full curriculum)';
+
+  @override
+  String get groupTaskReplyBy => 'Accept or decline by';
+
+  @override
+  String get groupTaskDeadline => 'Finish by';
+
+  @override
+  String get groupTaskCreateSuccess => 'Task posted to the group';
+
+  @override
+  String get groupTaskNoTasks => 'No group tasks yet';
+
+  @override
+  String get groupTaskAccept => 'Accept';
+
+  @override
+  String get groupTaskDecline => 'Decline';
+
+  @override
+  String get groupTaskPreferences => 'Set preferences and capacity';
+
+  @override
+  String get groupTaskAllocate => 'Allocate task';
+
+  @override
+  String get groupTaskRequestJoin => 'Ask the admin to join';
+
+  @override
+  String get groupTaskCapacity => 'Amount per study day';
+
+  @override
+  String get groupTaskStudyDays => 'Study days';
+
+  @override
+  String get groupTaskPaceUnit => 'Pace unit';
+
+  @override
+  String get groupTaskWaiting => 'Waiting for responses and preferences';
+
+  @override
+  String get groupTaskPublished => 'Assignments published';
+
+  @override
+  String get groupTaskAssignments => 'Member shares';
+
+  @override
+  String get groupTaskNoDeadline => 'No deadline';
+
+  @override
+  String groupTaskStatusLine(String status, String deadline) {
+    return '$status · $deadline';
+  }
+
+  @override
+  String groupTaskJoinRequest(String memberName) {
+    return '$memberName · wants to join';
+  }
+
+  @override
+  String groupTaskInfeasible(int amount) {
+    return 'Current capacity is short by $amount workload units';
+  }
 }

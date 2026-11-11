@@ -4604,5 +4604,42 @@
   "groupInvitationCreated": "קוד הזמנה: {code}",
   "@groupInvitationCreated": {
     "placeholders": { "code": { "type": "String" } }
+  },
+  "groupTaskTitle": "משימות קבוצתיות",
+  "groupTaskCreate": "פרסום משימת לימוד",
+  "groupTaskCurriculum": "תוכנית לימוד",
+  "groupTaskSupportedCurricula": "משימות קבוצתיות זמינות לתוכניות עם היררכיית לימוד קנונית. תנ״ך משלב את ספרי החומש והנ״ך.",
+  "groupTaskPushTitle": "משימת לימוד קבוצתית חדשה",
+  "groupTaskPushBody": "ממתינה לך תגובה למשימה קבוצתית.",
+  "groupTaskApproveJoin": "אישור",
+  "groupTaskDeclineJoin": "דחיית בקשה",
+  "groupTaskScope": "בחירת חלקים (השארת הכול ריק תבחר את התוכנית כולה)",
+  "groupTaskReplyBy": "יש לאשר או לדחות עד",
+  "groupTaskDeadline": "מועד סיום",
+  "groupTaskCreateSuccess": "המשימה פורסמה בקבוצה",
+  "groupTaskNoTasks": "אין עדיין משימות קבוצתיות",
+  "groupTaskAccept": "אישור",
+  "groupTaskDecline": "דחייה",
+  "groupTaskPreferences": "הגדרת העדפות וקצב לימוד",
+  "groupTaskAllocate": "חלוקת המשימה",
+  "groupTaskRequestJoin": "בקשה מהמנהלים להצטרף",
+  "groupTaskCapacity": "כמות בכל יום לימוד",
+  "groupTaskStudyDays": "ימי לימוד",
+  "groupTaskPaceUnit": "יחידת קצב",
+  "groupTaskWaiting": "ממתינים לתגובות ולהעדפות",
+  "groupTaskPublished": "המשימות חולקו",
+  "groupTaskAssignments": "חלקי הלימוד של החברים",
+  "groupTaskNoDeadline": "ללא מועד סיום",
+  "groupTaskStatusLine": "{status} · {deadline}",
+  "@groupTaskStatusLine": {
+    "placeholders": { "status": { "type": "String" }, "deadline": { "type": "String" } }
+  },
+  "groupTaskJoinRequest": "{memberName} · מבקש להצטרף",
+  "@groupTaskJoinRequest": {
+    "placeholders": { "memberName": { "type": "String" } }
+  },
+  "groupTaskInfeasible": "הקיבולת הנוכחית חסרה {amount} יחידות לימוד",
+  "@groupTaskInfeasible": {
+    "placeholders": { "amount": { "type": "int" } }
   }
 }

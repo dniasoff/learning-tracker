@@ -8211,4 +8211,96 @@ class AppLocalizationsHe extends AppLocalizations {
   String groupInvitationCreated(String code) {
     return 'קוד הזמנה: $code';
   }
+
+  @override
+  String get groupTaskTitle => 'משימות קבוצתיות';
+
+  @override
+  String get groupTaskCreate => 'פרסום משימת לימוד';
+
+  @override
+  String get groupTaskCurriculum => 'תוכנית לימוד';
+
+  @override
+  String get groupTaskSupportedCurricula =>
+      'משימות קבוצתיות זמינות לתוכניות עם היררכיית לימוד קנונית. תנ״ך משלב את ספרי החומש והנ״ך.';
+
+  @override
+  String get groupTaskPushTitle => 'משימת לימוד קבוצתית חדשה';
+
+  @override
+  String get groupTaskPushBody => 'ממתינה לך תגובה למשימה קבוצתית.';
+
+  @override
+  String get groupTaskApproveJoin => 'אישור';
+
+  @override
+  String get groupTaskDeclineJoin => 'דחיית בקשה';
+
+  @override
+  String get groupTaskScope =>
+      'בחירת חלקים (השארת הכול ריק תבחר את התוכנית כולה)';
+
+  @override
+  String get groupTaskReplyBy => 'יש לאשר או לדחות עד';
+
+  @override
+  String get groupTaskDeadline => 'מועד סיום';
+
+  @override
+  String get groupTaskCreateSuccess => 'המשימה פורסמה בקבוצה';
+
+  @override
+  String get groupTaskNoTasks => 'אין עדיין משימות קבוצתיות';
+
+  @override
+  String get groupTaskAccept => 'אישור';
+
+  @override
+  String get groupTaskDecline => 'דחייה';
+
+  @override
+  String get groupTaskPreferences => 'הגדרת העדפות וקצב לימוד';
+
+  @override
+  String get groupTaskAllocate => 'חלוקת המשימה';
+
+  @override
+  String get groupTaskRequestJoin => 'בקשה מהמנהלים להצטרף';
+
+  @override
+  String get groupTaskCapacity => 'כמות בכל יום לימוד';
+
+  @override
+  String get groupTaskStudyDays => 'ימי לימוד';
+
+  @override
+  String get groupTaskPaceUnit => 'יחידת קצב';
+
+  @override
+  String get groupTaskWaiting => 'ממתינים לתגובות ולהעדפות';
+
+  @override
+  String get groupTaskPublished => 'המשימות חולקו';
+
+  @override
+  String get groupTaskAssignments => 'חלקי הלימוד של החברים';
+
+  @override
+  String get groupTaskNoDeadline => 'ללא מועד סיום';
+
+  @override
+  String groupTaskStatusLine(String status, String deadline) {
+    return '$status · $deadline';
+  }
+
+  @override
+  String groupTaskJoinRequest(String memberName) {
+    return '$memberName · מבקש להצטרף';
+  }
+
+  @override
+  String groupTaskInfeasible(int amount) {
+    return 'הקיבולת הנוכחית חסרה $amount יחידות לימוד';
+  }
 }

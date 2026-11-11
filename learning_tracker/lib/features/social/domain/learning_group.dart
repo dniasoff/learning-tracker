@@ -215,6 +215,141 @@ final class GroupParentApproval {
   }
 }
 
+final class LearningGroupTaskScope {
+  const LearningGroupTaskScope({
+    required this.ref,
+    required this.label,
+    required this.weight,
+    this.children = const [],
+  });
+
+  final String ref;
+  final String label;
+  final int weight;
+  final List<LearningGroupTaskScope> children;
+
+  factory LearningGroupTaskScope.fromWire(Object? value) {
+    final map = _groupMap(value);
+    if (map['ref'] is! String ||
+        map['label'] is! String ||
+        map['weight'] is! int ||
+        (map['weight'] as int) < 1) {
+      throw const FormatException('Invalid group task scope');
+    }
+    return LearningGroupTaskScope(
+      ref: map['ref'] as String,
+      label: map['label'] as String,
+      weight: map['weight'] as int,
+      children: List<LearningGroupTaskScope>.unmodifiable(
+        (map['children'] is List
+                ? (map['children'] as List).cast<Object?>()
+                : const <Object?>[])
+            .map(LearningGroupTaskScope.fromWire),
+      ),
+    );
+  }
+}
+
+final class LearningGroupTaskCard {
+  const LearningGroupTaskCard({
+    required this.taskId,
+    required this.taskName,
+    required this.curriculumId,
+    required this.status,
+    required this.memberState,
+    required this.scopeUnits,
+    required this.allocationMembers,
+    required this.joinRequests,
+    this.replyBy,
+    this.deadline,
+    this.paceUnit,
+    this.capacityPerStudyDay,
+    this.feasible,
+    this.shortfall,
+  });
+
+  final String taskId;
+  final String taskName;
+  final String curriculumId;
+  final String status;
+  final String memberState;
+  final String? replyBy;
+  final String? deadline;
+  final String? paceUnit;
+  final int? capacityPerStudyDay;
+  final bool? feasible;
+  final int? shortfall;
+  final List<LearningGroupTaskScope> scopeUnits;
+  final List<Map<String, Object?>> allocationMembers;
+  final List<Map<String, Object?>> joinRequests;
+
+  factory LearningGroupTaskCard.fromWire(Object? value) {
+    final map = _groupMap(value);
+    for (final key in const [
+      'taskId',
+      'taskName',
+      'curriculumId',
+      'status',
+      'memberState',
+    ]) {
+      if (map[key] is! String || (map[key] as String).isEmpty) {
+        throw const FormatException('Invalid group task');
+      }
+    }
+    final scopes = map['scopeUnits'];
+    if (scopes is! List)
+      throw const FormatException('Invalid group task scopes');
+    final allocation = map['allocation'];
+    final allocationData = allocation is Map
+        ? Map<String, Object?>.from(allocation)
+        : null;
+    final rawMembers = allocationData?['members'];
+    final members = rawMembers is List
+        ? rawMembers
+              .map((item) {
+                if (item is! Map ||
+                    item['memberId'] is! String ||
+                    item['units'] is! List ||
+                    item['dailyTasks'] is! List) {
+                  throw const FormatException('Invalid group task allocation');
+                }
+                return Map<String, Object?>.from(item);
+              })
+              .toList(growable: false)
+        : <Map<String, Object?>>[];
+    final rawRequests = map['joinRequests'];
+    final requests = rawRequests is List
+        ? rawRequests
+              .whereType<Map<Object?, Object?>>()
+              .map((item) => Map<String, Object?>.from(item))
+              .toList(growable: false)
+        : <Map<String, Object?>>[];
+    final feasibility = map['feasibility'];
+    if (feasibility != null && feasibility is! Map)
+      throw const FormatException('Invalid group task feasibility');
+    final feasibilityMap = feasibility is Map ? feasibility : null;
+    final shortfall = feasibilityMap?['shortfall'];
+    return LearningGroupTaskCard(
+      taskId: map['taskId'] as String,
+      taskName: map['taskName'] as String,
+      curriculumId: map['curriculumId'] as String,
+      status: map['status'] as String,
+      memberState: map['memberState'] as String,
+      replyBy: map['replyBy'] as String?,
+      deadline: map['deadline'] as String?,
+      paceUnit: map['paceUnit'] as String?,
+      capacityPerStudyDay: map['capacityPerStudyDay'] as int?,
+      feasible: feasibilityMap?['feasible'] as bool?,
+      shortfall: shortfall is int ? shortfall : null,
+      scopeUnits: List.unmodifiable(
+        scopes.map(LearningGroupTaskScope.fromWire),
+      ),
+      allocationMembers: List.unmodifiable(members),
+      joinRequests: List.unmodifiable(requests),
+    );
+  }
+}
+
 Map<String, Object?> _groupMap(Object? value) {
   if (value is! Map || value.keys.any((key) => key is! String)) {
     throw const FormatException('Invalid group response');

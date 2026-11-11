@@ -6763,5 +6763,42 @@
   "groupInvitationCreated": "Invite code: {code}",
   "@groupInvitationCreated": {
     "placeholders": { "code": { "type": "String" } }
+  },
+  "groupTaskTitle": "Group tasks",
+  "groupTaskCreate": "Post a learning task",
+  "groupTaskCurriculum": "Curriculum",
+  "groupTaskSupportedCurricula": "Group tasks can use curricula with a canonical hierarchy. Tanach combines the Chumash and Nach sefarim.",
+  "groupTaskPushTitle": "New group learning task",
+  "groupTaskPushBody": "A group task is waiting for your response.",
+  "groupTaskApproveJoin": "Approve",
+  "groupTaskDeclineJoin": "Decline request",
+  "groupTaskScope": "Choose sections (leave all unchecked for the full curriculum)",
+  "groupTaskReplyBy": "Accept or decline by",
+  "groupTaskDeadline": "Finish by",
+  "groupTaskCreateSuccess": "Task posted to the group",
+  "groupTaskNoTasks": "No group tasks yet",
+  "groupTaskAccept": "Accept",
+  "groupTaskDecline": "Decline",
+  "groupTaskPreferences": "Set preferences and capacity",
+  "groupTaskAllocate": "Allocate task",
+  "groupTaskRequestJoin": "Ask the admin to join",
+  "groupTaskCapacity": "Amount per study day",
+  "groupTaskStudyDays": "Study days",
+  "groupTaskPaceUnit": "Pace unit",
+  "groupTaskWaiting": "Waiting for responses and preferences",
+  "groupTaskPublished": "Assignments published",
+  "groupTaskAssignments": "Member shares",
+  "groupTaskNoDeadline": "No deadline",
+  "groupTaskStatusLine": "{status} · {deadline}",
+  "@groupTaskStatusLine": {
+    "placeholders": { "status": { "type": "String" }, "deadline": { "type": "String" } }
+  },
+  "groupTaskJoinRequest": "{memberName} · wants to join",
+  "@groupTaskJoinRequest": {
+    "placeholders": { "memberName": { "type": "String" } }
+  },
+  "groupTaskInfeasible": "Current capacity is short by {amount} workload units",
+  "@groupTaskInfeasible": {
+    "placeholders": { "amount": { "type": "int" } }
   }
 }

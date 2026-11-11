@@ -809,6 +809,21 @@ service cloud.firestore {
           allow read, write: if false;
         }
       }
+      match /tasks/{taskId} {
+        allow read, write: if false;
+        match /members/{memberId} {
+          allow read, write: if false;
+        }
+        match /join_requests/{memberId} {
+          allow read, write: if false;
+        }
+        match /allocations/{allocationId} {
+          allow read, write: if false;
+          match /members/{memberId} {
+            allow read, write: if false;
+          }
+        }
+      }
     }
     match /learning_group_invites/{inviteId} {
       allow read, write: if false;
@@ -820,6 +835,9 @@ service cloud.firestore {
       allow read, write: if false;
     }
     match /learning_group_rate_limits/{limitId} {
+      allow read, write: if false;
+    }
+    match /learning_group_task_rate_limits/{limitId} {
       allow read, write: if false;
     }
 
