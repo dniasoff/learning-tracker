@@ -39,13 +39,12 @@ void main() {
   });
 
   test(
-    'Learn progress provider reconciles the local day before reading published shares',
+    'Learn progress provider reads published shares without schedule reconciliation',
     () async {
       final calls = <(String, Map<String, Object?>)>[];
       final repository = LearningGroupRepository((name, data) async {
         calls.add((name, data));
         return switch (name) {
-          'listMyLearningGroupDailyTasks' => <Object?>[],
           'listMyLearningGroups' => [
             {
               'groupId': 'group-12345678',
@@ -94,21 +93,23 @@ void main() {
           onDate: '2026-11-11',
         )).future,
       );
+      final cachedResult = await container.read(
+        groupTaskProgressForLearnProvider((
+          profileId: 'profile-b',
+          onDate: '2026-11-11',
+        )).future,
+      );
 
       expect(result.single.groupName, 'Family study');
+      expect(cachedResult, same(result));
       expect(result.single.task.allocationMembers.single['progress'], {
         'completed': 2,
         'total': 5,
       });
       expect(calls.map((call) => call.$1), [
-        'listMyLearningGroupDailyTasks',
         'listMyLearningGroups',
         'listLearningGroupTasks',
       ]);
-      expect(calls.first.$2, {
-        'profileId': 'profile-b',
-        'onDate': '2026-11-11',
-      });
     },
   );
 }

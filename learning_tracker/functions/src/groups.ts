@@ -527,7 +527,7 @@ export const listMyLearningGroups = onCall(CALL_OPTS, async (request) => {
     .where("owner_uid", "==", uid)
     .where("profile_id", "==", profileId)
     .where("state", "==", "active")
-    .limit(50).get();
+    .limit(20).get();
   const result = [];
   for (const member of membershipSnap.docs) {
     const groupRef = groups().doc(String(member.get("group_id")));

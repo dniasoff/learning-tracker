@@ -62,6 +62,10 @@ async function preferences(groupId, taskId, profileId, auth = strangerAuth, capa
   }, auth);
 }
 
+async function runDailyGroupTaskRebalance() {
+  return fns.reconcileLearningGroupMissedTasks.run({ scheduleTime: new Date().toISOString() });
+}
+
 describe('group task acceptance, preferences, allocation, and daily schedule', () => {
   beforeEach(async () => clearFirestore());
   afterEach(() => notifications.setPushMessagingForTests(null));
@@ -221,7 +225,28 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     assert.equal(shared.progress, null);
   });
 
-  test('daily Learn reconciliation puts missed units on the original member future schedule first', async () => {
+  test('a forged future daily-task date is rejected without changing any member schedule', async () => {
+    const groupId = await makeGroup();
+    const task = await postTask(groupId);
+    await accept(groupId, task.taskId);
+    await call(fns.respondToLearningGroupTask, { groupId, taskId: task.taskId, profileId: memberProfile, response: 'accept' }, parentAuth);
+    await preferences(groupId, task.taskId, adminProfile);
+    await preferences(groupId, task.taskId, memberProfile, parentAuth);
+    await call(fns.allocateLearningGroupTask, { groupId, taskId: task.taskId }, strangerAuth);
+    const assignments = await db.collection('learning_groups').doc(groupId).collection('tasks').doc(task.taskId)
+      .collection('allocations').doc('v1').collection('members').get();
+    const before = new Map(assignments.docs.map((doc) => [doc.id, doc.get('daily_tasks')]));
+    await expectHttpsError(
+      call(fns.listMyLearningGroupDailyTasks, { profileId: memberProfile, onDate: dateIn(3650) }, parentAuth),
+      'invalid-argument',
+    );
+    await call(fns.listMyLearningGroupDailyTasks, { profileId: memberProfile, onDate: dateIn(1) }, parentAuth);
+    for (const assignment of assignments.docs) {
+      assert.deepEqual((await assignment.ref.get()).get('daily_tasks'), before.get(assignment.id));
+    }
+  });
+
+  test('Learn reads are non-mutating and the daily job puts missed units on the owner future schedule first', async () => {
     const groupId = await makeGroup();
     const task = await postTask(groupId);
     await accept(groupId, task.taskId);
@@ -237,10 +262,10 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     const yesterday = dateIn(-1);
     await owner.ref.update({ daily_tasks: [{ ...first, date: yesterday }] });
     const today = dateIn(0);
-    await Promise.all([
-      call(fns.listMyLearningGroupDailyTasks, { profileId: memberProfile, onDate: today }, parentAuth),
-      call(fns.listMyLearningGroupDailyTasks, { profileId: adminProfile, onDate: today }, strangerAuth),
-    ]);
+    const beforeRead = (await owner.ref.get()).get('daily_tasks');
+    await call(fns.listMyLearningGroupDailyTasks, { profileId: memberProfile, onDate: today }, parentAuth);
+    assert.deepEqual((await owner.ref.get()).get('daily_tasks'), beforeRead);
+    await runDailyGroupTaskRebalance();
     const updated = await owner.ref.get();
     const history = updated.get('daily_tasks').find((entry) => entry.date === yesterday);
     assert.ok(history.reconciled_at);
@@ -249,7 +274,7 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
       .reduce((count, entry) => count + entry.refs.filter((ref) => ref === first.refs[0]).length, 0), 1);
   });
 
-  test('daily Learn reconciliation transfers only overflow to another accepted member with capacity', async () => {
+  test('daily job transfers owner overflow only to a currently accepted member with capacity', async () => {
     const groupId = await makeGroup();
     const task = await postTask(groupId);
     await accept(groupId, task.taskId);
@@ -269,7 +294,7 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     const yesterday = dateIn(-1);
     await owner.ref.update({ daily_tasks: [{ ...first, date: yesterday }], study_days: [] });
     const today = dateIn(0);
-    await call(fns.listMyLearningGroupDailyTasks, { profileId: memberProfile, onDate: today }, parentAuth);
+    await runDailyGroupTaskRebalance();
     const [updatedOwner, updatedPeer, peerTrack] = await Promise.all([
       owner.ref.get(), peer.ref.get(),
       db.collection('users').doc(strangerAuth.uid).collection('learner_profiles').doc(adminProfile)
@@ -282,7 +307,87 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     assert.ok(updatedPeer.get('daily_tasks').some((entry) => entry.date >= today && entry.refs.includes(missedRef)));
   });
 
-  test('daily reconciliation does not redistribute a missed ref already completed by the owner', async () => {
+  test('a lapsed owner is still rebalanced to an accepted active peer', async () => {
+    const groupId = await makeGroup();
+    const task = await postTask(groupId);
+    await accept(groupId, task.taskId);
+    await call(fns.respondToLearningGroupTask, { groupId, taskId: task.taskId, profileId: memberProfile, response: 'accept' }, parentAuth);
+    await preferences(groupId, task.taskId, adminProfile);
+    await preferences(groupId, task.taskId, memberProfile, parentAuth);
+    await call(fns.allocateLearningGroupTask, { groupId, taskId: task.taskId }, strangerAuth);
+    const taskRef = db.collection('learning_groups').doc(groupId).collection('tasks').doc(task.taskId);
+    const assignments = await taskRef.collection('allocations').doc('v1').collection('members').get();
+    const owner = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
+    const peer = assignments.docs.find((doc) => doc.get('profile_id') === adminProfile);
+    const missed = owner.get('daily_tasks')[0];
+    const missedRef = missed.refs[0];
+    const ownerMember = db.collection('learning_groups').doc(groupId).collection('members').doc(parentAuth.uid);
+    await Promise.all([
+      owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-1) }], study_days: [] }),
+      ownerMember.collection('group_profiles').doc(memberProfile).update({ state: 'removed' }),
+      ownerMember.update({ active_profile_ids: [] }),
+    ]);
+    await runDailyGroupTaskRebalance();
+    const [updatedOwner, updatedPeer, peerTrack] = await Promise.all([
+      owner.ref.get(), peer.ref.get(),
+      db.collection('users').doc(strangerAuth.uid).collection('learner_profiles').doc(adminProfile)
+        .collection('sub_tracks').doc(peer.get('sub_track_id')).get(),
+    ]);
+    assert.ok(!updatedOwner.get('units').some((unit) => unit.ref === missedRef));
+    assert.ok(updatedPeer.get('units').some((unit) => unit.ref === missedRef));
+    assert.ok(peerTrack.get('ground').some((unit) => unit.ref === missedRef));
+  });
+
+  test('a no-longer-accepted recipient is skipped and the missed ref stays pending', async () => {
+    const groupId = await makeGroup();
+    const task = await postTask(groupId);
+    await accept(groupId, task.taskId);
+    await call(fns.respondToLearningGroupTask, { groupId, taskId: task.taskId, profileId: memberProfile, response: 'accept' }, parentAuth);
+    await preferences(groupId, task.taskId, adminProfile);
+    await preferences(groupId, task.taskId, memberProfile, parentAuth);
+    await call(fns.allocateLearningGroupTask, { groupId, taskId: task.taskId }, strangerAuth);
+    const taskRef = db.collection('learning_groups').doc(groupId).collection('tasks').doc(task.taskId);
+    const assignments = await taskRef.collection('allocations').doc('v1').collection('members').get();
+    const owner = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
+    const peer = assignments.docs.find((doc) => doc.get('profile_id') === adminProfile);
+    const missed = owner.get('daily_tasks')[0];
+    const missedRef = missed.refs[0];
+    await Promise.all([
+      owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-1) }], study_days: [] }),
+      taskRef.collection('members').doc(peer.id).update({ state: 'declined' }),
+    ]);
+    await runDailyGroupTaskRebalance();
+    const [updatedOwner, updatedPeer, currentTask] = await Promise.all([owner.ref.get(), peer.ref.get(), taskRef.get()]);
+    assert.ok(updatedOwner.get('units').some((unit) => unit.ref === missedRef || missedRef.startsWith(`${unit.ref} `)));
+    assert.ok(!updatedPeer.get('units').some((unit) => unit.ref === missedRef));
+    assert.ok(currentTask.get('rebalance_unassigned_refs').includes(missedRef));
+    assert.ok(updatedOwner.get('daily_tasks').some((entry) => entry.refs.includes(missedRef) && !entry.reconciled_at));
+  });
+
+  test('a recipient with a missing sub-track is logged and skipped without aborting the job', async () => {
+    const groupId = await makeGroup();
+    const task = await postTask(groupId);
+    await accept(groupId, task.taskId);
+    await call(fns.respondToLearningGroupTask, { groupId, taskId: task.taskId, profileId: memberProfile, response: 'accept' }, parentAuth);
+    await preferences(groupId, task.taskId, adminProfile);
+    await preferences(groupId, task.taskId, memberProfile, parentAuth);
+    await call(fns.allocateLearningGroupTask, { groupId, taskId: task.taskId }, strangerAuth);
+    const taskRef = db.collection('learning_groups').doc(groupId).collection('tasks').doc(task.taskId);
+    const assignments = await taskRef.collection('allocations').doc('v1').collection('members').get();
+    const owner = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
+    const peer = assignments.docs.find((doc) => doc.get('profile_id') === adminProfile);
+    const missed = owner.get('daily_tasks')[0];
+    await Promise.all([
+      owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-1) }], study_days: [] }),
+      db.collection('users').doc(strangerAuth.uid).collection('learner_profiles').doc(adminProfile)
+        .collection('sub_tracks').doc(peer.get('sub_track_id')).delete(),
+    ]);
+    await runDailyGroupTaskRebalance();
+    const updated = await owner.ref.get();
+    assert.ok(updated.get('daily_tasks').some((entry) => entry.refs.includes(missed.refs[0]) && !entry.reconciled_at));
+  });
+
+  test('daily job does not redistribute a missed ref already completed by the owner', async () => {
     const groupId = await makeGroup();
     const task = await postTask(groupId);
     await accept(groupId, task.taskId);
@@ -300,7 +405,7 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
       .collection('learning_events').doc('01JLEARN0000000000000000001').set({
         kind: 'learn', source: owner.get('sub_track_id'), curriculum_id: 'mishnayos', ref,
       });
-    await call(fns.listMyLearningGroupDailyTasks, { profileId: memberProfile, onDate: dateIn(0) }, parentAuth);
+    await runDailyGroupTaskRebalance();
     const updated = await owner.ref.get();
     assert.ok(updated.get('daily_tasks').some((entry) => entry.date === yesterday && entry.reconciled_at));
     assert.ok(!updated.get('daily_tasks').some((entry) => entry.date >= dateIn(0) && entry.refs.includes(ref)));

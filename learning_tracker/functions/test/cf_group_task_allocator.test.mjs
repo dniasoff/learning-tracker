@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { allocateGroupTask, rebalanceMissedWork } from '../lib/group_task_allocator.js';
-import { groupTaskCurriculumIds, groupTaskLeafRefs, listGroupTaskScopes, resolveGroupTaskUnits } from '../lib/group_task_catalog.js';
+import { groupTaskCurriculumIds, groupTaskLeafRefs, listGroupTaskScopes, reassignGroupTaskUnits, resolveGroupTaskUnits } from '../lib/group_task_catalog.js';
 
 const member = (memberId, rankedRefs = [], capacityPerStudyDay = 10, studyDays = [1, 2, 3, 4, 5, 6, 7], paceUnit = 'mishna', workloadPerPaceUnit = 1) => ({
   memberId, rankedRefs, paceUnit, capacityPerStudyDay, workloadPerPaceUnit, studyDays,
@@ -30,7 +30,36 @@ describe('deterministic whole-unit group allocation', () => {
   test('leaves missed units unassigned when neither the owner nor group has capacity', () => {
     const plan = rebalanceMissedWork({
       ownerMemberId: 'owner', missedRefs: ['A'], participants: [
-        { memberId: 'owner', capacityPerDay: 1, workloadPerPaceUnit: 1, paceUnit: 'mishna', workloadByRef: { A: 2 }, futureDays: ['2026-11-12'], dailyTasks: [] },
+        { memberId: 'owner', capacityPerDay: 1, workloadPerPaceUnit: 1, paceUnit: 'mishna', workloadByRef: { A: 2 }, futureDays: [], dailyTasks: [] },
+      ],
+    });
+    assert.deepEqual(plan.unassigned, ['A']);
+    assert.deepEqual(plan.transferred, []);
+  });
+
+  test('rebalancing uses pace-unit ref capacity like allocation and permits oversized atomic refs', () => {
+    const pacePlan = rebalanceMissedWork({
+      ownerMemberId: 'owner', missedRefs: ['Daf 1', 'Daf 2'], participants: [
+        { memberId: 'owner', capacityPerDay: 1, workloadPerPaceUnit: 3, paceUnit: 'daf', workloadByRef: { 'Daf 1': 900, 'Daf 2': 900 }, futureDays: ['2026-11-12', '2026-11-13'], dailyTasks: [] },
+      ],
+    });
+    assert.deepEqual(pacePlan.unassigned, []);
+    assert.deepEqual(pacePlan.schedules.owner.map((task) => task.refs), [['Daf 1'], ['Daf 2']]);
+    const oversizedPlan = rebalanceMissedWork({
+      ownerMemberId: 'owner', missedRefs: ['Kelim 1'], participants: [
+        { memberId: 'owner', capacityPerDay: 2, workloadPerPaceUnit: 1, paceUnit: 'mishna', workloadByRef: { 'Kelim 1': 12 }, futureDays: ['2026-11-12'], dailyTasks: [] },
+      ],
+    });
+    assert.deepEqual(oversizedPlan.keptByOwner, ['Kelim 1']);
+    assert.equal(oversizedPlan.schedules.owner[0].workload, 12);
+    assert.deepEqual(oversizedPlan.unassigned, []);
+  });
+
+  test('retains unfittable refs as pending and never assigns to an ineligible member', () => {
+    const plan = rebalanceMissedWork({
+      ownerMemberId: 'owner', missedRefs: ['A'], participants: [
+        { memberId: 'owner', canReceive: false, capacityPerDay: 1, workloadPerPaceUnit: 1, paceUnit: 'mishna', workloadByRef: { A: 1 }, futureDays: [], dailyTasks: [] },
+        { memberId: 'lapsed', canReceive: false, capacityPerDay: 10, workloadPerPaceUnit: 1, paceUnit: 'mishna', workloadByRef: { A: 1 }, futureDays: ['2026-11-12'], dailyTasks: [] },
       ],
     });
     assert.deepEqual(plan.unassigned, ['A']);
@@ -77,6 +106,24 @@ describe('deterministic whole-unit group allocation', () => {
     assert.equal(selectedSefer.length, 1);
     assert.equal(selectedSefer[0].ref, 'Genesis');
     assert.ok(selectedSefer[0].children.every((perek) => perek.level === 'chapter'));
+  });
+
+  test('reassignment rejects refs nested deeper than one level and overlapping ownership', () => {
+    const genesis = resolveGroupTaskUnits('tanach', ['Genesis'])[0];
+    assert.throws(
+      () => reassignGroupTaskUnits('mishnayos', [
+        { ref: 'Seder Zeraim', label: 'Zeraim', level: 'seder', weight: 100, children: [] },
+      ], ['Mishnah Berakhot 1']),
+      /nested more than one level/,
+    );
+    assert.throws(
+      () => reassignGroupTaskUnits('tanach', [genesis], [], ['Genesis 1']),
+      /overlap by ancestry/,
+    );
+    const movedChapter = reassignGroupTaskUnits('tanach', [genesis], ['Genesis 1']);
+    assert.ok(!movedChapter.some((unit) => unit.ref === 'Genesis'));
+    assert.ok(!movedChapter.some((unit) => unit.ref === 'Genesis 1'));
+    assert.ok(movedChapter.some((unit) => unit.ref === 'Genesis 2'));
   });
 
   test('represents terminal daf refs as atomic children so Yerushalmi masechtos can split at daf', () => {

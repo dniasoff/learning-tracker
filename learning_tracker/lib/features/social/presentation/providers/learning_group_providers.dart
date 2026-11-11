@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/features/social/data/learning_group_repository.dart';
@@ -14,12 +16,13 @@ final groupTaskProgressForLearnProvider = FutureProvider.autoDispose
       List<({String groupName, LearningGroupTaskCard task})>,
       ({String profileId, String onDate})
     >((ref, query) async {
+      final keepAlive = ref.keepAlive();
+      final expiry = Timer(const Duration(seconds: 30), keepAlive.close);
+      ref.onDispose(expiry.cancel);
       final repository = ref.watch(learningGroupRepositoryProvider);
-      await repository.reconcileDailyTasks(
+      final groups = (await repository.listMine(
         profileId: query.profileId,
-        onDate: query.onDate,
-      );
-      final groups = await repository.listMine(profileId: query.profileId);
+      )).take(20);
       final result = <({String groupName, LearningGroupTaskCard task})>[];
       for (final group in groups) {
         final tasks = await repository.listTasks(

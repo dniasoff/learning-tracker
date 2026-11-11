@@ -135,6 +135,25 @@ export function reassignGroupTaskUnits(
   const all = nodes(curriculumId);
   const byRef = new Map(all.map((node) => [node.ref, node]));
   const moved = new Set(movedRefs);
+  const ancestorDistance = (ancestorRef: string, descendantRef: string): number | null => {
+    let parentRef = byRef.get(descendantRef)?.parentRef ?? null;
+    let distance = 1;
+    while (parentRef) {
+      if (parentRef === ancestorRef) return distance;
+      parentRef = byRef.get(parentRef)?.parentRef ?? null;
+      distance++;
+    }
+    return null;
+  };
+  for (const ref of [...moved, ...incomingRefs]) {
+    if (!byRef.has(ref)) throw new Error("Cannot reassign an unknown group task ref");
+  }
+  for (const movedRef of moved) {
+    if (current.some((unit) => ancestorDistance(unit.ref, movedRef) !== null &&
+      ancestorDistance(unit.ref, movedRef)! > 1)) {
+      throw new Error("Cannot reassign a group task ref nested more than one level below its assigned unit");
+    }
+  }
   const result = new Map<string, { ref: string; label: string; level: string; weight: number }>();
   for (const unit of current) {
     if (moved.has(unit.ref)) continue;
@@ -148,7 +167,16 @@ export function reassignGroupTaskUnits(
     }
   }
   for (const unit of groupTaskUnitsForRefs(curriculumId, incomingRefs)) result.set(unit.ref, unit);
-  return [...result.values()].sort((a, b) => a.ref.localeCompare(b.ref));
+  const assigned = [...result.values()];
+  for (let left = 0; left < assigned.length; left++) {
+    for (let right = left + 1; right < assigned.length; right++) {
+      if (ancestorDistance(assigned[left].ref, assigned[right].ref) !== null ||
+          ancestorDistance(assigned[right].ref, assigned[left].ref) !== null) {
+        throw new Error("Reassigned group task units overlap by ancestry");
+      }
+    }
+  }
+  return assigned.sort((a, b) => a.ref.localeCompare(b.ref));
 }
 
 export function groupTaskCurriculumIds(): string[] {

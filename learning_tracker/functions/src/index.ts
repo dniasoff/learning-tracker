@@ -135,4 +135,5 @@ export {
   requestLateLearningGroupTaskJoin,
   reviewLateLearningGroupTaskJoin,
   listMyLearningGroupDailyTasks,
+  reconcileLearningGroupMissedTasks,
 } from "./group_tasks";

@@ -46,6 +46,7 @@ export interface GroupAllocation {
 
 export interface RebalanceParticipant {
   memberId: string;
+  canReceive?: boolean;
   capacityPerDay: number;
   workloadPerPaceUnit: number;
   paceUnit: string;
@@ -75,13 +76,19 @@ export function rebalanceMissedWork(args: {
   const schedules = new Map(args.participants.map((member) => [member.memberId,
     member.dailyTasks.map((task) => ({ ...task, refs: [...task.refs] }))]));
   const append = (member: RebalanceParticipant, ref: string): boolean => {
+    if (member.canReceive === false) return false;
     const workload = member.workloadByRef[ref];
     if (!Number.isFinite(workload) || workload < 1) return false;
     const daily = schedules.get(member.memberId)!;
     for (const date of member.futureDays) {
       let task = daily.find((item) => item.date === date);
       const current = task?.workload ?? 0;
-      if (current + workload > member.capacityPerDay * member.workloadPerPaceUnit) continue;
+      const hasCapacity = member.workloadPerPaceUnit > 1
+        ? (task?.refs.length ?? 0) < member.capacityPerDay
+        : current + workload <= member.capacityPerDay * member.workloadPerPaceUnit;
+      const oversizedUnitAlone = member.workloadPerPaceUnit <= 1 &&
+        workload > member.capacityPerDay * member.workloadPerPaceUnit && (task?.refs.length ?? 0) === 0;
+      if (!hasCapacity && !oversizedUnitAlone) continue;
       if (!task) {
         task = { date, refs: [], workload: 0, paceUnit: member.paceUnit, paceAmount: 0 };
         daily.push(task);
@@ -108,6 +115,22 @@ export function rebalanceMissedWork(args: {
       transferred.push({ ref, fromMemberId: owner.memberId, toMemberId: candidate.memberId });
       assigned = true;
       break;
+    }
+    if (!assigned && owner.canReceive !== false && owner.futureDays.length > 0) {
+      const lastDate = owner.futureDays[owner.futureDays.length - 1];
+      let lastTask = schedules.get(owner.memberId)!.find((item) => item.date === lastDate);
+      if (!lastTask) {
+        lastTask = { date: lastDate, refs: [], workload: 0, paceUnit: owner.paceUnit, paceAmount: 0 };
+        schedules.get(owner.memberId)!.push(lastTask);
+      }
+      const workload = owner.workloadByRef[ref];
+      if (Number.isFinite(workload) && workload >= 1) {
+        lastTask.refs.push(ref);
+        lastTask.workload += workload;
+        lastTask.paceAmount += owner.workloadPerPaceUnit > 1 ? 1 : workload;
+        keptByOwner.push(ref);
+        assigned = true;
+      }
     }
     if (!assigned) unassigned.push(ref);
   }
