@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -7975,6 +7974,11 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get communityThisWeek => 'השבוע';
+
+  @override
+  String communityWeekOf(String date) {
+    return 'השבוע שמתחיל ב־$date';
+  }
 
   @override
   String get communitySiyumim => 'סיומים';

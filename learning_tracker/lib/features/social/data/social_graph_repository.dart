@@ -47,6 +47,18 @@ final class SocialGraphRepository {
     });
   }
 
+  Future<void> publishSummary({
+    required String profileId,
+    required Map<String, Object?> summary,
+    String? parentSessionId,
+  }) async {
+    await _invoke('publishSocialSummary', {
+      'profileId': profileId,
+      if (parentSessionId != null) 'parentSessionId': parentSessionId,
+      'summary': summary,
+    });
+  }
+
   Future<SocialChildControls> getChildControls({
     required String profileId,
     required String parentSessionId,

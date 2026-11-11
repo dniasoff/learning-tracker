@@ -6595,6 +6595,10 @@
   "communityStreak": "Streak",
   "communityCurrentTracks": "Current tracks and position",
   "communityThisWeek": "This week",
+  "communityWeekOf": "Week of {date}",
+  "@communityWeekOf": {
+    "placeholders": { "date": { "type": "String" } }
+  },
   "communitySiyumim": "Siyumim",
   "communityNoSiyumim": "No siyumim to show yet",
   "communityUpdatedAt": "Updated {date}",

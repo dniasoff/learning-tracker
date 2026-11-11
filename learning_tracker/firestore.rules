@@ -104,14 +104,13 @@ service cloud.firestore {
     // Shared read boundary for follower and school-staff progress. The
     // per-viewer ACL is server-maintained; follower and school grants occupy
     // separate arrays so either lane can revoke its grant independently.
-    function socialSummaryMayRead(summaryId, ownerUid) {
+    function socialSummaryMayRead(summaryId) {
       let readerPath = /databases/$(database)/documents/social_summaries/$(summaryId)/readers/$(request.auth.uid);
-      return isOwner(ownerUid)
-          || (isSignedIn() && exists(readerPath)
+      return isSignedIn() && exists(readerPath)
             && ((get(readerPath).data.follower_profile_ids is list
                   && get(readerPath).data.follower_profile_ids.size() > 0)
               || (get(readerPath).data.school_ids is list
-                  && get(readerPath).data.school_ids.size() > 0)));
+                  && get(readerPath).data.school_ids.size() > 0));
     }
 
     // Server-controlled rollout claim. It remains absent/false until the
@@ -581,14 +580,12 @@ service cloud.firestore {
     // One whitelisted projection per learner profile. Raw events, points,
     // settings, tutor data and change history are never reachable here.
     match /social_summaries/{summaryId} {
-      allow get: if socialSummaryMayRead(summaryId, resource.data.owner_uid)
+      allow get: if socialSummaryMayRead(summaryId)
         && resource.data.keys().hasOnly([
-          'owner_uid', 'profile_id', 'display_name', 'avatar_id', 'streak',
+          'display_name', 'avatar_id', 'streak',
           'current_tracks', 'weekly_learning', 'siyumim', 'computed_at',
           'schema_version'
         ])
-        && resource.data.owner_uid is string
-        && resource.data.profile_id is string
         && resource.data.display_name is string
         && resource.data.avatar_id is int
         && resource.data.streak is map
@@ -596,7 +593,8 @@ service cloud.firestore {
         && resource.data.streak.by_curriculum is list
         && resource.data.current_tracks is list
         && resource.data.weekly_learning is map
-        && resource.data.weekly_learning.keys().hasOnly(['by_curriculum', 'overall'])
+        && resource.data.weekly_learning.keys().hasOnly(['week_start', 'by_curriculum', 'overall'])
+        && resource.data.weekly_learning.week_start is string
         && resource.data.weekly_learning.by_curriculum is list
         && resource.data.siyumim is list
         && resource.data.computed_at is timestamp

@@ -4436,6 +4436,10 @@
   "communityStreak": "רצף לימוד",
   "communityCurrentTracks": "מסלולים נוכחיים ומיקום",
   "communityThisWeek": "השבוע",
+  "communityWeekOf": "השבוע שמתחיל ב־{date}",
+  "@communityWeekOf": {
+    "placeholders": { "date": { "type": "String" } }
+  },
   "communitySiyumim": "סיומים",
   "communityNoSiyumim": "אין עדיין סיומים להצגה",
   "communityUpdatedAt": "עודכן {date}",

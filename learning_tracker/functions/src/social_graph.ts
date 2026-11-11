@@ -4,6 +4,7 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 import { assertActiveParentSessionInTransaction } from "./parent_session_validation";
 import { CALL_OPTS, db } from "./shared";
+import { ULID_RE } from "./write_with_change_log";
 
 const MAX_SCHOOLS = 20;
 const MAX_PENDING_REQUESTS = 30;
@@ -13,6 +14,12 @@ const MAX_INBOUND_REQUESTS_PER_DAY = 50;
 const MAX_PAGE_SIZE = 50;
 const REQUEST_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const PROFILE_FIELDS = ["profileId", "displayName", "avatarId", "parentSessionId"] as const;
+const SOCIAL_CURRICULA = new Set([
+  "chumash", "nach", "tanach", "mishnayos", "bavli", "yerushalmi",
+  "shnayim_mikra", "mishneh_torah", "mishna_berurah", "mussar",
+]);
+const SOCIAL_REF_RE = /^[\p{L}\p{N}][\p{L}\p{N} ,.:;’'"״׳–—-]{0,255}$/u;
+const SOCIAL_IDENTIFIER_RE = /^[A-Za-z0-9_.-]{1,64}$/;
 
 type ProfileRef = { ownerUid: string; profileId: string };
 type SocialProfile = ProfileRef & {
@@ -34,6 +41,7 @@ const controls = () => db.collection("social_parent_controls");
 const auditLogs = () => db.collection("social_audit_logs");
 const searchCursors = () => db.collection("social_search_cursors");
 const summaries = () => db.collection("social_summaries");
+const summaryRateLimits = () => db.collection("social_summary_rate_limits");
 
 function opaqueId(...parts: string[]): string {
   return crypto.createHash("sha256").update(parts.join("\0")).digest("hex");
@@ -56,6 +64,137 @@ function requiredString(value: unknown, name: string, max = 128): string {
     throw new HttpsError("invalid-argument", `${name} must be a non-empty string`);
   }
   return value.trim();
+}
+
+function summaryObject(value: unknown, keys: readonly string[], name: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new HttpsError("invalid-argument", `${name} must be an object`);
+  }
+  const result = value as Record<string, unknown>;
+  exactKeys(result, keys);
+  return result;
+}
+
+function summaryCount(value: unknown, name: string): number {
+  if (!Number.isInteger(value) || Number(value) < 0 || Number(value) > 100_000) {
+    throw new HttpsError("invalid-argument", `${name} is outside its allowed range`);
+  }
+  return Number(value);
+}
+
+function summaryCurriculum(value: unknown): string {
+  if (typeof value !== "string" || !SOCIAL_CURRICULA.has(value)) {
+    throw new HttpsError("invalid-argument", "Unknown curriculum_id");
+  }
+  return value;
+}
+
+function summaryRef(value: unknown, name: string): string {
+  if (typeof value !== "string" || value.length > 256 || !SOCIAL_REF_RE.test(value)) {
+    throw new HttpsError("invalid-argument", `${name} must be a canonical reference`);
+  }
+  return value;
+}
+
+function uniqueCurriculumRows<T extends { curriculum_id: string }>(
+  rows: T[], name: string,
+): T[] {
+  if (new Set(rows.map((row) => row.curriculum_id)).size !== rows.length) {
+    throw new HttpsError("invalid-argument", `${name} contains duplicate curricula`);
+  }
+  return rows;
+}
+
+function normalizeSocialSummary(value: unknown): Record<string, unknown> {
+  const input = summaryObject(value, ["streak", "current_tracks", "weekly_learning", "siyumim"], "summary");
+
+  const streak = summaryObject(input.streak, ["by_curriculum", "overall"], "streak");
+  if (!Array.isArray(streak.by_curriculum) || streak.by_curriculum.length > SOCIAL_CURRICULA.size) {
+    throw new HttpsError("invalid-argument", "Invalid streak rows");
+  }
+  const streakRows = uniqueCurriculumRows(streak.by_curriculum.map((row) => {
+    const data = summaryObject(row, ["curriculum_id", "current_days", "best_days"], "streak row");
+    return {
+      curriculum_id: summaryCurriculum(data.curriculum_id),
+      current_days: summaryCount(data.current_days, "current_days"),
+      best_days: summaryCount(data.best_days, "best_days"),
+    };
+  }), "streak");
+  let overallStreak: Record<string, number> | undefined;
+  if (streak.overall !== undefined) {
+    const data = summaryObject(streak.overall, ["current_days", "best_days"], "overall streak");
+    overallStreak = {
+      current_days: summaryCount(data.current_days, "current_days"),
+      best_days: summaryCount(data.best_days, "best_days"),
+    };
+  }
+
+  if (!Array.isArray(input.current_tracks) || input.current_tracks.length > SOCIAL_CURRICULA.size) {
+    throw new HttpsError("invalid-argument", "Invalid current_tracks");
+  }
+  const trackRows = uniqueCurriculumRows(input.current_tracks.map((row) => {
+    const data = summaryObject(row, ["curriculum_id", "position_ref"], "current track");
+    return {
+      curriculum_id: summaryCurriculum(data.curriculum_id),
+      position_ref: data.position_ref === null ? null : summaryRef(data.position_ref, "position_ref"),
+    };
+  }), "current_tracks");
+
+  const weekly = summaryObject(input.weekly_learning, ["week_start", "by_curriculum", "overall"], "weekly_learning");
+  if (typeof weekly.week_start !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(weekly.week_start) ||
+      Number.isNaN(Date.parse(`${weekly.week_start}T00:00:00Z`)) ||
+      new Date(`${weekly.week_start}T00:00:00Z`).getUTCDay() !== 0) {
+    throw new HttpsError("invalid-argument", "week_start must be a Sunday civil date");
+  }
+  if (!Array.isArray(weekly.by_curriculum) || weekly.by_curriculum.length > SOCIAL_CURRICULA.size) {
+    throw new HttpsError("invalid-argument", "Invalid weekly learning rows");
+  }
+  const weeklyRows = uniqueCurriculumRows(weekly.by_curriculum.map((row) => {
+    const data = summaryObject(row, ["curriculum_id", "limudim", "chazaros"], "weekly learning row");
+    return {
+      curriculum_id: summaryCurriculum(data.curriculum_id),
+      limudim: summaryCount(data.limudim, "limudim"),
+      chazaros: summaryCount(data.chazaros, "chazaros"),
+    };
+  }), "weekly_learning");
+  let overallWeekly: Record<string, number> | undefined;
+  if (weekly.overall !== undefined) {
+    const data = summaryObject(weekly.overall, ["limudim", "chazaros"], "overall weekly learning");
+    overallWeekly = {
+      limudim: summaryCount(data.limudim, "limudim"),
+      chazaros: summaryCount(data.chazaros, "chazaros"),
+    };
+  }
+
+  if (!Array.isArray(input.siyumim) || input.siyumim.length > 100) {
+    throw new HttpsError("invalid-argument", "Invalid siyumim");
+  }
+  const siyumim = input.siyumim.map((row) => {
+    const data = summaryObject(row, ["curriculum_id", "ref", "level"], "siyum");
+    if (typeof data.level !== "string" || !SOCIAL_IDENTIFIER_RE.test(data.level)) {
+      throw new HttpsError("invalid-argument", "siyum level must be an identifier");
+    }
+    return {
+      curriculum_id: summaryCurriculum(data.curriculum_id),
+      ref: summaryRef(data.ref, "siyum ref"),
+      level: data.level,
+    };
+  });
+
+  const result = {
+    streak: { by_curriculum: streakRows, ...(overallStreak ? { overall: overallStreak } : {}) },
+    current_tracks: trackRows,
+    weekly_learning: {
+      week_start: weekly.week_start,
+      by_curriculum: weeklyRows,
+      ...(overallWeekly ? { overall: overallWeekly } : {}),
+    },
+    siyumim,
+  };
+  if (Buffer.byteLength(JSON.stringify(result), "utf8") > 16_384) {
+    throw new HttpsError("invalid-argument", "Social summary is too large");
+  }
+  return result;
 }
 
 function profileDocId(ref: ProfileRef): string {
@@ -298,6 +437,67 @@ export const upsertSocialProfile = onCall(CALL_OPTS, async (request) => {
     return opaqueProfileId;
   });
   return { success: true, socialProfileId };
+});
+
+/** Publishes only the learner engine's sanitized, identifier-only summary. */
+export const publishSocialSummary = onCall(CALL_OPTS, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  exactKeys(data, ["profileId", "parentSessionId", "summary"]);
+  const profileId = requiredString(data.profileId, "profileId");
+  if (!ULID_RE.test(profileId)) throw new HttpsError("invalid-argument", "profileId must be a valid ULID");
+  const normalized = normalizeSocialSummary(data.summary);
+  const parentSessionId = data.parentSessionId;
+  if (parentSessionId !== undefined && typeof parentSessionId !== "string") {
+    throw new HttpsError("invalid-argument", "parentSessionId must be a string");
+  }
+
+  const profile: ProfileRef = { ownerUid: uid, profileId };
+  const learnerRef = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
+  const summaryRef = summaries().doc(profileDocId(profile));
+  const rateRef = summaryRateLimits().doc(profileDocId(profile));
+  const now = admin.firestore.Timestamp.now();
+  const minute = Math.floor(now.toMillis() / 60_000);
+
+  await db.runTransaction(async (txn) => {
+    const [learner, rate] = await Promise.all([
+      txn.get(learnerRef), txn.get(rateRef),
+    ]);
+    if (!learner.exists) throw new HttpsError("not-found", "Learner profile is unavailable");
+    const mode = learner.get("mode");
+    if (mode !== "child" && mode !== "adult") {
+      throw new HttpsError("failed-precondition", "Learner mode is unavailable");
+    }
+    if (mode === "child") {
+      await assertActiveParentSessionInTransaction(txn, uid, profileId, parentSessionId);
+    } else if (parentSessionId !== undefined) {
+      throw new HttpsError("invalid-argument", "parentSessionId is only valid for a child profile");
+    }
+
+    const previousMinute = Number(rate.get("minute"));
+    const count = previousMinute === minute ? Number(rate.get("count") ?? 0) : 0;
+    if (count >= 30) throw new HttpsError("resource-exhausted", "Summary publish limit reached");
+
+    const profileName = learner.get("display_name");
+    if (typeof profileName !== "string" || !profileName.trim() || profileName.length > 60) {
+      throw new HttpsError("failed-precondition", "Profile display name is unavailable");
+    }
+    const avatarValue = learner.get("avatar");
+    const parsedAvatar = typeof avatarValue === "number" ? avatarValue : Number(avatarValue);
+    const avatarId = Number.isInteger(parsedAvatar) && parsedAvatar >= 0 && parsedAvatar <= 9
+      ? parsedAvatar
+      : 0;
+
+    txn.set(summaryRef, {
+      display_name: profileName.trim(),
+      avatar_id: avatarId,
+      ...normalized,
+      computed_at: now,
+      schema_version: 1,
+    });
+    txn.set(rateRef, { minute, count: count + 1, updated_at: now });
+  });
+  return { success: true, summaryId: profileDocId(profile) };
 });
 
 /** Parent-PIN protected child allow-list and sharing pause controls. */

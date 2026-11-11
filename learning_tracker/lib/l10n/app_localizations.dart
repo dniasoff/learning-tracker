@@ -13152,6 +13152,12 @@ abstract class AppLocalizations {
   /// **'This week'**
   String get communityThisWeek;
 
+  /// No description provided for @communityWeekOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Week of {date}'**
+  String communityWeekOf(String date);
+
   /// No description provided for @communitySiyumim.
   ///
   /// In en, this message translates to:

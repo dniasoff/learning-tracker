@@ -114,7 +114,7 @@ class ProgressScreen extends ConsumerWidget {
                           subtitle: Text(l10n.communityPrivacyNotice),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () =>
-                              context.router.push(const SocialCommunityRoute()),
+                              context.router.push(SocialCommunityRoute()),
                         ),
                       ),
                     if (!userMode.isChild) const SizedBox(height: 10),

@@ -223,7 +223,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                       size: 26,
                     ),
                     onTap: () => context.pushRoute(
-                      const SocialCommunityRoute(parentMode: true),
+                      SocialCommunityRoute(parentMode: true),
                     ),
                   ),
                   // AD-53: canEditLearning gates "Manage Tracks" for tutors.

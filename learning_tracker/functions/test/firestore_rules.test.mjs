@@ -280,15 +280,13 @@ describe('social graph rules', () => {
         setDoc(doc(db, ratePath), { day: '2026-11-10', request_count: 1 }),
         setDoc(doc(db, cursorPath), { owner_uid: OWNER, profile_id: profileId, expires_at: futureTs }),
         setDoc(doc(db, summaryPath), {
-          owner_uid: OWNER,
-          profile_id: profileId,
           display_name: 'Learner',
           avatar_id: 0,
           streak: { by_curriculum: [] },
           current_tracks: [],
-          weekly_learning: { by_curriculum: [] },
+          weekly_learning: { week_start: '2026-11-08', by_curriculum: [] },
           siyumim: [],
-          computed_at: nowTs,
+          computed_at: pastTs,
           schema_version: 1,
         }),
         setDoc(doc(db, readerPath), {
@@ -368,8 +366,8 @@ describe('social graph rules', () => {
     await assertFails(setDoc(doc(owner(), cursorPath), { forged: true }));
   });
 
-  test('social summary reads require an owner, follower grant, or staff grant and deny malformed fields', async () => {
-    await assertSucceeds(getDoc(doc(owner(), summaryPath)));
+  test('social summary reads require a follower or staff grant and deny malformed fields', async () => {
+    await assertFails(getDoc(doc(owner(), summaryPath)));
     await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
     await assertFails(getDoc(doc(stranger(), summaryPath)));
     await assertFails(getDoc(doc(anon(), summaryPath)));

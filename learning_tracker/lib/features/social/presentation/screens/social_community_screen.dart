@@ -1,9 +1,9 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/social/domain/social_graph.dart';
 import 'package:learning_tracker/features/social/presentation/providers/social_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -211,7 +211,6 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
           child: Text((name ?? '?').characters.first.toUpperCase()),
         ),
         title: Text(name ?? l10n.communityUnavailableProfile),
-        subtitle: Text(item.state.name),
         onTap: summaryId == null
             ? null
             : () => context.router.push(
@@ -220,7 +219,9 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
         trailing: IconButton(
           tooltip: l10n.communityRemove,
           icon: const Icon(Icons.more_vert),
-          onPressed: _busy ? null : () => _relationshipActions(targetId),
+          onPressed: _busy
+              ? null
+              : () => _relationshipActions(targetId, summaryId: summaryId),
         ),
       ),
     );
@@ -299,7 +300,7 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
     );
   }
 
-  Future<void> _remove(String targetId) async {
+  Future<void> _remove(String targetId, {String? summaryId}) async {
     final scope = await _scope();
     if (scope == null) return;
     await _perform(
@@ -311,9 +312,10 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
             parentSessionId: scope.parentSessionId,
           ),
     );
+    if (summaryId != null) ref.invalidate(socialSummaryProvider(summaryId));
   }
 
-  Future<void> _block(String targetId) async {
+  Future<void> _block(String targetId, {String? summaryId}) async {
     final scope = await _scope();
     if (scope == null) return;
     await _perform(
@@ -325,9 +327,13 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
             parentSessionId: scope.parentSessionId,
           ),
     );
+    if (summaryId != null) ref.invalidate(socialSummaryProvider(summaryId));
   }
 
-  Future<void> _relationshipActions(String targetId) async {
+  Future<void> _relationshipActions(
+    String targetId, {
+    String? summaryId,
+  }) async {
     final l10n = AppLocalizations.of(context)!;
     final action = await showModalBottomSheet<String>(
       context: context,
@@ -349,8 +355,8 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
         ),
       ),
     );
-    if (action == 'remove') await _remove(targetId);
-    if (action == 'block') await _block(targetId);
+    if (action == 'remove') await _remove(targetId, summaryId: summaryId);
+    if (action == 'block') await _block(targetId, summaryId: summaryId);
   }
 
   Future<void> _openFindPeople() async {

@@ -1,6 +1,9 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/features/social/domain/social_summary.dart';
 import 'package:learning_tracker/features/social/presentation/providers/social_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -31,17 +34,14 @@ class SocialSummaryProfileScreen extends ConsumerWidget {
   }
 }
 
-class _SummaryContent extends StatelessWidget {
+class _SummaryContent extends ConsumerWidget {
   const _SummaryContent({required this.summary});
 
   final SocialSummary summary;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final tracks = {
-      for (final track in summary.currentTracks) track.curriculumId: track,
-    };
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
@@ -66,9 +66,7 @@ class _SummaryContent extends StatelessWidget {
         _SectionTitle(l10n.communityStreak),
         for (final streak in summary.streak.byCurriculum)
           ListTile(
-            title: Text(
-              tracks[streak.curriculumId]?.displayName ?? streak.curriculumId,
-            ),
+            title: Text(_curriculumLabel(ref, streak.curriculumId)),
             subtitle: Text(
               l10n.communityStreakValues(streak.currentDays, streak.bestDays),
             ),
@@ -77,19 +75,26 @@ class _SummaryContent extends StatelessWidget {
         _SectionTitle(l10n.communityCurrentTracks),
         for (final track in summary.currentTracks)
           ListTile(
-            title: Text(track.displayName),
-            subtitle: track.position == null
+            title: Text(_curriculumLabel(ref, track.curriculumId)),
+            subtitle: track.positionRef == null
                 ? null
-                : Text(l10n.communityPosition(track.position!)),
+                : _SummaryRefLabel(track.positionRef!),
             leading: const Icon(Icons.menu_book_outlined),
           ),
         _SectionTitle(l10n.communityThisWeek),
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 16, bottom: 4),
+          child: Text(
+            l10n.communityWeekOf(
+              MaterialLocalizations.of(context).formatMediumDate(
+                DateTime.parse('${summary.weeklyLearning.weekStart}T00:00:00Z'),
+              ),
+            ),
+          ),
+        ),
         for (final activity in summary.weeklyLearning.byCurriculum)
           ListTile(
-            title: Text(
-              tracks[activity.curriculumId]?.displayName ??
-                  activity.curriculumId,
-            ),
+            title: Text(_curriculumLabel(ref, activity.curriculumId)),
             subtitle: Text(
               l10n.communityWeeklyCounts(activity.limudim, activity.chazaros),
             ),
@@ -101,11 +106,32 @@ class _SummaryContent extends StatelessWidget {
         else
           for (final siyum in summary.siyumim)
             ListTile(
-              title: Text(siyum.label),
-              subtitle: Text(siyum.level),
+              title: _SummaryRefLabel(siyum.ref),
               leading: const Icon(Icons.emoji_events_outlined),
             ),
       ],
+    );
+  }
+}
+
+String _curriculumLabel(WidgetRef ref, String key) {
+  final curriculum = CurriculumId.fromStorageKey(key);
+  if (curriculum == null) return key;
+  return curriculumLabelText(ref, curriculum: curriculum);
+}
+
+class _SummaryRefLabel extends ConsumerWidget {
+  const _SummaryRefLabel(this.refValue);
+
+  final String refValue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rendered = ref.watch(renderedDisplayForRefProvider(refValue));
+    return rendered.when(
+      loading: () => Text(refValue),
+      error: (_, __) => Text(refValue),
+      data: Text.new,
     );
   }
 }
