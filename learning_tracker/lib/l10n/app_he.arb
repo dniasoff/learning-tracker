@@ -4616,6 +4616,7 @@
   "groupTaskScope": "בחירת חלקים (השארת הכול ריק תבחר את התוכנית כולה)",
   "groupTaskReplyBy": "יש לאשר או לדחות עד",
   "groupTaskDeadline": "מועד סיום",
+  "groupTaskDeadlineTooFar": "יש לבחור מועד סיום בתוך שלוש שנים.",
   "groupTaskCreateSuccess": "המשימה פורסמה בקבוצה",
   "groupTaskNoTasks": "אין עדיין משימות קבוצתיות",
   "groupTaskAccept": "אישור",

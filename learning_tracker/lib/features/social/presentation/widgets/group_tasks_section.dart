@@ -7,6 +7,16 @@ import 'package:learning_tracker/features/social/data/learning_group_repository.
 import 'package:learning_tracker/features/social/domain/learning_group.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// Returns the inclusive three-calendar-year deadline limit for [today].
+DateTime groupTaskDeadlineLimitFor(DateTime today) {
+  final year = today.year + 3;
+  final lastDayOfTargetMonth = DateTime(year, today.month + 1, 0).day;
+  final day = today.day <= lastDayOfTargetMonth
+      ? today.day
+      : lastDayOfTargetMonth;
+  return DateTime(year, today.month, day);
+}
+
 class GroupTasksSection extends ConsumerStatefulWidget {
   const GroupTasksSection({
     super.key,
@@ -60,15 +70,15 @@ class _GroupTasksSectionState extends ConsumerState<GroupTasksSection> {
     for (final item in items) ..._flatten(item.children),
   ];
 
-  Future<DateTime?> _pickDate(DateTime initial) => showDatePicker(
-    context: context,
-    initialDate: initial,
-    firstDate: ref.read(localDayClockProvider).today(),
-    lastDate: ref
-        .read(localDayClockProvider)
-        .today()
-        .add(const Duration(days: 730)),
-  );
+  Future<DateTime?> _pickDate(DateTime initial) {
+    final today = ref.read(localDayClockProvider).today();
+    return showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: today,
+      lastDate: groupTaskDeadlineLimitFor(today),
+    );
+  }
 
   Future<void> _postTask(AppLocalizations l10n) async {
     try {
@@ -78,6 +88,7 @@ class _GroupTasksSectionState extends ConsumerState<GroupTasksSection> {
       var scopes = <LearningGroupTaskScope>[];
       var selected = <String>{};
       final today = ref.read(localDayClockProvider).today();
+      final deadlineLimit = groupTaskDeadlineLimitFor(today);
       var replyBy = today.add(const Duration(days: 3));
       var deadline = today.add(const Duration(days: 14));
       var loadingScopes = true;
@@ -172,6 +183,8 @@ class _GroupTasksSectionState extends ConsumerState<GroupTasksSection> {
                         setDialogState(() => deadline = choice);
                     },
                   ),
+                  if (deadline.isAfter(deadlineLimit))
+                    Text(l10n.groupTaskDeadlineTooFar),
                 ],
               ),
             ),
@@ -183,7 +196,10 @@ class _GroupTasksSectionState extends ConsumerState<GroupTasksSection> {
                 ),
               ),
               FilledButton(
-                onPressed: loadingScopes || !deadline.isAfter(replyBy)
+                onPressed:
+                    loadingScopes ||
+                        !deadline.isAfter(replyBy) ||
+                        deadline.isAfter(deadlineLimit)
                     ? null
                     : () => Navigator.pop(context, (
                         curriculum,

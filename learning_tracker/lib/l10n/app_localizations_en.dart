@@ -8338,6 +8338,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupTaskDeadline => 'Finish by';
 
   @override
+  String get groupTaskDeadlineTooFar => 'Choose a deadline within three years.';
+
+  @override
   String get groupTaskCreateSuccess => 'Task posted to the group';
 
   @override

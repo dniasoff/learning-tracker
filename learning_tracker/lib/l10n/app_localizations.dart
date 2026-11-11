@@ -13614,6 +13614,12 @@ abstract class AppLocalizations {
   /// **'Finish by'**
   String get groupTaskDeadline;
 
+  /// No description provided for @groupTaskDeadlineTooFar.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a deadline within three years.'**
+  String get groupTaskDeadlineTooFar;
+
   /// No description provided for @groupTaskCreateSuccess.
   ///
   /// In en, this message translates to:

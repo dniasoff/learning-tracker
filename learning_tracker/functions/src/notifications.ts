@@ -125,11 +125,13 @@ export async function sendGroupTaskPostedPush(args: {
     }
   }
   const messages: admin.messaging.Message[] = [];
+  const sentTokens: Array<{ uid: string; installId: string; token: string }> = [];
   for (const [uid, invitee] of [...byAccount.entries()].sort(([a], [b]) => a.localeCompare(b))) {
     const account = await db.collection("users").doc(uid).get();
     // FCM token presence is the existing opt-in boundary: tokens are added
     // only after notification permission is granted and removed on lock.
-    for (const { token } of readTokens(account.get("fcm_tokens"))) {
+    for (const { installId, token } of readTokens(account.get("fcm_tokens"))) {
+      sentTokens.push({ uid, installId, token });
       messages.push({
         token,
         data: {
@@ -148,14 +150,21 @@ export async function sendGroupTaskPostedPush(args: {
   if (messages.length === 0) return { accountCount: byAccount.size, tokenCount: 0, successCount: 0 };
   const response = await messaging().sendEach(messages);
   const deadByUid = new Map<string, Array<{ installId: string; token: string }>>();
-  let index = 0;
-  for (const [uid] of [...byAccount.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    const account = await db.collection("users").doc(uid).get();
-    const tokens = readTokens(account.get("fcm_tokens"));
-    const dead = tokens.filter((token) => response.responses[index++]?.error?.code && DEAD_TOKEN_CODES.has(response.responses[index - 1].error!.code!));
-    if (dead.length > 0) deadByUid.set(uid, dead);
+  if (response.responses.length !== sentTokens.length) {
+    throw new Error("FCM group-task response count did not match sent messages");
   }
-  await Promise.all([...deadByUid].map(([uid, dead]) => pruneTokens(uid, dead)));
+  response.responses.forEach((result, index) => {
+    const sent = sentTokens[index];
+    const code = result.error?.code;
+    if (code && DEAD_TOKEN_CODES.has(code)) {
+      const dead = deadByUid.get(sent.uid) ?? [];
+      dead.push({ installId: sent.installId, token: sent.token });
+      deadByUid.set(sent.uid, dead);
+    }
+  });
+  for (const [uid, dead] of deadByUid) {
+    await pruneTokens(uid, dead);
+  }
   return { accountCount: byAccount.size, tokenCount: messages.length, successCount: response.successCount };
 }
 

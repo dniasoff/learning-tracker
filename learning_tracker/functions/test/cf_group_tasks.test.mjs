@@ -91,6 +91,62 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     assert.equal('progress' in messages[0].data, false);
   });
 
+  test('posting rejects a deadline more than three years away', async () => {
+    const groupId = await makeGroup();
+    await expectHttpsError(call(fns.createLearningGroupTask, {
+      groupId,
+      profileId: adminProfile,
+      curriculumId: 'mishnayos',
+      scopeRefs: ['Mishnah Tamid'],
+      replyBy: dateIn(1),
+      deadline: dateIn(365 * 3 + 5),
+    }, strangerAuth), 'invalid-argument');
+  });
+
+  test('dead-token pruning follows the account and token paired with each sent message', async () => {
+    const uids = [parentAuth.uid, strangerAuth.uid].sort();
+    for (const [index, uid] of uids.entries()) {
+      await db.collection('users').doc(uid).set({
+        fcm_tokens: { install_a: { token: `device-${index}` } },
+      }, { merge: true });
+    }
+
+    const messages = [];
+    notifications.setPushMessagingForTests({
+      async sendEach(batch) {
+        messages.push(...batch);
+        await db.collection('users').doc(uids[0]).update({
+          'fcm_tokens.install_b': { token: 'new-device-token' },
+        });
+        return {
+          responses: [
+            { success: true },
+            { success: false, error: { code: 'messaging/registration-token-not-registered' } },
+          ],
+          successCount: 1,
+          failureCount: 1,
+        };
+      },
+    });
+
+    await notifications.sendGroupTaskPostedPush({
+      groupId: 'group-test',
+      taskId: 'task-test',
+      invitees: uids.map((uid, index) => ({
+        uid,
+        profileId: `profile-${index}`,
+        mode: 'adult',
+      })),
+    });
+
+    assert.deepEqual(messages.map((message) => message.token), ['device-0', 'device-1']);
+    const firstAccount = await db.collection('users').doc(uids[0]).get();
+    const secondAccount = await db.collection('users').doc(uids[1]).get();
+    assert.equal(firstAccount.get('fcm_tokens.install_a.token'), 'device-0');
+    assert.equal(firstAccount.get('fcm_tokens.install_b.token'), 'new-device-token');
+    assert.equal(secondAccount.get('fcm_tokens.install_a'), undefined);
+  });
+
   test('acceptance and preferences are required before one atomic publication creates ordinary tracks', async () => {
     const groupId = await makeGroup();
     const task = await postTask(groupId);

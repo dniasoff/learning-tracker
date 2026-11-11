@@ -47,6 +47,14 @@ function date(value: unknown, field: string): string {
   return value;
 }
 
+function addCivilYears(value: string, years: number): string {
+  const [year, month, day] = value.split("-").map(Number);
+  const targetYear = year + years;
+  const lastDay = new Date(Date.UTC(targetYear, month, 0)).getUTCDate();
+  const targetDay = Math.min(day, lastDay);
+  return `${targetYear.toString().padStart(4, "0")}-${month.toString().padStart(2, "0")}-${targetDay.toString().padStart(2, "0")}`;
+}
+
 function timestampDate(value: unknown): string | null {
   if (!(value instanceof admin.firestore.Timestamp)) return null;
   return value.toDate().toISOString().slice(0, 10);
@@ -213,6 +221,9 @@ export const createLearningGroupTask = onCall(CALL_OPTS, async (request) => {
   const deadline = date(data.deadline, "deadline");
   const today = new Date().toISOString().slice(0, 10);
   if (replyBy < today || deadline <= replyBy) throw new HttpsError("invalid-argument", "The study deadline must be after the reply window");
+  if (deadline > addCivilYears(today, 3)) {
+    throw new HttpsError("invalid-argument", "The study deadline cannot be more than three years away");
+  }
   let scopeUnits: AllocationUnit[];
   try {
     scopeUnits = resolveGroupTaskUnits(curriculumId, scopeRefs);

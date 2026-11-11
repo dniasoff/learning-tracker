@@ -7,6 +7,17 @@ import 'package:learning_tracker/features/social/presentation/widgets/group_task
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {
+  test('deadline limit is three calendar years and clamps leap day', () {
+    expect(
+      groupTaskDeadlineLimitFor(DateTime(2026, 11, 11)),
+      DateTime(2029, 11, 11),
+    );
+    expect(
+      groupTaskDeadlineLimitFor(DateTime(2024, 2, 29)),
+      DateTime(2027, 2, 28),
+    );
+  });
+
   testWidgets('shows an empty state when the group has no tasks', (
     tester,
   ) async {

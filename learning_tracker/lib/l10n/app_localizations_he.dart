@@ -8248,6 +8248,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get groupTaskDeadline => 'מועד סיום';
 
   @override
+  String get groupTaskDeadlineTooFar => 'יש לבחור מועד סיום בתוך שלוש שנים.';
+
+  @override
   String get groupTaskCreateSuccess => 'המשימה פורסמה בקבוצה';
 
   @override

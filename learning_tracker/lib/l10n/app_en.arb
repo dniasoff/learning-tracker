@@ -6775,6 +6775,7 @@
   "groupTaskScope": "Choose sections (leave all unchecked for the full curriculum)",
   "groupTaskReplyBy": "Accept or decline by",
   "groupTaskDeadline": "Finish by",
+  "groupTaskDeadlineTooFar": "Choose a deadline within three years.",
   "groupTaskCreateSuccess": "Task posted to the group",
   "groupTaskNoTasks": "No group tasks yet",
   "groupTaskAccept": "Accept",
