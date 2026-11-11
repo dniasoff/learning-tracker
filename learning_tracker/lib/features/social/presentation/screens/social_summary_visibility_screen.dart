@@ -1,14 +1,14 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
+import 'package:learning_tracker/features/social/domain/social_summary.dart';
 import 'package:learning_tracker/features/social/domain/social_summary_projection.dart';
 import 'package:learning_tracker/features/social/domain/social_summary_visibility.dart';
 import 'package:learning_tracker/features/social/presentation/providers/social_providers.dart';
+import 'package:learning_tracker/features/social/presentation/widgets/social_summary_sections.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -92,6 +92,13 @@ class _SocialSummaryVisibilityScreenState
               return const Center(child: CircularProgressIndicator());
             }
             final summary = socialSummaryPayload(learnerState);
+            final previewSummary = SocialSummary.fromWire({
+              'display_name': 'Preview',
+              'avatar_id': 0,
+              ...summary,
+              'computed_at': learnerState.nowUtc,
+              'schema_version': 1,
+            });
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -169,7 +176,11 @@ class _SocialSummaryVisibilityScreenState
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: _Preview(summary: summary, visibility: visibility),
+                    child: SocialSummarySections(
+                      summary: previewSummary,
+                      visibility: visibility,
+                      showEmptyMessage: true,
+                    ),
                   ),
                 ),
                 if (_saving) ...[
@@ -194,105 +205,4 @@ class _SocialSummaryVisibilityScreenState
     value: value,
     onChanged: _saving ? null : onChanged,
   );
-}
-
-class _Preview extends ConsumerWidget {
-  const _Preview({required this.summary, required this.visibility});
-
-  final Map<String, Object?> summary;
-  final SocialSummaryVisibility visibility;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final streak = summary['streak']! as Map<String, Object?>;
-    final weekly = summary['weekly_learning']! as Map<String, Object?>;
-    final lines = <Widget>[];
-    final overallStreak = streak['overall'] as Map<String, Object?>?;
-    if (visibility.overallStreak && overallStreak != null) {
-      lines.add(
-        _previewLine(
-          l10n.communityOverall,
-          l10n.communityStreakValues(
-            overallStreak['current_days']! as int,
-            overallStreak['best_days']! as int,
-          ),
-        ),
-      );
-    }
-    if (visibility.perTrackStreaks) {
-      for (final item in streak['by_curriculum']! as List<Object?>) {
-        final row = item! as Map<String, Object?>;
-        lines.add(
-          _previewLine(
-            _label(ref, row['curriculum_id']! as String),
-            l10n.communityStreakValues(
-              row['current_days']! as int,
-              row['best_days']! as int,
-            ),
-          ),
-        );
-      }
-    }
-    final overallWeekly = weekly['overall'] as Map<String, Object?>?;
-    if (visibility.overallWeekly && overallWeekly != null) {
-      lines.add(
-        _previewLine(
-          l10n.communityOverall,
-          l10n.communityWeeklyCounts(
-            overallWeekly['limudim']! as int,
-            overallWeekly['chazaros']! as int,
-          ),
-        ),
-      );
-    }
-    if (visibility.perTrackWeekly) {
-      for (final item in weekly['by_curriculum']! as List<Object?>) {
-        final row = item! as Map<String, Object?>;
-        lines.add(
-          _previewLine(
-            _label(ref, row['curriculum_id']! as String),
-            l10n.communityWeeklyCounts(
-              row['limudim']! as int,
-              row['chazaros']! as int,
-            ),
-          ),
-        );
-      }
-    }
-    if (visibility.currentTracks) {
-      final tracks = summary['current_tracks']! as List<Object?>;
-      lines.add(
-        _previewLine(
-          l10n.communityCurrentTracks,
-          l10n.communityTrackCount(tracks.length),
-        ),
-      );
-    }
-    if (visibility.siyumim) {
-      final siyumim = summary['siyumim']! as List<Object?>;
-      lines.add(
-        _previewLine(
-          l10n.communitySiyumim,
-          l10n.communitySiyumCount(siyumim.length),
-        ),
-      );
-    }
-    if (lines.isEmpty) return Text(l10n.communityVisibilityPreviewEmpty);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: lines,
-    );
-  }
-
-  Widget _previewLine(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Text('$label: $value'),
-  );
-
-  String _label(WidgetRef ref, String key) {
-    final curriculum = CurriculumId.fromStorageKey(key);
-    if (curriculum == null) return key;
-    return curriculumLabelText(ref, curriculum: curriculum);
-  }
 }
