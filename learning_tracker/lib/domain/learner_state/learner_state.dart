@@ -556,6 +556,7 @@ final class LearnerState {
     Set<String> lockIgnoredEventIds = const {},
     List<RejectedRow> rejectedRows = const [],
     List<LearningEvent> countedLearns = const [],
+    this.overallStreak,
   }) : today = today ?? formatCivilDay(nowUtc.toUtc()),
        curricula = Map.unmodifiable(curricula),
        countedLearns = List.unmodifiable(countedLearns),
@@ -604,6 +605,10 @@ final class LearnerState {
   /// `learning_events` (AD-35 "Reads"; DNI-474, additive to the C0
   /// contract).
   final List<LearningEvent> countedLearns;
+
+  /// Profile-wide AD-40 streak over counted learning in every curriculum.
+  /// Null for hand-constructed states that do not come from the engine.
+  final CurriculumStreak? overallStreak;
 
   /// The state of [curriculumId], or null when it has none.
   CurriculumState? operator [](String curriculumId) => curricula[curriculumId];

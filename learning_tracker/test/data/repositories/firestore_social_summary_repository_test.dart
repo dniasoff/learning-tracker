@@ -27,7 +27,7 @@ void main() {
       ).read(id);
 
       expect(summary?.displayName, 'Learner');
-      expect(summary?.weeklyLearning.weekStart, '2026-11-08');
+      expect(summary?.weeklyLearning?.weekStart, '2026-11-08');
     },
   );
 

@@ -51,11 +51,13 @@ describe('social graph callable state', () => {
   const summaryPayload = () => ({
     streak: {
       by_curriculum: [{ curriculum_id: 'mishnayos', current_days: 2, best_days: 5 }],
+      overall: { current_days: 4, best_days: 8 },
     },
     current_tracks: [{ curriculum_id: 'mishnayos', position_ref: 'Berakhot 1' }],
     weekly_learning: {
       week_start: '2026-11-08',
       by_curriculum: [{ curriculum_id: 'mishnayos', limudim: 3, chazaros: 1 }],
+      overall: { limudim: 7, chazaros: 2 },
     },
     siyumim: [{ curriculum_id: 'mishnayos', ref: 'Berakhot', level: 'masechta' }],
   });
@@ -70,13 +72,26 @@ describe('social graph callable state', () => {
     assert.equal(result.summaryId, id);
     const snapshot = await db.collection('social_summaries').doc(id).get();
     assert.deepEqual(snapshot.get('streak.by_curriculum'), summaryPayload().streak.by_curriculum);
+    assert.deepEqual(snapshot.get('streak.overall'), summaryPayload().streak.overall);
     assert.equal(snapshot.get('weekly_learning.week_start'), '2026-11-08');
+    assert.deepEqual(snapshot.get('weekly_learning.overall'), summaryPayload().weekly_learning.overall);
     assert.equal(snapshot.get('display_name'), `${parentAuth.uid} learner`);
     assert.equal(snapshot.get('avatar_id'), 0);
     assert.equal('owner_uid' in snapshot.data(), false);
     assert.equal('profile_id' in snapshot.data(), false);
     assert.equal('points' in snapshot.data(), false);
     assert.ok(snapshot.get('computed_at'));
+    assert.deepEqual(
+      (await call(fns.getSocialSummaryVisibility, { profileId: PROFILE }, parentAuth)).visibility,
+      {
+        overallStreak: true,
+        overallWeekly: true,
+        perTrackStreaks: true,
+        perTrackWeekly: true,
+        currentTracks: true,
+        siyumim: true,
+      },
+    );
   });
 
   test('rejects client text, points, unknown curricula and malformed references', async () => {
@@ -124,6 +139,84 @@ describe('social graph callable state', () => {
     assert.equal(
       (await db.collection('social_summaries').doc(socialProfileDocId(parentAuth.uid, PROFILE)).get()).exists,
       true,
+    );
+  });
+
+  test('visibility choices omit hidden sections and immediately replace the stored summary', async () => {
+    await seedSocialProfile(parentAuth.uid, PROFILE, 'adult');
+    await call(fns.publishSocialSummary, {
+      profileId: PROFILE,
+      summary: summaryPayload(),
+    }, parentAuth);
+    const summaryId = socialProfileDocId(parentAuth.uid, PROFILE);
+    const summaryRef = db.collection('social_summaries').doc(summaryId);
+    assert.ok((await summaryRef.get()).get('streak.overall'));
+
+    const visibility = {
+      overallStreak: false,
+      overallWeekly: false,
+      perTrackStreaks: false,
+      perTrackWeekly: false,
+      currentTracks: false,
+      siyumim: false,
+    };
+    await call(fns.setSocialSummaryVisibility, {
+      profileId: PROFILE,
+      visibility,
+      summary: summaryPayload(),
+    }, parentAuth);
+
+    const stored = (await summaryRef.get()).data();
+    for (const field of ['streak', 'weekly_learning', 'current_tracks', 'siyumim']) {
+      assert.equal(field in stored, false, `${field} must be omitted when hidden`);
+    }
+    assert.deepEqual(
+      (await call(fns.getSocialSummaryVisibility, { profileId: PROFILE }, parentAuth)).visibility,
+      visibility,
+    );
+
+    await call(fns.publishSocialSummary, {
+      profileId: PROFILE,
+      summary: summaryPayload(),
+    }, parentAuth);
+    const republished = (await summaryRef.get()).data();
+    for (const field of ['streak', 'weekly_learning', 'current_tracks', 'siyumim']) {
+      assert.equal(field in republished, false, `future publishes must keep ${field} hidden`);
+    }
+  });
+
+  test('child visibility choices and reads require the active parent session', async () => {
+    await seedSocialProfile(parentAuth.uid, PROFILE, 'child');
+    const visibility = {
+      overallStreak: true,
+      overallWeekly: true,
+      perTrackStreaks: false,
+      perTrackWeekly: false,
+      currentTracks: true,
+      siyumim: false,
+    };
+    await expectHttpsError(call(fns.getSocialSummaryVisibility, {
+      profileId: PROFILE,
+    }, parentAuth), 'invalid-argument');
+    await expectHttpsError(call(fns.setSocialSummaryVisibility, {
+      profileId: PROFILE,
+      visibility,
+      summary: summaryPayload(),
+    }, parentAuth), 'invalid-argument');
+
+    const parentSessionId = await seedParentSession(parentAuth.uid, PROFILE);
+    await call(fns.setSocialSummaryVisibility, {
+      profileId: PROFILE,
+      parentSessionId,
+      visibility,
+      summary: summaryPayload(),
+    }, parentAuth);
+    assert.deepEqual(
+      (await call(fns.getSocialSummaryVisibility, {
+        profileId: PROFILE,
+        parentSessionId,
+      }, parentAuth)).visibility,
+      visibility,
     );
   });
 

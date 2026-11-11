@@ -315,7 +315,12 @@ describe('social graph rules', () => {
     await assertFails(getDoc(doc(anon(), profilePath)));
     await assertFails(setDoc(doc(owner(), profilePath), { forged: true }));
     await assertFails(deleteDoc(doc(owner(), profilePath)));
-    for (const path of [controlsPath, auditPath, `social_user_controls/${TUTOR}`]) {
+    for (const path of [
+      controlsPath,
+      auditPath,
+      `social_user_controls/${TUTOR}`,
+      `social_summary_visibility/${summaryId}`,
+    ]) {
       await assertFails(getDoc(doc(owner(), path)), `PIN-gated data denied directly for ${path}`);
       await assertFails(getDoc(doc(stranger(), path)), `unrelated account must not read ${path}`);
       await assertFails(getDoc(doc(anon(), path)), `anonymous must not read ${path}`);
@@ -337,6 +342,7 @@ describe('social graph rules', () => {
       'social_blocks/client-create',
       'social_rate_limits/client-create',
       'social_user_controls/client-create',
+      'social_summary_visibility/client-create',
       'social_search_cursors/client-create',
       'school_memberships/client-create',
     ]) {
@@ -440,6 +446,18 @@ describe('social graph rules', () => {
       await updateDoc(doc(ctx.firestore(), summaryProfilePath), { active_school_ids: [] });
     });
     await assertFails(getDoc(doc(tutor(), summaryPath)), 'learner leaving the school cuts staff access');
+  });
+
+  test('social summary rules allow omitted sections selected by the owner', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), summaryPath), {
+        display_name: 'Learner',
+        avatar_id: 0,
+        computed_at: pastTs,
+        schema_version: 1,
+      });
+    });
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
   });
 
   async function installChildFollowerGrant() {

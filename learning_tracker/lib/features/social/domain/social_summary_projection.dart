@@ -69,9 +69,25 @@ Map<String, Object?> socialSummaryPayload(LearnerState state) {
   final boundedSiyumim = siyumim.length <= 100
       ? siyumim
       : siyumim.sublist(siyumim.length - 100);
+  final overallStreak = state.overallStreak;
+  final totalLimudim = weeklyCounts.values.fold<int>(
+    0,
+    (sum, counts) => sum + counts.limudim,
+  );
+  final totalChazaros = weeklyCounts.values.fold<int>(
+    0,
+    (sum, counts) => sum + counts.chazaros,
+  );
 
   return {
-    'streak': {'by_curriculum': streakRows},
+    'streak': {
+      'by_curriculum': streakRows,
+      if (overallStreak != null)
+        'overall': {
+          'current_days': overallStreak.current,
+          'best_days': overallStreak.best,
+        },
+    },
     'current_tracks': tracks,
     'weekly_learning': {
       'week_start': weekStart,
@@ -83,6 +99,7 @@ Map<String, Object?> socialSummaryPayload(LearnerState state) {
             'chazaros': weeklyCounts[id]!.chazaros,
           },
       ],
+      'overall': {'limudim': totalLimudim, 'chazaros': totalChazaros},
     },
     'siyumim': boundedSiyumim,
   };

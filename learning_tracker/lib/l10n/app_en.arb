@@ -6622,5 +6622,24 @@
       "limudim": { "type": "int" },
       "chazaros": { "type": "int" }
     }
+  },
+  "communityOverall": "Overall",
+  "communityVisibilityTitle": "What followers can see",
+  "communityVisibilityDescription": "Choose which parts of this profile’s learning progress are shared with followers and school staff.",
+  "communityVisibilityOverallStreak": "Overall streak",
+  "communityVisibilityOverallWeekly": "Overall weekly learning and review totals",
+  "communityVisibilityTrackStreaks": "Streak for each track",
+  "communityVisibilityTrackWeekly": "Weekly learning and review counts for each track",
+  "communityVisibilityCurrentTracks": "Current tracks and position",
+  "communityVisibilitySiyumim": "Siyumim",
+  "communityVisibilityPreview": "Preview shared progress",
+  "communityVisibilityPreviewEmpty": "No progress sections are currently shared.",
+  "communityTrackCount": "{count, plural, =1{# current track} other{# current tracks}}",
+  "@communityTrackCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communitySiyumCount": "{count, plural, =1{# siyum} other{# siyumim}}",
+  "@communitySiyumCount": {
+    "placeholders": { "count": { "type": "int" } }
   }
 }

@@ -48,6 +48,7 @@ import 'package:learning_tracker/features/settings/presentation/screens/lifetime
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/social/presentation/screens/social_community_screen.dart';
 import 'package:learning_tracker/features/social/presentation/screens/social_summary_profile_screen.dart';
+import 'package:learning_tracker/features/social/presentation/screens/social_summary_visibility_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ground_picker_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/my_talmidim_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
@@ -212,6 +213,11 @@ class AppRouter extends RootStackRouter {
       path: '/community/profile/:summaryId',
       page: SocialSummaryProfileRoute.page,
       guards: [authGuard],
+    ),
+    AutoRoute(
+      path: '/community/visibility',
+      page: SocialSummaryVisibilityRoute.page,
+      guards: [authGuard, profileSelectionGuard, parentSessionGuard],
     ),
     // Lifetime report (Story 5.2, DNI-517): a parent surface. A child, a
     // PIN-locked or a tutor session — a deep link included — lands on

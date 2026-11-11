@@ -53,6 +53,7 @@ const ROOT_COLLECTIONS = [
   'social_user_controls',
   'social_audit_logs', 'social_search_cursors',
   'social_summaries',
+  'social_summary_visibility',
   'social_summary_rate_limits',
 ];
 

@@ -7,6 +7,7 @@ import 'package:learning_tracker/data/repositories/firestore_social_summary_repo
 import 'package:learning_tracker/features/social/data/social_graph_repository.dart';
 import 'package:learning_tracker/features/social/domain/social_graph.dart';
 import 'package:learning_tracker/features/social/domain/social_summary.dart';
+import 'package:learning_tracker/features/social/domain/social_summary_visibility.dart';
 
 final socialGraphRepositoryProvider = Provider<SocialGraphRepository>((ref) {
   final resolveFunctions = ref.watch(accountFunctionsProvider);
@@ -32,6 +33,19 @@ final socialChildControlsProvider = FutureProvider.autoDispose
             parentSessionId: query.parentSessionId,
           ),
     );
+
+final socialSummaryVisibilityProvider = FutureProvider.autoDispose
+    .family<
+      SocialSummaryVisibility,
+      ({String profileId, String? parentSessionId})
+    >((ref, query) {
+      return ref
+          .watch(socialGraphRepositoryProvider)
+          .getSummaryVisibility(
+            profileId: query.profileId,
+            parentSessionId: query.parentSessionId,
+          );
+    });
 
 final socialSummaryProvider = FutureProvider.autoDispose
     .family<SocialSummary?, String>((ref, summaryId) async {

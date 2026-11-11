@@ -11,6 +11,7 @@ void main() {
     expect(payload['weekly_learning'], {
       'week_start': '2026-11-08',
       'by_curriculum': <Map<String, Object?>>[],
+      'overall': {'limudim': 0, 'chazaros': 0},
     });
   });
 
@@ -25,6 +26,29 @@ void main() {
       'current_tracks',
       'weekly_learning',
       'siyumim',
+    });
+  });
+
+  test('projects the canonical overall streak and weekly totals', () {
+    final payload = socialSummaryPayload(
+      LearnerState(
+        nowUtc: DateTime.utc(2026, 11, 10),
+        curricula: const {},
+        overallStreak: const CurriculumStreak(
+          current: 5,
+          best: 11,
+          lastDay: '2026-11-10',
+        ),
+      ),
+    );
+
+    expect((payload['streak'] as Map)['overall'], {
+      'current_days': 5,
+      'best_days': 11,
+    });
+    expect((payload['weekly_learning'] as Map)['overall'], {
+      'limudim': 0,
+      'chazaros': 0,
     });
   });
 }

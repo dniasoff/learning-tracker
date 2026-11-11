@@ -9,34 +9,43 @@ final class SocialSummary {
   const SocialSummary({
     required this.displayName,
     required this.avatarId,
-    required this.streak,
-    required this.currentTracks,
-    required this.weeklyLearning,
-    required this.siyumim,
+    this.streak,
+    this.currentTracks,
+    this.weeklyLearning,
+    this.siyumim,
     required this.computedAt,
     required this.schemaVersion,
   });
 
   final String displayName;
   final int avatarId;
-  final SocialStreakProjection streak;
-  final List<SocialCurrentTrackSummary> currentTracks;
-  final SocialWeeklyLearningProjection weeklyLearning;
-  final List<SocialSiyumSummary> siyumim;
+  final SocialStreakProjection? streak;
+  final List<SocialCurrentTrackSummary>? currentTracks;
+  final SocialWeeklyLearningProjection? weeklyLearning;
+  final List<SocialSiyumSummary>? siyumim;
   final DateTime computedAt;
   final int schemaVersion;
 
   factory SocialSummary.fromWire(Object? value) {
-    final data = _map(value, const {
-      'display_name',
-      'avatar_id',
-      'streak',
-      'current_tracks',
-      'weekly_learning',
-      'siyumim',
-      'computed_at',
-      'schema_version',
-    });
+    final data = _map(
+      value,
+      const {
+        'display_name',
+        'avatar_id',
+        'streak',
+        'current_tracks',
+        'weekly_learning',
+        'siyumim',
+        'computed_at',
+        'schema_version',
+      },
+      optional: const {
+        'streak',
+        'current_tracks',
+        'weekly_learning',
+        'siyumim',
+      },
+    );
     if (data['avatar_id'] is! int ||
         (data['avatar_id'] as int) < 0 ||
         (data['avatar_id'] as int) > 9 ||
@@ -47,15 +56,18 @@ final class SocialSummary {
     return SocialSummary(
       displayName: _string(data['display_name'], 'display_name', max: 60),
       avatarId: data['avatar_id'] as int,
-      streak: SocialStreakProjection.fromWire(data['streak']),
-      currentTracks: _list(
-        data['current_tracks'],
-        SocialCurrentTrackSummary.fromWire,
-      ),
-      weeklyLearning: SocialWeeklyLearningProjection.fromWire(
-        data['weekly_learning'],
-      ),
-      siyumim: _list(data['siyumim'], SocialSiyumSummary.fromWire),
+      streak: data['streak'] == null
+          ? null
+          : SocialStreakProjection.fromWire(data['streak']),
+      currentTracks: data['current_tracks'] == null
+          ? null
+          : _list(data['current_tracks'], SocialCurrentTrackSummary.fromWire),
+      weeklyLearning: data['weekly_learning'] == null
+          ? null
+          : SocialWeeklyLearningProjection.fromWire(data['weekly_learning']),
+      siyumim: data['siyumim'] == null
+          ? null
+          : _list(data['siyumim'], SocialSiyumSummary.fromWire),
       computedAt: _date(data['computed_at']),
       schemaVersion: data['schema_version'] as int,
     );
@@ -72,11 +84,13 @@ final class SocialStreakProjection {
     final data = _map(
       value,
       const {'by_curriculum', 'overall'},
-      optional: const {'overall'},
+      optional: const {'by_curriculum', 'overall'},
     );
     final overall = data['overall'];
     return SocialStreakProjection(
-      byCurriculum: _list(data['by_curriculum'], SocialStreakSummary.fromWire),
+      byCurriculum: data['by_curriculum'] == null
+          ? const []
+          : _list(data['by_curriculum'], SocialStreakSummary.fromWire),
       overall: overall == null
           ? null
           : SocialOverallStreakSummary.fromWire(overall),
@@ -99,15 +113,14 @@ final class SocialWeeklyLearningProjection {
     final data = _map(
       value,
       const {'week_start', 'by_curriculum', 'overall'},
-      optional: const {'overall'},
+      optional: const {'by_curriculum', 'overall'},
     );
     final overall = data['overall'];
     return SocialWeeklyLearningProjection(
       weekStart: _sundayDate(data['week_start']),
-      byCurriculum: _list(
-        data['by_curriculum'],
-        SocialWeeklyLearningSummary.fromWire,
-      ),
+      byCurriculum: data['by_curriculum'] == null
+          ? const []
+          : _list(data['by_curriculum'], SocialWeeklyLearningSummary.fromWire),
       overall: overall == null
           ? null
           : SocialOverallWeeklyLearningSummary.fromWire(overall),

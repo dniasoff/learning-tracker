@@ -13193,6 +13193,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{limudim} new learning · {chazaros} review'**
   String communityWeeklyCounts(int limudim, int chazaros);
+
+  /// No description provided for @communityOverall.
+  ///
+  /// In en, this message translates to:
+  /// **'Overall'**
+  String get communityOverall;
+
+  /// No description provided for @communityVisibilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What followers can see'**
+  String get communityVisibilityTitle;
+
+  /// No description provided for @communityVisibilityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which parts of this profile’s learning progress are shared with followers and school staff.'**
+  String get communityVisibilityDescription;
+
+  /// No description provided for @communityVisibilityOverallStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Overall streak'**
+  String get communityVisibilityOverallStreak;
+
+  /// No description provided for @communityVisibilityOverallWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Overall weekly learning and review totals'**
+  String get communityVisibilityOverallWeekly;
+
+  /// No description provided for @communityVisibilityTrackStreaks.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak for each track'**
+  String get communityVisibilityTrackStreaks;
+
+  /// No description provided for @communityVisibilityTrackWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly learning and review counts for each track'**
+  String get communityVisibilityTrackWeekly;
+
+  /// No description provided for @communityVisibilityCurrentTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Current tracks and position'**
+  String get communityVisibilityCurrentTracks;
+
+  /// No description provided for @communityVisibilitySiyumim.
+  ///
+  /// In en, this message translates to:
+  /// **'Siyumim'**
+  String get communityVisibilitySiyumim;
+
+  /// No description provided for @communityVisibilityPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview shared progress'**
+  String get communityVisibilityPreview;
+
+  /// No description provided for @communityVisibilityPreviewEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No progress sections are currently shared.'**
+  String get communityVisibilityPreviewEmpty;
+
+  /// No description provided for @communityTrackCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{# current track} other{# current tracks}}'**
+  String communityTrackCount(int count);
+
+  /// No description provided for @communitySiyumCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{# siyum} other{# siyumim}}'**
+  String communitySiyumCount(int count);
 }
 
 class _AppLocalizationsDelegate

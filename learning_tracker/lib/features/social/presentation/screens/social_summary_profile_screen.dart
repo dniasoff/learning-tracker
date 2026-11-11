@@ -63,52 +63,82 @@ class _SummaryContent extends ConsumerWidget {
           ),
         ),
         const Divider(),
-        _SectionTitle(l10n.communityStreak),
-        for (final streak in summary.streak.byCurriculum)
-          ListTile(
-            title: Text(_curriculumLabel(ref, streak.curriculumId)),
-            subtitle: Text(
-              l10n.communityStreakValues(streak.currentDays, streak.bestDays),
+        if (summary.streak case final streak?) ...[
+          _SectionTitle(l10n.communityStreak),
+          if (streak.overall case final overall?)
+            ListTile(
+              title: Text(l10n.communityOverall),
+              subtitle: Text(
+                l10n.communityStreakValues(
+                  overall.currentDays,
+                  overall.bestDays,
+                ),
+              ),
+              leading: const Icon(Icons.local_fire_department_outlined),
             ),
-            leading: const Icon(Icons.local_fire_department_outlined),
-          ),
-        _SectionTitle(l10n.communityCurrentTracks),
-        for (final track in summary.currentTracks)
-          ListTile(
-            title: Text(_curriculumLabel(ref, track.curriculumId)),
-            subtitle: track.positionRef == null
-                ? null
-                : _SummaryRefLabel(track.positionRef!),
-            leading: const Icon(Icons.menu_book_outlined),
-          ),
-        _SectionTitle(l10n.communityThisWeek),
-        Padding(
-          padding: const EdgeInsetsDirectional.only(start: 16, bottom: 4),
-          child: Text(
-            l10n.communityWeekOf(
-              MaterialLocalizations.of(context).formatMediumDate(
-                DateTime.parse('${summary.weeklyLearning.weekStart}T00:00:00Z'),
+          for (final trackStreak in streak.byCurriculum)
+            ListTile(
+              title: Text(_curriculumLabel(ref, trackStreak.curriculumId)),
+              subtitle: Text(
+                l10n.communityStreakValues(
+                  trackStreak.currentDays,
+                  trackStreak.bestDays,
+                ),
+              ),
+              leading: const Icon(Icons.local_fire_department_outlined),
+            ),
+        ],
+        if (summary.currentTracks case final tracks?) ...[
+          _SectionTitle(l10n.communityCurrentTracks),
+          for (final track in tracks)
+            ListTile(
+              title: Text(_curriculumLabel(ref, track.curriculumId)),
+              subtitle: track.positionRef == null
+                  ? null
+                  : _SummaryRefLabel(track.positionRef!),
+              leading: const Icon(Icons.menu_book_outlined),
+            ),
+        ],
+        if (summary.weeklyLearning case final weekly?) ...[
+          _SectionTitle(l10n.communityThisWeek),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 16, bottom: 4),
+            child: Text(
+              l10n.communityWeekOf(
+                MaterialLocalizations.of(context).formatMediumDate(
+                  DateTime.parse('${weekly.weekStart}T00:00:00Z'),
+                ),
               ),
             ),
           ),
-        ),
-        for (final activity in summary.weeklyLearning.byCurriculum)
-          ListTile(
-            title: Text(_curriculumLabel(ref, activity.curriculumId)),
-            subtitle: Text(
-              l10n.communityWeeklyCounts(activity.limudim, activity.chazaros),
-            ),
-            leading: const Icon(Icons.calendar_view_week_outlined),
-          ),
-        _SectionTitle(l10n.communitySiyumim),
-        if (summary.siyumim.isEmpty)
-          ListTile(title: Text(l10n.communityNoSiyumim))
-        else
-          for (final siyum in summary.siyumim)
+          if (weekly.overall case final overall?)
             ListTile(
-              title: _SummaryRefLabel(siyum.ref),
-              leading: const Icon(Icons.emoji_events_outlined),
+              title: Text(l10n.communityOverall),
+              subtitle: Text(
+                l10n.communityWeeklyCounts(overall.limudim, overall.chazaros),
+              ),
+              leading: const Icon(Icons.calendar_view_week_outlined),
             ),
+          for (final activity in weekly.byCurriculum)
+            ListTile(
+              title: Text(_curriculumLabel(ref, activity.curriculumId)),
+              subtitle: Text(
+                l10n.communityWeeklyCounts(activity.limudim, activity.chazaros),
+              ),
+              leading: const Icon(Icons.calendar_view_week_outlined),
+            ),
+        ],
+        if (summary.siyumim case final siyumim?) ...[
+          _SectionTitle(l10n.communitySiyumim),
+          if (siyumim.isEmpty)
+            ListTile(title: Text(l10n.communityNoSiyumim))
+          else
+            for (final siyum in siyumim)
+              ListTile(
+                title: _SummaryRefLabel(siyum.ref),
+                leading: const Icon(Icons.emoji_events_outlined),
+              ),
+        ],
       ],
     );
   }

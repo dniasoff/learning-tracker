@@ -125,6 +125,14 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
               ? l10n.communityParentControls
               : l10n.communityTitle,
         ),
+        actions: [
+          IconButton(
+            tooltip: l10n.communityVisibilityTitle,
+            onPressed: () =>
+                context.router.push(const SocialSummaryVisibilityRoute()),
+            icon: const Icon(Icons.visibility_outlined),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           tabs: [

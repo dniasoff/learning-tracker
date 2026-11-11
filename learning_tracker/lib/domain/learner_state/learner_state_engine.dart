@@ -193,6 +193,12 @@ final class LearnerStateEngine {
       earningEventIds: earning,
       lockIgnoredEventIds: counted.lockIgnoredIds,
       countedLearns: counted.learns,
+      overallStreak: curriculumStreak(
+        counted.learns,
+        settingsHistory: inputs.settingsHistory,
+        locks: locks,
+        nowUtc: inputs.nowUtc,
+      ),
     );
   }
 

@@ -8005,4 +8005,62 @@ class AppLocalizationsHe extends AppLocalizations {
   String communityWeeklyCounts(int limudim, int chazaros) {
     return '$limudim לימוד חדש · $chazaros חזרות';
   }
+
+  @override
+  String get communityOverall => 'כללי';
+
+  @override
+  String get communityVisibilityTitle => 'מה העוקבים יכולים לראות';
+
+  @override
+  String get communityVisibilityDescription =>
+      'בחירת חלקי ההתקדמות בלימוד שישותפו עם העוקבים ועם צוות בית הספר.';
+
+  @override
+  String get communityVisibilityOverallStreak => 'רצף כללי';
+
+  @override
+  String get communityVisibilityOverallWeekly =>
+      'סיכומי לימוד וחזרה שבועיים כלליים';
+
+  @override
+  String get communityVisibilityTrackStreaks => 'רצף לכל מסלול';
+
+  @override
+  String get communityVisibilityTrackWeekly =>
+      'מספרי לימוד וחזרה שבועיים לכל מסלול';
+
+  @override
+  String get communityVisibilityCurrentTracks => 'מסלולים נוכחיים ומיקום';
+
+  @override
+  String get communityVisibilitySiyumim => 'סיומים';
+
+  @override
+  String get communityVisibilityPreview => 'תצוגה מקדימה של ההתקדמות המשותפת';
+
+  @override
+  String get communityVisibilityPreviewEmpty => 'לא משותפים כרגע חלקי התקדמות.';
+
+  @override
+  String communityTrackCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count מסלולים נוכחיים',
+      one: 'מסלול נוכחי אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communitySiyumCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count סיומים',
+      one: 'סיום אחד',
+    );
+    return '$_temp0';
+  }
 }

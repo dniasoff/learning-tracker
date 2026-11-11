@@ -638,15 +638,25 @@ service cloud.firestore {
         ])
         && resource.data.display_name is string
         && resource.data.avatar_id is int
-        && resource.data.streak is map
-        && resource.data.streak.keys().hasOnly(['by_curriculum', 'overall'])
-        && resource.data.streak.by_curriculum is list
-        && resource.data.current_tracks is list
-        && resource.data.weekly_learning is map
-        && resource.data.weekly_learning.keys().hasOnly(['week_start', 'by_curriculum', 'overall'])
-        && resource.data.weekly_learning.week_start is string
-        && resource.data.weekly_learning.by_curriculum is list
-        && resource.data.siyumim is list
+        && (!('streak' in resource.data)
+          || (resource.data.streak is map
+            && resource.data.streak.keys().hasOnly(['by_curriculum', 'overall'])
+            && (!('by_curriculum' in resource.data.streak)
+              || resource.data.streak.by_curriculum is list)
+            && (!('overall' in resource.data.streak)
+              || (resource.data.streak.overall is map
+                && resource.data.streak.overall.keys().hasOnly(['current_days', 'best_days'])))))
+        && (!('current_tracks' in resource.data) || resource.data.current_tracks is list)
+        && (!('weekly_learning' in resource.data)
+          || (resource.data.weekly_learning is map
+            && resource.data.weekly_learning.keys().hasOnly(['week_start', 'by_curriculum', 'overall'])
+            && resource.data.weekly_learning.week_start is string
+            && (!('by_curriculum' in resource.data.weekly_learning)
+              || resource.data.weekly_learning.by_curriculum is list)
+            && (!('overall' in resource.data.weekly_learning)
+              || (resource.data.weekly_learning.overall is map
+                && resource.data.weekly_learning.overall.keys().hasOnly(['limudim', 'chazaros'])))))
+        && (!('siyumim' in resource.data) || resource.data.siyumim is list)
         && resource.data.computed_at is timestamp
         && resource.data.schema_version is int;
       allow list: if false;
@@ -659,6 +669,11 @@ service cloud.firestore {
 
     match /social_parent_controls/{controlId} {
       // Reads as well as writes stay behind PIN-verified callables.
+      allow read, write: if false;
+    }
+
+    match /social_summary_visibility/{summaryId} {
+      // Visibility choices are server-owned and accessed only by callables.
       allow read, write: if false;
     }
 
