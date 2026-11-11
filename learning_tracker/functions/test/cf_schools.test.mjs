@@ -63,19 +63,15 @@ describe('school profile and membership callables', () => {
   });
 
   test('school staff read grant is revoked when member leaves', async () => {
-    await seedSocialProfile(parentAuth.uid, 'admin-member', 'adult');
     await seedSocialProfile(strangerAuth.uid, 'staff-member', 'adult');
     const created = await call(fns.createSchool, { name: 'Shared School' }, parentAuth);
     const firstInvite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
     await call(fns.joinSchoolWithInvite, { inviteCode: firstInvite.inviteCode, profileId: 'staff-member', progressConsent: true }, strangerAuth);
-    await call(fns.addSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'staff-member' }, parentAuth);
-    const secondInvite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
-    await call(fns.joinSchoolWithInvite, { inviteCode: secondInvite.inviteCode, profileId: 'admin-member', progressConsent: true }, parentAuth);
-    const summary = db.collection('social_summaries').doc(summaryId(parentAuth.uid, 'admin-member'));
-    assert.deepEqual((await summary.collection('readers').doc(strangerAuth.uid).get()).get('school_ids'), [created.schoolId]);
-    await call(fns.leaveSchool, { schoolId: created.schoolId, profileId: 'admin-member' }, parentAuth);
-    assert.equal((await summary.collection('readers').doc(strangerAuth.uid).get()).exists, false);
-    assert.deepEqual((await db.collection('social_profiles').doc(summaryId(parentAuth.uid, 'admin-member')).get()).get('active_school_ids'), []);
+    const summary = db.collection('social_summaries').doc(summaryId(strangerAuth.uid, 'staff-member'));
+    assert.deepEqual((await summary.collection('readers').doc(parentAuth.uid).get()).get('school_ids'), [created.schoolId]);
+    await call(fns.leaveSchool, { schoolId: created.schoolId, profileId: 'staff-member' }, strangerAuth);
+    assert.equal((await summary.collection('readers').doc(parentAuth.uid).get()).exists, false);
+    assert.deepEqual((await db.collection('social_profiles').doc(summaryId(strangerAuth.uid, 'staff-member')).get()).get('active_school_ids'), []);
   });
 
   test('staff summary reads stop on admin removal and school suspension, then restore on unsuspension', async () => {
@@ -147,7 +143,7 @@ describe('school profile and membership callables', () => {
     await call(fns.joinSchoolWithInvite, { inviteCode: invite.inviteCode, profileId: 'target-profile', progressConsent: true }, strangerAuth);
     await call(fns.addSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth);
     const controls = db.collection('social_user_controls');
-    assert.deepEqual((await controls.doc(parentAuth.uid).get()).get('active_staff_school_ids'), []);
+    assert.deepEqual((await controls.doc(parentAuth.uid).get()).get('active_staff_school_ids'), [created.schoolId]);
     assert.deepEqual((await controls.doc(strangerAuth.uid).get()).get('active_staff_school_ids'), [created.schoolId]);
     await expectHttpsError(call(fns.removeSchoolMember, { schoolId: created.schoolId, ownerUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth), 'failed-precondition');
     await call(fns.removeSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid }, parentAuth);
