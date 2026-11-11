@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, test } from 'node:test';
 import {
   call, clearFirestore, db, expectHttpsError, fns, parentAuth, seedParentSession,
@@ -70,6 +71,13 @@ async function runDailyGroupTaskRebalance() {
 describe('group task acceptance, preferences, allocation, and daily schedule', () => {
   beforeEach(async () => clearFirestore());
   afterEach(() => notifications.setPushMessagingForTests(null));
+
+  test('scheduled collection-group sweep has its production composite index', () => {
+    const config = JSON.parse(readFileSync(new URL('../../firestore.indexes.json', import.meta.url), 'utf8'));
+    assert.ok(config.indexes.some((index) => index.collectionGroup === 'tasks' && index.queryScope === 'COLLECTION_GROUP' &&
+      index.fields.some((field) => field.fieldPath === 'status' && field.order === 'ASCENDING') &&
+      index.fields.some((field) => field.fieldPath === '__name__' && field.order === 'ASCENDING')));
+  });
 
   test('posting sends one generic data-only invite push per account with registered FCM tokens', async () => {
     const groupId = await makeGroup({ includeChild: true });
@@ -205,6 +213,41 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     const shared = cards[0].allocation.members.find((row) => row.memberId === member.id);
     assert.equal(shared.progress.completed, 1);
     assert.equal(shared.progress.total, member.get('units').length);
+  });
+
+  test('source-less void events undo learning and a short cache serves the next list read', async () => {
+    const groupId = await makeGroup();
+    const task = await postTask(groupId);
+    await accept(groupId, task.taskId);
+    await call(fns.respondToLearningGroupTask, { groupId, taskId: task.taskId, profileId: memberProfile, response: 'accept' }, parentAuth);
+    await preferences(groupId, task.taskId, adminProfile);
+    await preferences(groupId, task.taskId, memberProfile, parentAuth);
+    await call(fns.allocateLearningGroupTask, { groupId, taskId: task.taskId }, strangerAuth);
+    const assignments = await db.collection('learning_groups').doc(groupId).collection('tasks').doc(task.taskId)
+      .collection('allocations').doc('v1').collection('members').get();
+    const member = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
+    const learnerEvents = db.collection('users').doc(parentAuth.uid).collection('learner_profiles').doc(memberProfile)
+      .collection('learning_events');
+    const learnId = '01JLEARN0000000000000000010';
+    const voidId = '01JVOID00000000000000000010';
+    await learnerEvents.doc(learnId).set({
+      kind: 'learn', source: member.get('sub_track_id'), curriculum_id: 'mishnayos', ref: member.get('units')[0].ref,
+    });
+    await learnerEvents.doc(voidId).set({
+      kind: 'void', target_id: learnId, reverts_action_id: '01JACTION000000000000000010',
+    });
+
+    const cards = await call(fns.listLearningGroupTasks, { groupId, profileId: adminProfile }, strangerAuth);
+    const shared = cards[0].allocation.members.find((row) => row.memberId === member.id);
+    assert.equal(shared.progress.completed, 0);
+    const cachedAssignment = await member.ref.get();
+    assert.equal(cachedAssignment.get('progress_cache.completed'), 0);
+    assert.equal(cachedAssignment.get('progress_cache.total'), member.get('units').length);
+
+    await learnerEvents.doc(voidId).delete();
+    const cachedCards = await call(fns.listLearningGroupTasks, { groupId, profileId: adminProfile }, strangerAuth);
+    const cachedProgress = cachedCards[0].allocation.members.find((row) => row.memberId === member.id).progress;
+    assert.equal(cachedProgress.completed, 0);
   });
 
   test('progress includes assignments with more than 200 units', async () => {
@@ -502,6 +545,42 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     assert.ok(updated.get('daily_tasks').some((entry) => entry.date === yesterday && entry.reconciled_at));
     assert.ok(!updated.get('daily_tasks').some((entry) => entry.date >= dateIn(0) && entry.refs.includes(ref)));
     assert.ok(updated.get('units').some((unit) => unit.ref === ref || ref.startsWith(`${unit.ref} `)));
+  });
+
+  test('daily reflow keeps a ref open when its learn event has a source-less void', async () => {
+    const groupId = await makeGroup();
+    const task = await postTask(groupId);
+    await accept(groupId, task.taskId);
+    await call(fns.respondToLearningGroupTask, { groupId, taskId: task.taskId, profileId: memberProfile, response: 'accept' }, parentAuth);
+    await preferences(groupId, task.taskId, adminProfile);
+    await preferences(groupId, task.taskId, memberProfile, parentAuth);
+    await call(fns.allocateLearningGroupTask, { groupId, taskId: task.taskId }, strangerAuth);
+    const taskRef = db.collection('learning_groups').doc(groupId).collection('tasks').doc(task.taskId);
+    const assignments = await taskRef.collection('allocations').doc('v1').collection('members').get();
+    const owner = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
+    const peer = assignments.docs.find((doc) => doc.get('profile_id') === adminProfile);
+    const missed = owner.get('daily_tasks')[0];
+    const missedRef = missed.refs[0];
+    await owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-2) }], study_days: [] });
+    const learnerEvents = db.collection('users').doc(parentAuth.uid).collection('learner_profiles').doc(memberProfile)
+      .collection('learning_events');
+    const learnId = '01JLEARN0000000000000000011';
+    await learnerEvents.doc(learnId).set({
+      kind: 'learn', source: owner.get('sub_track_id'), curriculum_id: 'mishnayos', ref: missedRef,
+    });
+    await learnerEvents.doc('01JVOID00000000000000000011').set({
+      kind: 'void', target_id: learnId, reverts_action_id: '01JACTION000000000000000011',
+    });
+
+    await runDailyGroupTaskRebalance();
+    const [updatedOwner, updatedPeer, peerTrack] = await Promise.all([
+      owner.ref.get(), peer.ref.get(),
+      db.collection('users').doc(strangerAuth.uid).collection('learner_profiles').doc(adminProfile)
+        .collection('sub_tracks').doc(peer.get('sub_track_id')).get(),
+    ]);
+    assert.ok(!updatedOwner.get('units').some((unit) => unit.ref === missedRef));
+    assert.ok(updatedPeer.get('units').some((unit) => unit.ref === missedRef));
+    assert.ok(peerTrack.get('ground').some((unit) => unit.ref === missedRef));
   });
 
   test('child acceptance requires the parent PIN session for this task', async () => {

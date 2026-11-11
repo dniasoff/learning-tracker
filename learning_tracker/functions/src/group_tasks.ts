@@ -40,6 +40,7 @@ const MAX_GROUPS_PER_LEARN_CALL = 20;
 const MAX_TASKS_PER_GROUP_CALL = 10;
 const LEARNING_EVENT_PAGE_SIZE = 200;
 const MAX_REBALANCE_TASKS_PER_RUN = 25;
+const PROGRESS_CACHE_TTL_MS = 30_000;
 const tasks = (groupId: string) => db.collection("learning_groups").doc(groupId).collection("tasks");
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -95,7 +96,7 @@ async function groupTaskProgress(groupId: string, readerUid: string, readerProfi
   const ownerProfileId = String(assignment.get("profile_id"));
   const ownerProfileKey = digest(ownerUid, ownerProfileId);
   const learner = db.collection("users").doc(ownerUid).collection("learner_profiles").doc(ownerProfileId);
-  return db.runTransaction(async (txn) => {
+  const checked = await db.runTransaction(async (txn) => {
     const group = await requireActiveGroup(txn, groupRef(groupId));
     const [currentAssignment, ownerAccount, ownerProfile, readerAccount, readerProfile, acl, ownerSocial, ownerControls, ownerUserControls,
       readerSocial, readerControls, readerUserControls] = await Promise.all([
@@ -131,39 +132,81 @@ async function groupTaskProgress(groupId: string, readerUid: string, readerProfi
     }
     const currentUnits = Array.isArray(currentAssignment.get("units"))
       ? currentAssignment.get("units") as Array<Record<string, unknown>> : [];
-    const sourceEvents = await readAllLearningEventsForSource(
-      txn, learner.collection("learning_events"), String(currentAssignment.get("sub_track_id")),
-    );
+    const cache = currentAssignment.get("progress_cache") as Record<string, unknown> | undefined;
+    const computedAt = cache?.computed_at;
     const refs = currentUnits.map((unit) => String(unit.ref ?? ""));
-    const voids = new Set(sourceEvents.filter((event) => event.get("kind") === "void").map((event) => String(event.get("target_id"))));
-    const learned = new Set(sourceEvents.filter((event) => event.get("kind") === "learn" && !voids.has(event.id))
-      .map((event) => String(event.get("ref"))));
-    let completed = 0;
-    for (const ref of refs) {
-      const leaves = groupTaskLeafRefs(curriculumId, ref);
-      if (learned.has(ref) || leaves.every((leaf) => learned.has(leaf))) completed++;
+    const unitsSignature = digest(...refs);
+    if (computedAt instanceof admin.firestore.Timestamp && Date.now() - computedAt.toMillis() < PROGRESS_CACHE_TTL_MS &&
+        cache?.units_signature === unitsSignature && Number.isInteger(cache.completed) && cache.total === refs.length) {
+      return { cached: { completed: Number(cache.completed), total: refs.length } };
     }
-    const progress = { completed, total: refs.length };
-    return progress;
+    return {
+      assignmentRef: currentAssignment.ref,
+      refs,
+      unitsSignature,
+      source: String(currentAssignment.get("sub_track_id")),
+    };
   });
+  if (!checked) return null;
+  if ("cached" in checked) return checked.cached ?? null;
+
+  const learnerEvents = learner.collection("learning_events");
+  const { sourceEvents, voidEvents } = await readAllLearningEventsForSource(undefined, learnerEvents, checked.source);
+  const voids = new Set(voidEvents.map((event) => String(event.get("target_id"))));
+  const learned = new Set(sourceEvents.filter((event) => event.get("kind") === "learn" && !voids.has(event.id))
+    .map((event) => String(event.get("ref"))));
+  const completed = countCompletedUnits(curriculumId, checked.refs, learned);
+  const progress = { completed, total: checked.refs.length };
+  try {
+    await checked.assignmentRef.update({
+      progress_cache: {
+        ...progress,
+        units_signature: checked.unitsSignature,
+        computed_at: admin.firestore.Timestamp.now(),
+      },
+    });
+  } catch (error) {
+    logger.warn("group_task_progress_cache_write_failed", {
+      groupId,
+      errorCode: error && typeof error === "object" && "code" in error
+        ? String((error as { code: unknown }).code) : "unknown",
+    });
+  }
+  return progress;
+}
+
+function countCompletedUnits(curriculumId: string, refs: string[], learned: Set<string>): number {
+  let completed = 0;
+  for (const ref of refs) {
+    const leaves = groupTaskLeafRefs(curriculumId, ref);
+    if (learned.has(ref) || leaves.every((leaf) => learned.has(leaf))) completed++;
+  }
+  return completed;
 }
 
 async function readAllLearningEventsForSource(
-  txn: FirebaseFirestore.Transaction,
+  txn: FirebaseFirestore.Transaction | undefined,
   events: FirebaseFirestore.CollectionReference,
   source: string,
-): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
-  const result: FirebaseFirestore.QueryDocumentSnapshot[] = [];
-  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
-  while (true) {
-    let query = events.where("source", "==", source)
-      .orderBy(admin.firestore.FieldPath.documentId()).limit(LEARNING_EVENT_PAGE_SIZE);
-    if (cursor) query = query.startAfter(cursor);
-    const page = await txn.get(query);
-    result.push(...page.docs);
-    if (page.size < LEARNING_EVENT_PAGE_SIZE) return result;
-    cursor = page.docs[page.docs.length - 1];
-  }
+): Promise<{ sourceEvents: FirebaseFirestore.QueryDocumentSnapshot[]; voidEvents: FirebaseFirestore.QueryDocumentSnapshot[] }> {
+  const readAll = async (filterField: string, filterValue: string) => {
+    const result: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+    while (true) {
+      let query: FirebaseFirestore.Query = events.where(filterField, "==", filterValue)
+        .orderBy(admin.firestore.FieldPath.documentId()).limit(LEARNING_EVENT_PAGE_SIZE);
+      if (cursor) query = query.startAfter(cursor);
+      const page = txn ? await txn.get(query) : await query.get();
+      result.push(...page.docs);
+      if (page.size < LEARNING_EVENT_PAGE_SIZE) return result;
+      cursor = page.docs[page.docs.length - 1];
+    }
+  };
+  const [sourceEvents, voidEvents] = await Promise.all([
+    readAll("source", source),
+    readAll("kind", "void"),
+  ]);
+  return { sourceEvents, voidEvents };
 }
 
 export async function runGroupTaskSweepItems<T>(
@@ -242,8 +285,8 @@ async function rebalanceMissedGroupTask(
     const curriculumId = String(task.get("curriculum_id"));
     const learner = db.collection("users").doc(owner.uid).collection("learner_profiles").doc(owner.profileId);
     const source = String(owner.member.sub_track_id);
-    const sourceEvents = await readAllLearningEventsForSource(txn, learner.collection("learning_events"), source);
-    const voided = new Set(sourceEvents.filter((event) => event.get("kind") === "void").map((event) => String(event.get("target_id"))));
+    const { sourceEvents, voidEvents } = await readAllLearningEventsForSource(txn, learner.collection("learning_events"), source);
+    const voided = new Set(voidEvents.map((event) => String(event.get("target_id"))));
     const learned = new Set(sourceEvents.filter((event) => event.get("kind") === "learn" && !voided.has(event.id))
       .map((event) => String(event.get("ref"))));
     const missedRefs = [...new Set(overdue.flatMap((daily) => Array.isArray(daily.refs)
