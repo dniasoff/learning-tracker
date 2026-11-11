@@ -5,6 +5,7 @@ import {
   call, clearFirestore, db, expectHttpsError, fns, parentAuth,
   seedParentSession, seedSocialProfile, socialProfileDocId, strangerAuth,
 } from './_cf_helpers.mjs';
+import { groupProfileMembershipIds } from '../lib/groups.js';
 
 const digest = (...parts) => createHash('sha256').update(parts.join('\0')).digest('hex');
 const summary = (uid, profileId) => socialProfileDocId(uid, profileId);
@@ -14,6 +15,18 @@ const siblingProfile = '01JSIBLING000000000000000000';
 const adminProfile = '01JADMIN0000000000000000000';
 const parentAdultProfile = '01JPARENTADULT0000000000000';
 const guestProfile = '01JGUEST0000000000000000000';
+
+test('group profile membership refs resolve the group, account, and profile ids from their path', () => {
+  assert.deepEqual(groupProfileMembershipIds(
+    'learning_groups/group-family-1/members/parent-uid/group_profiles/01JCHILD0000000000000000000',
+  ), { groupId: 'group-family-1', uid: 'parent-uid', profileId: childProfile });
+  assert.throws(() => groupProfileMembershipIds('learning_groups/group-family-1/members/parent-uid'), /path is invalid/);
+});
+
+async function joinAdultProfile(groupId, inviteCode, profileId) {
+  const preview = await call(fns.getLearningGroupInvite, { inviteCode, profileId }, parentAuth);
+  await call(fns.joinLearningGroup, { inviteCode, profileId, memberRevision: preview.memberRevision }, parentAuth);
+}
 
 async function enableChildSharing(uid, profileId, allowedSchoolIds = []) {
   const id = summary(uid, profileId);
@@ -241,5 +254,61 @@ describe('private and school-hosted group lifecycle', () => {
     const hosted = await call(fns.createLearningGroup, { name: 'Delete with school', profileId: adminProfile, schoolId: school.schoolId }, strangerAuth);
     await call(fns.deleteSchool, { schoolId: school.schoolId }, strangerAuth);
     assert.equal((await db.collection('learning_groups').doc(hosted.groupId).get()).get('status'), 'deleted');
+  });
+
+  test('deleting one of two group profiles preserves account access; deleting the last revokes it', async () => {
+    await seedSocialProfile(strangerAuth.uid, adminProfile, 'adult');
+    await seedSocialProfile(parentAuth.uid, guestProfile, 'adult');
+    await seedSocialProfile(parentAuth.uid, siblingProfile, 'adult');
+    const group = await call(fns.createLearningGroup, { name: 'Family group deletion', profileId: adminProfile }, strangerAuth);
+    const invite = await call(fns.createLearningGroupInvite, { groupId: group.groupId, uses: 2 }, strangerAuth);
+    await joinAdultProfile(group.groupId, invite.inviteCode, guestProfile);
+    await joinAdultProfile(group.groupId, invite.inviteCode, siblingProfile);
+
+    const accountRef = db.collection('learning_groups').doc(group.groupId).collection('members').doc(parentAuth.uid);
+    const parentAcl = db.collection('social_summaries').doc(summary(strangerAuth.uid, adminProfile)).collection('readers').doc(parentAuth.uid);
+    assert.deepEqual((await accountRef.get()).get('active_profile_ids').sort(), [guestProfile, siblingProfile].sort());
+    assert.ok([guestProfile, siblingProfile].includes((await parentAcl.get()).get('reader_profile_id')));
+
+    await call(fns.deleteLearnerProfile, { profileId: guestProfile }, parentAuth);
+    assert.equal((await db.collection('learning_groups').doc(group.groupId).collection('members').doc(parentAuth.uid).collection('group_profiles').doc(guestProfile).get()).get('state'), 'removed');
+    assert.deepEqual((await accountRef.get()).get('active_profile_ids'), [siblingProfile]);
+    assert.equal((await parentAcl.get()).get('reader_profile_id'), siblingProfile);
+    assert.deepEqual((await parentAcl.get()).get('active_profile_ids'), [siblingProfile]);
+    assert.equal((await parentAcl.get()).exists, true, 'the remaining sibling profile retains the account grant');
+
+    await call(fns.deleteLearnerProfile, { profileId: siblingProfile }, parentAuth);
+    assert.equal((await accountRef.get()).get('state'), 'removed');
+    assert.equal((await parentAcl.get()).exists, false, 'removing the last profile revokes the account grant');
+  });
+
+  test('profile deletion failure leaves a deny-first membership fence that a retry resumes', async () => {
+    await seedSocialProfile(strangerAuth.uid, adminProfile, 'adult');
+    await seedSocialProfile(parentAuth.uid, guestProfile, 'adult');
+    const group = await call(fns.createLearningGroup, { name: 'Resumable profile deletion', profileId: adminProfile }, strangerAuth);
+    const invite = await call(fns.createLearningGroupInvite, { groupId: group.groupId }, strangerAuth);
+    await joinAdultProfile(group.groupId, invite.inviteCode, guestProfile);
+    const groupMember = db.collection('learning_groups').doc(group.groupId).collection('members').doc(parentAuth.uid).collection('group_profiles').doc(guestProfile);
+    const account = db.collection('learning_groups').doc(group.groupId).collection('members').doc(parentAuth.uid);
+    const originalRunTransaction = db.runTransaction;
+    let transactionCount = 0;
+    db.runTransaction = async function (...args) {
+      transactionCount += 1;
+      if (transactionCount === 2) throw new Error('injected group revocation failure');
+      return originalRunTransaction.apply(this, args);
+    };
+    try {
+      await assert.rejects(call(fns.deleteLearnerProfile, { profileId: guestProfile }, parentAuth), /injected group revocation failure/);
+    } finally {
+      db.runTransaction = originalRunTransaction;
+    }
+
+    assert.equal((await groupMember.get()).get('state'), 'revoking');
+    assert.deepEqual((await account.get()).get('active_profile_ids'), []);
+    assert.equal((await db.collection('users').doc(parentAuth.uid).collection('learner_profiles').doc(guestProfile).get()).exists, true);
+
+    await call(fns.deleteLearnerProfile, { profileId: guestProfile }, parentAuth);
+    assert.equal((await groupMember.get()).get('state'), 'removed');
+    assert.equal((await db.collection('users').doc(parentAuth.uid).collection('learner_profiles').doc(guestProfile).get()).exists, false);
   });
 });

@@ -159,9 +159,25 @@ service cloud.firestore {
             && get(/databases/$(database)/documents/schools/$(group.school_id)).data.status == 'active');
     }
 
+    function socialGroupReaderChildSharingIsActive(readerUid, socialProfileId) {
+      let controls = get(/databases/$(database)/documents/social_user_controls/$(readerUid)).data;
+      return controls.active_social_child_profile_ids is list
+          && controls.active_social_child_profile_ids.hasAny([socialProfileId]);
+    }
+
+    function socialGroupReaderMemberIsActive(memberPath, readerUid) {
+      let member = get(memberPath).data;
+      return member.state == 'active'
+          && member.owner_uid == readerUid
+          && (member.mode == 'adult'
+            || (member.mode == 'child'
+              && socialGroupReaderChildSharingIsActive(readerUid, member.social_profile_id)));
+    }
+
     // A summary grant records one active shared group for this reader. The
-    // live group and both account memberships are checked on every read, so a
-    // removal/deletion fence denies access before paginated ACL cleanup ends.
+    // live group and both profile memberships are checked on every read; the
+    // reader ACL's active_profile_ids mirror also fences removed profiles before
+    // paginated grant cleanup finishes.
     function socialGroupGrantIsActive(summaryId, readerPath, summaryProfilePath) {
       let reader = get(readerPath).data;
       let summaryProfile = get(summaryProfilePath).data;
@@ -176,8 +192,9 @@ service cloud.firestore {
           && get(groupPath).data.status == 'active'
           && socialGroupSchoolIsActive(groupPath)
           && get(ownerMemberPath).data.state == 'active'
-          && get(readerMemberPath).data.state == 'active'
-          && get(readerMemberPath).data.owner_uid == request.auth.uid
+          && reader.active_profile_ids is list
+          && reader.active_profile_ids.hasAny([reader.reader_profile_id])
+          && socialGroupReaderMemberIsActive(readerMemberPath, request.auth.uid)
           && (summaryProfile.mode != 'child'
             || ((summaryProfile.owner_uid == request.auth.uid
               || (get(ownerMemberPath).data.approved_reader_uids is list

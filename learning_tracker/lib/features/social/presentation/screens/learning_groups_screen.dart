@@ -28,6 +28,9 @@ class LearningGroupsScreen extends ConsumerStatefulWidget {
 class _LearningGroupsScreenState extends ConsumerState<LearningGroupsScreen> {
   bool _busy = false;
 
+  String _groupTypeLabel(LearningGroupSummary group, AppLocalizations l10n) =>
+      group.groupType == 'school' ? l10n.groupSchoolHosted : l10n.groupPrivate;
+
   LearningGroupRepository get _repo =>
       ref.read(learningGroupRepositoryProvider);
   String? get _parentSessionId => ref.read(parentSessionIdProvider);
@@ -453,7 +456,7 @@ class _LearningGroupsScreenState extends ConsumerState<LearningGroupsScreen> {
                                 leading: const Icon(Icons.groups_outlined),
                                 title: Text(group.name),
                                 subtitle: Text(
-                                  '${group.groupType == 'school' ? l10n.groupSchoolHosted : l10n.groupPrivate} · ${group.memberCount} ${l10n.groupMembers.toLowerCase()}',
+                                  '${_groupTypeLabel(group, l10n)} · ${group.memberCount} ${l10n.groupMembers.toLowerCase()}',
                                 ),
                                 trailing: const Icon(Icons.chevron_right),
                                 onTap: () => _openGroup(group),

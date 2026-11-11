@@ -589,7 +589,7 @@ describe('social graph rules', () => {
           status: 'active', group_type: 'private', member_revision: 2,
         }),
         setDoc(doc(db, `learning_groups/${groupId}/members/${OWNER}`), { owner_uid: OWNER, active_profile_ids: [profileId], state: 'active' }),
-        setDoc(doc(db, `learning_groups/${groupId}/members/${TUTOR}`), { owner_uid: TUTOR, active_profile_ids: ['reader-profile'], state: 'active' }),
+        setDoc(doc(db, `learning_groups/${groupId}/members/${TUTOR}`), { owner_uid: TUTOR, active_profile_ids: ['reader-profile', 'reader-sibling'], state: 'active' }),
         setDoc(doc(db, `learning_groups/${groupId}/members/${OWNER}/group_profiles/${profileId}`), {
           owner_uid: OWNER, profile_id: profileId, social_profile_id: summaryId,
           mode: 'adult', state: 'active', approved_reader_uids: [],
@@ -598,10 +598,15 @@ describe('social graph rules', () => {
           owner_uid: TUTOR, profile_id: 'reader-profile', social_profile_id: 'reader-summary',
           mode: 'adult', state: 'active', approved_reader_uids: [],
         }),
+        setDoc(doc(db, `learning_groups/${groupId}/members/${TUTOR}/group_profiles/reader-sibling`), {
+          owner_uid: TUTOR, profile_id: 'reader-sibling', social_profile_id: 'reader-sibling-summary',
+          mode: 'adult', state: 'active', approved_reader_uids: [],
+        }),
         setDoc(doc(db, acl), {
           owner_uid: OWNER, profile_id: profileId, follower_profile_ids: [],
           adult_follower_profile_ids: [], child_follower_profile_ids: [], child_school_ids: [], active_school_ids: [],
           school_ids: [], group_ids: [groupId], reader_profile_id: 'reader-profile',
+          active_profile_ids: ['reader-profile', 'reader-sibling'],
         }),
       ]);
     });
@@ -610,14 +615,58 @@ describe('social graph rules', () => {
     await assertFails(getDoc(doc(tutor(), acl)));
     await assertFails(setDoc(doc(tutor(), 'learning_groups/client-group'), { status: 'active' }));
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await updateDoc(doc(ctx.firestore(), `learning_groups/${groupId}/members/${TUTOR}/group_profiles/reader-profile`), { state: 'revoking' });
+      await updateDoc(doc(ctx.firestore(), acl), { active_profile_ids: ['reader-sibling'] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)), 'the ACL representative must still be an active profile');
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), acl), { reader_profile_id: 'reader-sibling' });
+    });
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)), 'the remaining sibling can represent the account grant');
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), acl), { active_profile_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)), 'reader profile must remain in the active group profile list');
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), acl), { active_profile_ids: ['reader-sibling'] });
+      await updateDoc(doc(ctx.firestore(), `learning_groups/${groupId}/members/${TUTOR}/group_profiles/reader-sibling`), { state: 'revoking' });
     });
     await assertFails(getDoc(doc(tutor(), summaryPath)), 'member removal fence denies before ACL cleanup');
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await updateDoc(doc(ctx.firestore(), `learning_groups/${groupId}/members/${TUTOR}/group_profiles/reader-profile`), { state: 'active' });
+      await updateDoc(doc(ctx.firestore(), `learning_groups/${groupId}/members/${TUTOR}/group_profiles/reader-sibling`), { state: 'active' });
       await updateDoc(doc(ctx.firestore(), `learning_groups/${groupId}`), { status: 'deleting' });
     });
     await assertFails(getDoc(doc(tutor(), summaryPath)), 'group deletion fence denies immediately');
+  });
+
+  test('a paused child member cannot read group summaries even while group membership stays active', async () => {
+    const groupId = 'group-child-reader';
+    const readerProfileId = 'child-reader-profile';
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await Promise.all([
+        setDoc(doc(db, `learning_groups/${groupId}`), { status: 'active', group_type: 'private' }),
+        setDoc(doc(db, `learning_groups/${groupId}/members/${OWNER}`), { owner_uid: OWNER, active_profile_ids: [profileId], state: 'active' }),
+        setDoc(doc(db, `learning_groups/${groupId}/members/${TUTOR}`), { owner_uid: TUTOR, active_profile_ids: [readerProfileId], state: 'active' }),
+        setDoc(doc(db, `learning_groups/${groupId}/members/${OWNER}/group_profiles/${profileId}`), {
+          owner_uid: OWNER, profile_id: profileId, social_profile_id: 'owner-social-profile',
+          mode: 'adult', state: 'active', approved_reader_uids: [],
+        }),
+        setDoc(doc(db, `learning_groups/${groupId}/members/${TUTOR}/group_profiles/${readerProfileId}`), {
+          owner_uid: TUTOR, profile_id: readerProfileId, social_profile_id: 'approved-profile',
+          mode: 'child', state: 'active', approved_reader_uids: [],
+        }),
+        updateDoc(doc(db, followerReaderPath), {
+          follower_profile_ids: [], adult_follower_profile_ids: [], child_follower_profile_ids: [],
+          school_ids: [], group_ids: [groupId], reader_profile_id: readerProfileId,
+          active_profile_ids: [readerProfileId],
+        }),
+      ]);
+    });
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `social_user_controls/${TUTOR}`), { active_social_child_profile_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)), 'the social sharing pause fences child readers immediately');
   });
 
   test('child group access requires parent member approval, active child sharing, and allowed school for hosted groups', async () => {
@@ -653,7 +702,7 @@ describe('social graph rules', () => {
         setDoc(doc(db, acl), {
           owner_uid: OWNER, profile_id: profileId, follower_profile_ids: [],
           adult_follower_profile_ids: [], child_follower_profile_ids: [], child_school_ids: [], active_school_ids: [],
-          school_ids: [], group_ids: [groupId], reader_profile_id: 'reader-profile',
+          school_ids: [], group_ids: [groupId], reader_profile_id: 'reader-profile', active_profile_ids: ['reader-profile'],
         }),
       ]);
     });

@@ -69,6 +69,14 @@ function summaryId(value: ProfileRef): string { return profileKey(value); }
 function strList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
+export function groupProfileMembershipIds(path: string): { groupId: string; uid: string; profileId: string } {
+  const [root, groupId, members, uid, profiles, profileId, ...rest] = path.split("/");
+  if (root !== "learning_groups" || members !== "members" || profiles !== "group_profiles" ||
+      !groupId || !uid || !profileId || rest.length > 0) {
+    throw new Error("Group profile membership path is invalid");
+  }
+  return { groupId, uid, profileId };
+}
 function memberFrom(uid: string, snap: FirebaseFirestore.DocumentSnapshot): GroupMember {
   const mode = snap.get("mode");
   if (mode !== "adult" && mode !== "child") throw new Error("Group member mode is invalid");
@@ -240,6 +248,7 @@ export async function grantGroupSummary(groupId: string, owner: GroupMember, rea
       group_id: groupId,
       reader_uid: reader.uid,
       reader_profile_id: reader.profileId,
+      active_profile_ids: strList(readerAccount.get("active_profile_ids")),
       updated_at: admin.firestore.Timestamp.now(),
     }, { merge: true });
   });
@@ -262,7 +271,7 @@ async function revokeGroupSummary(groupId: string, owner: ProfileRef, readerUid:
     if (!snap.exists) return;
     const ids = strList(snap.get("group_ids"));
     if (!ids.includes(groupId)) return;
-    let replacement: { groupId: string; readerProfileId: string } | null = null;
+    let replacement: { groupId: string; readerProfileId: string; activeProfileIds: string[] } | null = null;
     for (const candidate of candidates) {
       const [group, ownerMember, readerAccount, readerProfiles] = await Promise.all([
         txn.get(candidate.group), txn.get(candidate.owner), txn.get(candidate.reader),
@@ -273,7 +282,11 @@ async function revokeGroupSummary(groupId: string, owner: ProfileRef, readerUid:
       if (ownerMember.get("mode") === "child" && !strList(ownerMember.get("approved_reader_uids")).includes(readerUid)) continue;
       const activeReaderProfile = await chooseActiveReaderProfile(txn, readerAccount, readerProfiles.docs);
       if (!activeReaderProfile) continue;
-      replacement = { groupId: candidate.groupId, readerProfileId: activeReaderProfile.id };
+      replacement = {
+        groupId: candidate.groupId,
+        readerProfileId: activeReaderProfile.id,
+        activeProfileIds: strList(readerAccount.get("active_profile_ids")),
+      };
       break;
     }
     const nextIds = replacement === null ? [] : [replacement.groupId];
@@ -284,6 +297,7 @@ async function revokeGroupSummary(groupId: string, owner: ProfileRef, readerUid:
       group_ids: nextIds,
       group_id: replacement === null ? admin.firestore.FieldValue.delete() : replacement.groupId,
       reader_profile_id: replacement === null ? admin.firestore.FieldValue.delete() : replacement.readerProfileId,
+      active_profile_ids: replacement === null ? admin.firestore.FieldValue.delete() : replacement.activeProfileIds,
       updated_at: admin.firestore.Timestamp.now(),
     }, { merge: true });
   });
@@ -668,7 +682,11 @@ export const removeLearningGroupMember = onCall(CALL_OPTS, async (request) => {
       const replacement = await chooseActiveReaderProfile(txn, account, profiles.docs.filter((profile) => profile.id !== profileId));
       if (replacement) {
         for (const acl of aclDocs.docs) {
-          if (strList(acl.get("group_ids")).includes(group.id)) txn.set(acl.ref, { reader_profile_id: replacement.id, updated_at: admin.firestore.Timestamp.now() }, { merge: true });
+          if (strList(acl.get("group_ids")).includes(group.id)) txn.set(acl.ref, {
+            reader_profile_id: replacement.id,
+            active_profile_ids: activeIds,
+            updated_at: admin.firestore.Timestamp.now(),
+          }, { merge: true });
         }
       }
       txn.update(targetRef, { state: "revoking", updated_at: admin.firestore.Timestamp.now() });
@@ -863,12 +881,13 @@ export async function cleanupGroupsForAccount(ownerUid: string, profileId?: stri
     const page = await query.get();
     if (page.empty) break;
     for (const memberDoc of page.docs.filter((doc) => profileId === undefined || doc.get("profile_id") === profileId)) {
-    const groupRef = memberDoc.ref.parent.parent;
-    if (!groupRef) continue;
-    const groupId = groupRef.id;
-    const accountRef = memberDoc.ref.parent.parent;
-    if (!accountRef) continue;
-    const uid = accountRef.id;
+    const ids = groupProfileMembershipIds(memberDoc.ref.path);
+    if (ids.uid !== ownerUid || ids.profileId !== memberDoc.id || memberDoc.get("profile_id") !== ids.profileId) {
+      throw new Error("Group profile membership identity is inconsistent");
+    }
+    const { groupId, uid } = ids;
+    const groupRef = groups().doc(groupId);
+    const accountRef = memberRef(groupId, uid);
     const group = await groupRef.get();
     if (!group.exists || group.get("status") === "deleted") continue;
     if (group.get("status") === "deleting") { await finishGroupDeletion(groupId); continue; }
