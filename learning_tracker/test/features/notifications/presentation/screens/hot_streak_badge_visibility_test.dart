@@ -39,6 +39,9 @@ Widget _buildSubject({required NotificationGateway mockService}) {
     overrides: [
       selectedProfileIdProvider.overrideWithValue(_testProfileId),
       notificationServiceProvider.overrideWithValue(mockService),
+      reminderSyncEffectProvider.overrideWith((ref) async {}),
+      streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+      streakSaverSyncEffectProvider.overrideWith((ref) async {}),
     ],
     child: const MaterialApp(
       localizationsDelegates: [

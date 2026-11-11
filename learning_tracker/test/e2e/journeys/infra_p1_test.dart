@@ -116,7 +116,8 @@ import 'package:learning_tracker/features/notifications/presentation/providers/n
         allProfilesReminderBootstrapProvider,
         notificationServiceProvider,
         reminderSyncEffectProvider,
-        streakAlertSyncEffectProvider;
+        streakAlertSyncEffectProvider,
+        streakSaverSyncEffectProvider;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show selectedProfileIdProvider;
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart'
@@ -214,6 +215,7 @@ List<Override> _notificationSilenceOverrides(NotificationGateway fakeGw) => [
   notificationServiceProvider.overrideWithValue(fakeGw),
   reminderSyncEffectProvider.overrideWith((ref) async {}),
   streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+  streakSaverSyncEffectProvider.overrideWith((ref) async {}),
   allProfilesReminderBootstrapProvider.overrideWith((ref) async {}),
 ];
 

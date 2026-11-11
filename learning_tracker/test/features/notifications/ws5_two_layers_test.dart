@@ -37,6 +37,7 @@ Widget _buildWithProviders({
       // so this widget test never opens a real database.
       reminderSyncEffectProvider.overrideWith((ref) async {}),
       streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+      streakSaverSyncEffectProvider.overrideWith((ref) async {}),
     ],
     child: MaterialApp(
       localizationsDelegates: const [

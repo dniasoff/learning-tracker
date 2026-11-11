@@ -40,7 +40,7 @@ void main() {
 
     test(
       'AC: a NEW widget test that pumps NotificationsScreen without '
-      'overriding both keepAlive sync-effect providers flips the checker '
+      'overriding all three keepAlive sync-effect providers flips the checker '
       'from clean to FAILED, and deleting the fixture restores clean',
       () async {
         expect(
@@ -77,6 +77,7 @@ void main() {
               contains('_tmp_aud_notifications_01_fixture_test.dart'),
               contains('reminderSyncEffectProvider'),
               contains('streakAlertSyncEffectProvider'),
+              contains('streakSaverSyncEffectProvider'),
             ),
           );
         } finally {
@@ -94,10 +95,12 @@ void main() {
       },
     );
 
-    test('a fixture overriding both sync effects (the real fix shape) does '
-        'NOT trip the checker', () async {
-      try {
-        fixtureFile.writeAsStringSync('''
+    test(
+      'a fixture overriding all three sync effects (the real fix shape) does '
+      'NOT trip the checker',
+      () async {
+        try {
+          fixtureFile.writeAsStringSync('''
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/notifications/presentation/screens/notifications_screen.dart';
@@ -107,21 +110,23 @@ void main() {
     overrides: [
       reminderSyncEffectProvider.overrideWith((ref) async {}),
       streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+      streakSaverSyncEffectProvider.overrideWith((ref) async {}),
     ],
     child: const NotificationsScreen(),
   );
 }
 ''');
 
-        final result = await runCheck();
-        expect(
-          result.exitCode,
-          0,
-          reason: 'stdout=${result.stdout}\nstderr=${result.stderr}',
-        );
-      } finally {
-        if (fixtureFile.existsSync()) fixtureFile.deleteSync();
-      }
-    });
+          final result = await runCheck();
+          expect(
+            result.exitCode,
+            0,
+            reason: 'stdout=${result.stdout}\nstderr=${result.stderr}',
+          );
+        } finally {
+          if (fixtureFile.existsSync()) fixtureFile.deleteSync();
+        }
+      },
+    );
   });
 }

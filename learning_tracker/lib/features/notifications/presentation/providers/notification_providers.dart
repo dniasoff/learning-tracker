@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
@@ -833,7 +834,7 @@ Future<void> streakSaverSyncEffect(Ref ref) async {
     if (!ref.mounted) return;
     final settings = await ref.watch(learnerLockSettingsProvider(scope).future);
     if (!ref.mounted) return;
-    final now = DateTime.now().toUtc();
+    final now = ref.watch(localDayClockProvider).nowUtc();
     final today = civilDate(now, settings);
     final zone = LearnerZone.of(settings.at(now).timeZone);
     final fireAt = zone.at(parseCivilDay(today), hour: 22, minute: 0);

@@ -18,7 +18,7 @@
 /// override `reminderSyncEffectProvider`/`streakAlertSyncEffectProvider`
 /// with no-ops — this is the finding's own acceptance criterion: "any
 /// widget test file that pumps NotificationsScreen must also override
-/// both keepAlive sync-effect providers in the same overrides list."
+/// all three keepAlive sync-effect providers in the same overrides list."
 ///
 /// Detection is per-file (not a precise "same ProviderScope.overrides
 /// list" parse): a file "pumps NotificationsScreen" when it constructs
@@ -44,14 +44,14 @@
 /// in [_baseline] below so the gate fails only on a NEW file introducing
 /// the unguarded pump, or on one of the two files this finding just fixed
 /// regressing, not on the pre-existing backlog. Shrink [_baseline] as each
-/// is burned down to override both effects.
+/// is burned down to override all three effects.
 ///
 /// Usage:
 ///   dart run tool/check_notifications_sync_effect_overrides.dart
 ///
 /// Exit codes (ratchet mode):
 ///   0 — no NEW (non-baselined) file under test/ pumps NotificationsScreen
-///       without overriding both keepAlive sync-effect providers
+///       without overriding all three keepAlive sync-effect providers
 ///   1 — one or more such violations found in a file outside [_baseline]
 ///       (prints file:line)
 library;
@@ -64,14 +64,12 @@ import 'dart:io';
 /// `ws5_two_layers_test.dart`, both fixed by the same commit). Shrink this
 /// set as each file is burned down to override both sync effects; never
 /// add to it to paper over a NEW violation.
-const _baseline = <String>{
-  'test/features/notifications/presentation/screens/hot_streak_badge_visibility_test.dart',
-  'test/features/notifications/presentation/screens/notification_switch_a11y_test.dart',
-};
+const _baseline = <String>{};
 
 const _pumpPattern = 'NotificationsScreen(';
 const _reminderOverride = 'reminderSyncEffectProvider.overrideWith(';
 const _streakOverride = 'streakAlertSyncEffectProvider.overrideWith(';
+const _saverOverride = 'streakSaverSyncEffectProvider.overrideWith(';
 
 /// The widget's own definition file — constructs itself via `class
 /// NotificationsScreen extends ConsumerWidget`, not a pump site.
@@ -123,23 +121,25 @@ void main() {
     final pumpLines = <int>[];
     var hasReminderOverride = false;
     var hasStreakOverride = false;
+    var hasSaverOverride = false;
 
     for (var i = 0; i < lines.length; i++) {
       if (lines[i].contains(_pumpPattern)) pumpLines.add(i + 1);
       if (lines[i].contains(_reminderOverride)) hasReminderOverride = true;
       if (lines[i].contains(_streakOverride)) hasStreakOverride = true;
+      if (lines[i].contains(_saverOverride)) hasSaverOverride = true;
     }
 
     if (pumpLines.isEmpty) continue; // doesn't pump NotificationsScreen
-    if (hasReminderOverride && hasStreakOverride) {
-      continue; // both keepAlive sync effects are overridden
+    if (hasReminderOverride && hasStreakOverride && hasSaverOverride) {
+      continue; // all three keepAlive sync effects are overridden
     }
     if (_baseline.contains(path)) continue; // tolerated pre-existing gap
 
     for (final line in pumpLines) {
       violations.add(
         '$path:$line: pumps NotificationsScreen() without overriding '
-        'both reminderSyncEffectProvider and streakAlertSyncEffectProvider',
+        'reminderSyncEffectProvider, streakAlertSyncEffectProvider, and streakSaverSyncEffectProvider',
       );
     }
   }
@@ -149,10 +149,10 @@ void main() {
       'NotificationsScreen sync-effect override check FAILED '
       '(AUD-t-notifications-01) — NotificationsScreen.build() '
       'unconditionally watches reminderSyncEffectProvider and '
-      'streakAlertSyncEffectProvider, both @Riverpod(keepAlive) '
+      'streakAlertSyncEffectProvider, and streakSaverSyncEffectProvider, all @Riverpod(keepAlive) '
       'FutureProviders that chain into a real drift_flutter-backed '
       'UserDatabase. Any widget test that pumps NotificationsScreen must '
-      'override BOTH with no-ops in the same ProviderScope.overrides list '
+      'override ALL THREE with no-ops in the same ProviderScope.overrides list '
       '(see notifications_screen_l1_test.dart\'s _buildApp() for the '
       'pattern):',
     );
@@ -164,7 +164,7 @@ void main() {
 
   stdout.writeln(
     'NotificationsScreen sync-effect override check passed — no NEW file '
-    'under test/ pumps NotificationsScreen without overriding both '
+    'under test/ pumps NotificationsScreen without overriding all three '
     'keepAlive sync-effect providers (${_baseline.length} pre-existing '
     'baselined file(s) tolerated).',
   );

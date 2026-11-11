@@ -124,6 +124,7 @@ Widget _buildApp({
       // Suppress scheduling side-effects so tests stay isolated.
       reminderSyncEffectProvider.overrideWith((ref) async {}),
       streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+      streakSaverSyncEffectProvider.overrideWith((ref) async {}),
     ],
     child: MaterialApp(
       locale: locale,
@@ -238,13 +239,13 @@ void main() {
     });
 
     testWidgets(
-      'shows four Switch widgets (reminder, streak alert, reward, device toggle)',
+      'shows five Switch widgets (reminder, streak alert, streak saver, reward, device toggle)',
       (tester) async {
         await _pump(tester, _buildApp(gateway: _gateway));
 
-        // Three per-preference switches plus one in DeviceNotificationToggle.
+        // Four per-profile switches plus one in DeviceNotificationToggle.
         final switches = find.byType(Switch);
-        expect(switches, findsNWidgets(4));
+        expect(switches, findsNWidgets(5));
 
         await _tearDown(tester);
       },
@@ -350,6 +351,7 @@ void main() {
               notificationServiceProvider.overrideWithValue(_gateway),
               reminderSyncEffectProvider.overrideWith((ref) async {}),
               streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+              streakSaverSyncEffectProvider.overrideWith((ref) async {}),
             ],
             child: const MaterialApp(
               localizationsDelegates: [
@@ -393,6 +395,7 @@ void main() {
             notificationServiceProvider.overrideWithValue(_gateway),
             reminderSyncEffectProvider.overrideWith((ref) async {}),
             streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+            streakSaverSyncEffectProvider.overrideWith((ref) async {}),
           ],
           child: const MaterialApp(
             localizationsDelegates: [
@@ -435,6 +438,7 @@ void main() {
               notificationServiceProvider.overrideWithValue(_gateway),
               reminderSyncEffectProvider.overrideWith((ref) async {}),
               streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+              streakSaverSyncEffectProvider.overrideWith((ref) async {}),
             ],
             child: const MaterialApp(
               localizationsDelegates: [
@@ -595,6 +599,7 @@ void main() {
             notificationServiceProvider.overrideWithValue(_gateway),
             reminderSyncEffectProvider.overrideWith((ref) async {}),
             streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+            streakSaverSyncEffectProvider.overrideWith((ref) async {}),
           ],
           child: const MaterialApp(
             localizationsDelegates: [
@@ -635,6 +640,7 @@ void main() {
               notificationServiceProvider.overrideWithValue(_gateway),
               reminderSyncEffectProvider.overrideWith((ref) async {}),
               streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+              streakSaverSyncEffectProvider.overrideWith((ref) async {}),
             ],
             child: const MaterialApp(
               localizationsDelegates: [
@@ -736,6 +742,7 @@ void main() {
             notificationServiceProvider.overrideWithValue(_gateway),
             reminderSyncEffectProvider.overrideWith((ref) async {}),
             streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+            streakSaverSyncEffectProvider.overrideWith((ref) async {}),
           ],
           child: const MaterialApp(
             localizationsDelegates: [
@@ -753,6 +760,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final row = find.byKey(const Key('reward_notification_toggle'));
+      await tester.ensureVisible(row);
+      await tester.pumpAndSettle();
       await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -777,6 +786,7 @@ void main() {
             notificationServiceProvider.overrideWithValue(_gateway),
             reminderSyncEffectProvider.overrideWith((ref) async {}),
             streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+            streakSaverSyncEffectProvider.overrideWith((ref) async {}),
           ],
           child: const MaterialApp(
             localizationsDelegates: [
@@ -794,6 +804,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final row = find.byKey(const Key('reward_notification_toggle'));
+      await tester.ensureVisible(row);
+      await tester.pumpAndSettle();
       await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));

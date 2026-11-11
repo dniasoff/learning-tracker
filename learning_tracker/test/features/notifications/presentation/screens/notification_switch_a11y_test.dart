@@ -36,7 +36,12 @@ class _MockNotificationGateway extends Mock implements NotificationGateway {}
 
 Widget _buildSubject({required NotificationGateway mockService}) {
   return ProviderScope(
-    overrides: [notificationServiceProvider.overrideWithValue(mockService)],
+    overrides: [
+      notificationServiceProvider.overrideWithValue(mockService),
+      reminderSyncEffectProvider.overrideWith((ref) async {}),
+      streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+      streakSaverSyncEffectProvider.overrideWith((ref) async {}),
+    ],
     child: const MaterialApp(
       localizationsDelegates: [
         AppLocalizations.delegate,

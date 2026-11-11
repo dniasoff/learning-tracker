@@ -88,7 +88,8 @@ import 'package:learning_tracker/features/notifications/presentation/providers/n
         allProfilesReminderBootstrapProvider,
         notificationServiceProvider,
         reminderSyncEffectProvider,
-        streakAlertSyncEffectProvider;
+        streakAlertSyncEffectProvider,
+        streakSaverSyncEffectProvider;
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart'
     show LocationService;
 import 'package:learning_tracker/features/sacred_time/domain/learner_settings_change.dart'
@@ -153,6 +154,7 @@ List<Override> _notificationSilenceOverrides(_FakeNotificationGateway fakeGw) =>
       // notifications — silence to avoid timer leaks in headless tests.
       reminderSyncEffectProvider.overrideWith((ref) async {}),
       streakAlertSyncEffectProvider.overrideWith((ref) async {}),
+      streakSaverSyncEffectProvider.overrideWith((ref) async {}),
       allProfilesReminderBootstrapProvider.overrideWith((ref) async {}),
       // AppShell's connectivityStreamProvider starts Timer.periodic
       // (offline-debounce + recovery-probe) — silence with a static stream.
