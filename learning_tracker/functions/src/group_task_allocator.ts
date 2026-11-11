@@ -24,6 +24,7 @@ export interface DailyTask {
   workload: number;
   paceUnit: string;
   paceAmount: number;
+  overloaded?: boolean;
 }
 
 export interface MemberAllocation {
@@ -128,6 +129,7 @@ export function rebalanceMissedWork(args: {
         lastTask.refs.push(ref);
         lastTask.workload += workload;
         lastTask.paceAmount += owner.workloadPerPaceUnit > 1 ? 1 : workload;
+        lastTask.overloaded = true;
         keptByOwner.push(ref);
         assigned = true;
       }

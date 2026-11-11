@@ -38,9 +38,8 @@ const MAX_TASK_CREATIONS_PER_DAY = 3;
 const MAX_PREFERENCE_UPDATES_PER_DAY = 20;
 const MAX_GROUPS_PER_LEARN_CALL = 20;
 const MAX_TASKS_PER_GROUP_CALL = 10;
-const MAX_PROGRESS_CACHE_AGE_MS = 60 * 1000;
-const MAX_PROGRESS_EVENTS = 200;
-const MAX_REBALANCE_TASKS_PER_RUN = 200;
+const LEARNING_EVENT_PAGE_SIZE = 200;
+const MAX_REBALANCE_TASKS_PER_RUN = 25;
 const tasks = (groupId: string) => db.collection("learning_groups").doc(groupId).collection("tasks");
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -130,22 +129,14 @@ async function groupTaskProgress(groupId: string, readerUid: string, readerProfi
           !Array.isArray(readerUserControls.get("active_social_child_profile_ids")) ||
           !(readerUserControls.get("active_social_child_profile_ids") as string[]).includes(readerKey))) return null;
     }
-    const cache = currentAssignment.get("progress_cache") as Record<string, unknown> | undefined;
-    const cacheTime = cache?.computed_at;
     const currentUnits = Array.isArray(currentAssignment.get("units"))
       ? currentAssignment.get("units") as Array<Record<string, unknown>> : [];
-    if (cache && cacheTime instanceof admin.firestore.Timestamp && Date.now() - cacheTime.toMillis() <= MAX_PROGRESS_CACHE_AGE_MS &&
-        Number.isInteger(cache?.completed) && Number.isInteger(cache?.total) && cache.total === currentUnits.length) {
-      return { completed: Number(cache.completed), total: Number(cache.total) };
-    }
-    const [eventPage, voidPage] = await Promise.all([
-      txn.get(learner.collection("learning_events").where("source", "==", String(currentAssignment.get("sub_track_id"))).limit(MAX_PROGRESS_EVENTS)),
-      txn.get(learner.collection("learning_events").where("kind", "==", "void").limit(MAX_PROGRESS_EVENTS)),
-    ]);
-    if (eventPage.size >= MAX_PROGRESS_EVENTS || voidPage.size >= MAX_PROGRESS_EVENTS) return null;
+    const sourceEvents = await readAllLearningEventsForSource(
+      txn, learner.collection("learning_events"), String(currentAssignment.get("sub_track_id")),
+    );
     const refs = currentUnits.map((unit) => String(unit.ref ?? ""));
-    const voids = new Set(voidPage.docs.map((event) => String(event.get("target_id"))));
-    const learned = new Set(eventPage.docs.filter((event) => event.get("kind") === "learn" && !voids.has(event.id))
+    const voids = new Set(sourceEvents.filter((event) => event.get("kind") === "void").map((event) => String(event.get("target_id"))));
+    const learned = new Set(sourceEvents.filter((event) => event.get("kind") === "learn" && !voids.has(event.id))
       .map((event) => String(event.get("ref"))));
     let completed = 0;
     for (const ref of refs) {
@@ -153,11 +144,42 @@ async function groupTaskProgress(groupId: string, readerUid: string, readerProfi
       if (learned.has(ref) || leaves.every((leaf) => learned.has(leaf))) completed++;
     }
     const progress = { completed, total: refs.length };
-    txn.update(currentAssignment.ref, {
-      progress_cache: { ...progress, computed_at: admin.firestore.Timestamp.now() },
-    });
     return progress;
   });
+}
+
+async function readAllLearningEventsForSource(
+  txn: FirebaseFirestore.Transaction,
+  events: FirebaseFirestore.CollectionReference,
+  source: string,
+): Promise<FirebaseFirestore.QueryDocumentSnapshot[]> {
+  const result: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  while (true) {
+    let query = events.where("source", "==", source)
+      .orderBy(admin.firestore.FieldPath.documentId()).limit(LEARNING_EVENT_PAGE_SIZE);
+    if (cursor) query = query.startAfter(cursor);
+    const page = await txn.get(query);
+    result.push(...page.docs);
+    if (page.size < LEARNING_EVENT_PAGE_SIZE) return result;
+    cursor = page.docs[page.docs.length - 1];
+  }
+}
+
+export async function runGroupTaskSweepItems<T>(
+  items: readonly T[],
+  itemId: (item: T) => string,
+  execute: (item: T) => Promise<void>,
+): Promise<void> {
+  for (const item of items) {
+    try {
+      await execute(item);
+    } catch (error) {
+      const errorCode = error && typeof error === "object" && "code" in error
+        ? String((error as { code: unknown }).code) : error instanceof Error ? error.name : "unknown";
+      logger.error("group_task_rebalance_sweep_item_failed", { itemId: itemId(item), errorCode });
+    }
+  }
 }
 
 function remainingStudyDates(start: string, deadline: string, studyDays: number[]): string[] {
@@ -176,6 +198,7 @@ async function rebalanceMissedGroupTask(
   taskId: string,
   ownerMemberId: string,
   onDate: string,
+  missedBefore: string,
 ): Promise<{ changed: boolean; missingSubTracks?: Array<{ memberId: string; subTrackId: string }> }> {
   const groupRefValue = db.collection("learning_groups").doc(groupId);
   const taskRef = tasks(groupId).doc(taskId);
@@ -210,7 +233,7 @@ async function rebalanceMissedGroupTask(
     const owner = entries.find((entry) => entry.snap.id === ownerMemberId);
     if (!owner) return { changed: false };
     const ownerDaily = Array.isArray(owner.member.daily_tasks) ? owner.member.daily_tasks as Array<Record<string, unknown>> : [];
-    const overdue = ownerDaily.filter((daily) => typeof daily.date === "string" && daily.date < onDate && daily.reconciled_at == null);
+    const overdue = ownerDaily.filter((daily) => typeof daily.date === "string" && daily.date < missedBefore && daily.reconciled_at == null);
     if (overdue.length === 0) return { changed: false };
     const missingSubTracks = entries.filter((entry) => !entry.subTrack.exists)
       .map((entry) => ({ memberId: entry.snap.id, subTrackId: String(entry.member.sub_track_id) }));
@@ -219,16 +242,9 @@ async function rebalanceMissedGroupTask(
     const curriculumId = String(task.get("curriculum_id"));
     const learner = db.collection("users").doc(owner.uid).collection("learner_profiles").doc(owner.profileId);
     const source = String(owner.member.sub_track_id);
-    const [learnEvents, voidEvents] = await Promise.all([
-      txn.get(learner.collection("learning_events").where("source", "==", source).limit(MAX_PROGRESS_EVENTS)),
-      txn.get(learner.collection("learning_events").where("kind", "==", "void").limit(MAX_PROGRESS_EVENTS)),
-    ]);
-    if (learnEvents.size >= MAX_PROGRESS_EVENTS || voidEvents.size >= MAX_PROGRESS_EVENTS) {
-      logger.warn("group_task_rebalance_skipped_event_cap", { groupId, taskId, ownerMemberId });
-      return { changed: false, missingSubTracks };
-    }
-    const voided = new Set(voidEvents.docs.map((event) => String(event.get("target_id"))));
-    const learned = new Set(learnEvents.docs.filter((event) => event.get("kind") === "learn" && !voided.has(event.id))
+    const sourceEvents = await readAllLearningEventsForSource(txn, learner.collection("learning_events"), source);
+    const voided = new Set(sourceEvents.filter((event) => event.get("kind") === "void").map((event) => String(event.get("target_id"))));
+    const learned = new Set(sourceEvents.filter((event) => event.get("kind") === "learn" && !voided.has(event.id))
       .map((event) => String(event.get("ref"))));
     const missedRefs = [...new Set(overdue.flatMap((daily) => Array.isArray(daily.refs)
       ? daily.refs.filter((ref): ref is string => typeof ref === "string") : []))];
@@ -254,13 +270,13 @@ async function rebalanceMissedGroupTask(
         workloadPerPaceUnit,
         paceUnit: String(entry.member.pace_unit),
         workloadByRef,
-        futureDays: entry.snap.id === ownerMemberId && !ownerCanReceive
+      futureDays: entry.snap.id === ownerMemberId && !ownerCanReceive
           ? [] : remainingStudyDates(onDate, deadline, studyDays),
         dailyTasks: dailyTasks.filter((daily) => typeof daily.date === "string" && daily.date >= onDate)
           .map((daily) => ({ date: String(daily.date), refs: Array.isArray(daily.refs)
             ? daily.refs.filter((ref): ref is string => typeof ref === "string") : [],
           workload: Number(daily.workload ?? 0), paceUnit: String(daily.paceUnit ?? entry.member.pace_unit),
-          paceAmount: Number(daily.paceAmount ?? 0) })),
+          paceAmount: Number(daily.paceAmount ?? 0), ...(daily.overloaded === true ? { overloaded: true } : {}) })),
       };
     });
     const rebalanced = rebalanceMissedWork({ ownerMemberId, missedRefs: openRefs, participants: participantInputs });
@@ -287,7 +303,7 @@ async function rebalanceMissedGroupTask(
       const historical = (Array.isArray(entry.member.daily_tasks) ? entry.member.daily_tasks as Array<Record<string, unknown>> : [])
         .filter((daily) => typeof daily.date === "string" && daily.date < onDate)
         .map((daily) => {
-          if (memberId !== ownerMemberId) return daily;
+          if (memberId !== ownerMemberId || typeof daily.date !== "string" || daily.date >= missedBefore) return daily;
           const refs = Array.isArray(daily.refs) ? daily.refs.filter((ref): ref is string => typeof ref === "string") : [];
           const pendingRefs = refs.filter((ref) => unresolved.has(ref));
           return pendingRefs.length > 0 ? { ...daily, refs: pendingRefs } : { ...daily, reconciled_at: now };
@@ -320,32 +336,52 @@ async function rebalanceMissedGroupTask(
 
 /** Daily server-side reflow never depends on a client-supplied date or Learn read. */
 export const reconcileLearningGroupMissedTasks = onSchedule({
-  schedule: "every day 00:15",
+  schedule: "every 15 minutes",
   timeZone: "Etc/UTC",
   timeoutSeconds: 540,
 }, async () => {
   const today = serverToday();
-  const page = await db.collectionGroup("tasks").where("status", "==", "published").limit(MAX_REBALANCE_TASKS_PER_RUN).get();
-  logger.info("group_task_rebalance_sweep_started", { today, taskCount: page.size });
+  const missedBefore = shiftCivilDate(today, -1);
+  const cursorRef = db.collection("server_job_state").doc("group_task_rebalance");
+  const cursor = await cursorRef.get();
+  const lastTaskPath = cursor.get("last_task_path");
+  let query = db.collectionGroup("tasks").where("status", "==", "published")
+    .orderBy(admin.firestore.FieldPath.documentId()).limit(MAX_REBALANCE_TASKS_PER_RUN);
+  if (typeof lastTaskPath === "string" && lastTaskPath.length > 0) query = query.startAfter(lastTaskPath);
+  const page = await query.get();
+  logger.info("group_task_rebalance_sweep_started", { today, missedBefore, taskCount: page.size });
+  let lastProcessedPath = typeof lastTaskPath === "string" ? lastTaskPath : null;
+  const finishBy = Date.now() + 480_000;
+  let completedPage = true;
   for (const task of page.docs) {
-    const path = task.ref.path.split("/");
-    if (path.length !== 4 || path[0] !== "learning_groups" || path[2] !== "tasks") continue;
-    const groupId = path[1];
-    const version = Number(task.get("allocation_version") ?? 1);
-    const assignments = await task.ref.collection("allocations").doc(`v${version}`).collection("members")
-      .where("state", "==", "active").limit(MAX_GROUP_MEMBERS).get();
-    for (const assignment of assignments.docs) {
-      const result = await rebalanceMissedGroupTask(groupId, task.id, assignment.id, today);
-      if (result.changed || result.missingSubTracks?.length) {
-        logger.info("group_task_rebalance_assignment_checked", {
-          groupId, taskId: task.id, ownerMemberId: assignment.id,
-          changed: result.changed, missingSubTrackCount: result.missingSubTracks?.length ?? 0,
-        });
-      }
+    if (Date.now() >= finishBy) {
+      completedPage = false;
+      break;
     }
+    const path = task.ref.path.split("/");
+    if (path.length === 4 && path[0] === "learning_groups" && path[2] === "tasks") {
+      const groupId = path[1];
+      await runGroupTaskSweepItems([task], (row) => row.ref.path, async (row) => {
+        const version = Number(row.get("allocation_version") ?? 1);
+        const assignments = await row.ref.collection("allocations").doc(`v${version}`).collection("members")
+          .where("state", "==", "active").limit(MAX_GROUP_MEMBERS).get();
+        await runGroupTaskSweepItems(assignments.docs, (assignment) => assignment.id, async (assignment) => {
+          const result = await rebalanceMissedGroupTask(groupId, row.id, assignment.id, today, missedBefore);
+          if (result.changed || result.missingSubTracks?.length) {
+            logger.info("group_task_rebalance_assignment_checked", {
+              groupId, taskId: row.id, ownerMemberId: assignment.id,
+              changed: result.changed, missingSubTrackCount: result.missingSubTracks?.length ?? 0,
+            });
+          }
+        });
+      });
+    }
+    lastProcessedPath = task.ref.path;
+    await cursorRef.set({ last_task_path: lastProcessedPath, updated_at: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
   }
-  if (page.size === MAX_REBALANCE_TASKS_PER_RUN) {
-    logger.warn("group_task_rebalance_task_cap_reached", { limit: MAX_REBALANCE_TASKS_PER_RUN });
+  if (completedPage && page.size < MAX_REBALANCE_TASKS_PER_RUN) {
+    lastProcessedPath = null;
+    await cursorRef.set({ last_task_path: null, updated_at: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
   }
 });
 
@@ -981,6 +1017,7 @@ export const listMyLearningGroupDailyTasks = onCall(CALL_OPTS, async (request) =
         groupId, taskId: task.id, taskName: task.get("task_name"), curriculumId: task.get("curriculum_id"),
         subTrackId: assignment.get("sub_track_id"), date: today.date, refs: today.refs,
         workload: today.workload, paceUnit: today.paceUnit, paceAmount: today.paceAmount,
+        ...(today.overloaded === true ? { overloaded: true } : {}),
       });
     }
   }

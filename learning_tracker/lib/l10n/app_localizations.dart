@@ -13698,6 +13698,12 @@ abstract class AppLocalizations {
   /// **'Member shares'**
   String get groupTaskAssignments;
 
+  /// No description provided for @groupTaskOverloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'This day includes work beyond the usual daily capacity'**
+  String get groupTaskOverloaded;
+
   /// No description provided for @groupTaskLearnProgress.
   ///
   /// In en, this message translates to:

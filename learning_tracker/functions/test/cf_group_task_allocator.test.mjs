@@ -55,6 +55,19 @@ describe('deterministic whole-unit group allocation', () => {
     assert.deepEqual(oversizedPlan.unassigned, []);
   });
 
+  test('marks owner fallback days overloaded when missed work exceeds remaining capacity', () => {
+    const plan = rebalanceMissedWork({
+      ownerMemberId: 'owner', missedRefs: ['B'], participants: [
+        { memberId: 'owner', capacityPerDay: 1, workloadPerPaceUnit: 1, paceUnit: 'mishna',
+          workloadByRef: { A: 1, B: 1 }, futureDays: ['2026-11-12'],
+          dailyTasks: [{ date: '2026-11-12', refs: ['A'], workload: 1, paceUnit: 'mishna', paceAmount: 1 }] },
+      ],
+    });
+    assert.deepEqual(plan.unassigned, []);
+    assert.deepEqual(plan.schedules.owner[0].refs, ['A', 'B']);
+    assert.equal(plan.schedules.owner[0].overloaded, true);
+  });
+
   test('retains unfittable refs as pending and never assigns to an ineligible member', () => {
     const plan = rebalanceMissedWork({
       ownerMemberId: 'owner', missedRefs: ['A'], participants: [

@@ -6,6 +6,7 @@ import {
   seedSocialProfile, strangerAuth,
 } from './_cf_helpers.mjs';
 const notifications = await import('../lib/notifications.js');
+const groupTasks = await import('../lib/group_tasks.js');
 
 const adminProfile = '01JADMIN0000000000000000000';
 const memberProfile = '01JMEMBER000000000000000000';
@@ -206,6 +207,24 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     assert.equal(shared.progress.total, member.get('units').length);
   });
 
+  test('progress includes assignments with more than 200 units', async () => {
+    const groupId = await makeGroup();
+    const task = await postTask(groupId);
+    await accept(groupId, task.taskId);
+    await call(fns.respondToLearningGroupTask, { groupId, taskId: task.taskId, profileId: memberProfile, response: 'accept' }, parentAuth);
+    await preferences(groupId, task.taskId, adminProfile);
+    await preferences(groupId, task.taskId, memberProfile, parentAuth);
+    await call(fns.allocateLearningGroupTask, { groupId, taskId: task.taskId }, strangerAuth);
+    const assignments = await db.collection('learning_groups').doc(groupId).collection('tasks').doc(task.taskId)
+      .collection('allocations').doc('v1').collection('members').get();
+    const member = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
+    const units = Array.from({ length: 201 }, (_, index) => ({ ref: `Mishnah Tamid ${index + 1}` }));
+    await member.ref.update({ units });
+    const cards = await call(fns.listLearningGroupTasks, { groupId, profileId: adminProfile }, strangerAuth);
+    const shared = cards[0].allocation.members.find((row) => row.memberId === member.id);
+    assert.deepEqual(shared.progress, { completed: 0, total: 201 });
+  });
+
   test('published group progress is withheld when the group summary grant is absent', async () => {
     const groupId = await makeGroup();
     const task = await postTask(groupId);
@@ -259,7 +278,7 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     const assignments = await assignmentsRef.get();
     const owner = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
     const first = owner.get('daily_tasks')[0];
-    const yesterday = dateIn(-1);
+    const yesterday = dateIn(-2);
     await owner.ref.update({ daily_tasks: [{ ...first, date: yesterday }] });
     const today = dateIn(0);
     const beforeRead = (await owner.ref.get()).get('daily_tasks');
@@ -272,6 +291,79 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     assert.ok(updated.get('daily_tasks').some((entry) => entry.date >= today && entry.refs.includes(first.refs[0])), JSON.stringify(updated.get('daily_tasks')));
     assert.equal(updated.get('daily_tasks').filter((entry) => entry.date >= today)
       .reduce((count, entry) => count + entry.refs.filter((ref) => ref === first.refs[0]).length, 0), 1);
+  });
+
+  test('daily sweep leaves yesterday in the time-zone grace period untouched', async () => {
+    const groupId = await makeGroup();
+    const task = await postTask(groupId);
+    await accept(groupId, task.taskId);
+    await call(fns.respondToLearningGroupTask, { groupId, taskId: task.taskId, profileId: memberProfile, response: 'accept' }, parentAuth);
+    await preferences(groupId, task.taskId, adminProfile);
+    await preferences(groupId, task.taskId, memberProfile, parentAuth);
+    await call(fns.allocateLearningGroupTask, { groupId, taskId: task.taskId }, strangerAuth);
+    const assignmentsRef = db.collection('learning_groups').doc(groupId).collection('tasks').doc(task.taskId)
+      .collection('allocations').doc('v1').collection('members');
+    const assignments = await assignmentsRef.get();
+    const owner = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
+    const yesterdayTask = owner.get('daily_tasks')[0];
+    const yesterday = dateIn(-1);
+    await owner.ref.update({ daily_tasks: [{ ...yesterdayTask, date: yesterday }] });
+    const before = (await owner.ref.get()).get('daily_tasks');
+    await runDailyGroupTaskRebalance();
+    assert.deepEqual((await owner.ref.get()).get('daily_tasks'), before);
+  });
+
+  test('a task with many unrelated void events still reflows its own missed source', async () => {
+    const groupId = await makeGroup();
+    const task = await postTask(groupId);
+    await accept(groupId, task.taskId);
+    await call(fns.respondToLearningGroupTask, { groupId, taskId: task.taskId, profileId: memberProfile, response: 'accept' }, parentAuth);
+    await preferences(groupId, task.taskId, adminProfile);
+    await preferences(groupId, task.taskId, memberProfile, parentAuth);
+    await call(fns.allocateLearningGroupTask, { groupId, taskId: task.taskId }, strangerAuth);
+    const assignments = await db.collection('learning_groups').doc(groupId).collection('tasks').doc(task.taskId)
+      .collection('allocations').doc('v1').collection('members').get();
+    const owner = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
+    const missed = owner.get('daily_tasks')[0];
+    const missedRef = missed.refs[0];
+    await owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-2) }] });
+    const eventCollection = db.collection('users').doc(parentAuth.uid).collection('learner_profiles').doc(memberProfile)
+      .collection('learning_events');
+    const batch = db.batch();
+    for (let index = 0; index < 205; index++) {
+      batch.set(eventCollection.doc(`unrelated_void_${String(index).padStart(4, '0')}`), {
+        kind: 'void', source: 'another-track', target_id: `event-${index}`,
+      });
+    }
+    await batch.commit();
+    await runDailyGroupTaskRebalance();
+    const updated = await owner.ref.get();
+    assert.ok(updated.get('daily_tasks').some((day) => day.refs.includes(missedRef) && day.date >= dateIn(0)));
+  });
+
+  test('sweep isolates failures and continues through later assignments', async () => {
+    const visited = [];
+    await groupTasks.runGroupTaskSweepItems(['bad', 'good'], (item) => item, async (item) => {
+      visited.push(item);
+      if (item === 'bad') throw new Error('test failure');
+    });
+    assert.deepEqual(visited, ['bad', 'good']);
+  });
+
+  test('scheduled sweep pages past 200 published tasks', async () => {
+    const groupId = 'page-test-group';
+    const groupRef = db.collection('learning_groups').doc(groupId);
+    await groupRef.set({ state: 'active' });
+    const batch = db.batch();
+    for (let index = 0; index < 201; index++) {
+      batch.set(groupRef.collection('tasks').doc(`task-${String(index).padStart(3, '0')}`), {
+        status: 'published', allocation_version: 1,
+      });
+    }
+    await batch.commit();
+    for (let page = 0; page < 9; page++) await runDailyGroupTaskRebalance();
+    const cursor = await db.collection('server_job_state').doc('group_task_rebalance').get();
+    assert.equal(cursor.get('last_task_path'), null);
   });
 
   test('daily job transfers owner overflow only to a currently accepted member with capacity', async () => {
@@ -291,7 +383,7 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     const missedRef = first.refs[0];
     const holdingUnit = owner.get('units').find((unit) => missedRef === unit.ref || missedRef.startsWith(`${unit.ref} `));
     assert.ok(holdingUnit);
-    const yesterday = dateIn(-1);
+    const yesterday = dateIn(-2);
     await owner.ref.update({ daily_tasks: [{ ...first, date: yesterday }], study_days: [] });
     const today = dateIn(0);
     await runDailyGroupTaskRebalance();
@@ -323,7 +415,7 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     const missedRef = missed.refs[0];
     const ownerMember = db.collection('learning_groups').doc(groupId).collection('members').doc(parentAuth.uid);
     await Promise.all([
-      owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-1) }], study_days: [] }),
+      owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-2) }], study_days: [] }),
       ownerMember.collection('group_profiles').doc(memberProfile).update({ state: 'removed' }),
       ownerMember.update({ active_profile_ids: [] }),
     ]);
@@ -353,7 +445,7 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     const missed = owner.get('daily_tasks')[0];
     const missedRef = missed.refs[0];
     await Promise.all([
-      owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-1) }], study_days: [] }),
+      owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-2) }], study_days: [] }),
       taskRef.collection('members').doc(peer.id).update({ state: 'declined' }),
     ]);
     await runDailyGroupTaskRebalance();
@@ -378,7 +470,7 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
     const peer = assignments.docs.find((doc) => doc.get('profile_id') === adminProfile);
     const missed = owner.get('daily_tasks')[0];
     await Promise.all([
-      owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-1) }], study_days: [] }),
+      owner.ref.update({ daily_tasks: [{ ...missed, date: dateIn(-2) }], study_days: [] }),
       db.collection('users').doc(strangerAuth.uid).collection('learner_profiles').doc(adminProfile)
         .collection('sub_tracks').doc(peer.get('sub_track_id')).delete(),
     ]);
@@ -399,7 +491,7 @@ describe('group task acceptance, preferences, allocation, and daily schedule', (
       .collection('allocations').doc('v1').collection('members').get();
     const owner = assignments.docs.find((doc) => doc.get('profile_id') === memberProfile);
     const ref = owner.get('daily_tasks')[0].refs[0];
-    const yesterday = dateIn(-1);
+    const yesterday = dateIn(-2);
     await owner.ref.update({ daily_tasks: [{ ...owner.get('daily_tasks')[0], date: yesterday }], study_days: [] });
     await db.collection('users').doc(parentAuth.uid).collection('learner_profiles').doc(memberProfile)
       .collection('learning_events').doc('01JLEARN0000000000000000001').set({

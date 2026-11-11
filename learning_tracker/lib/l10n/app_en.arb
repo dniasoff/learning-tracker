@@ -6789,6 +6789,7 @@
   "groupTaskWaiting": "Waiting for responses and preferences",
   "groupTaskPublished": "Assignments published",
   "groupTaskAssignments": "Member shares",
+  "groupTaskOverloaded": "This day includes work beyond the usual daily capacity",
   "groupTaskLearnProgress": "Group task progress",
   "groupTaskProgressCount": "{completed} of {total} units complete",
   "@groupTaskProgressCount": {

@@ -542,6 +542,11 @@ class _GroupTasksSectionState extends ConsumerState<GroupTasksSection> {
                                   dense: true,
                                   leading: const Icon(Icons.today),
                                   title: Text(_dailyLabel(daily)),
+                                  subtitle:
+                                      daily is Map &&
+                                          daily['overloaded'] == true
+                                      ? Text(l10n.groupTaskOverloaded)
+                                      : null,
                                 ),
                             ],
                           ),

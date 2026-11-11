@@ -8380,6 +8380,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupTaskAssignments => 'Member shares';
 
   @override
+  String get groupTaskOverloaded =>
+      'This day includes work beyond the usual daily capacity';
+
+  @override
   String get groupTaskLearnProgress => 'Group task progress';
 
   @override

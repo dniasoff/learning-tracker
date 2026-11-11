@@ -4630,6 +4630,7 @@
   "groupTaskWaiting": "ממתינים לתגובות ולהעדפות",
   "groupTaskPublished": "המשימות חולקו",
   "groupTaskAssignments": "חלקי הלימוד של החברים",
+  "groupTaskOverloaded": "ביום זה משימות מעבר לקיבולת היומית הרגילה",
   "groupTaskLearnProgress": "התקדמות במשימות הקבוצה",
   "groupTaskProgressCount": "הושלמו {completed} מתוך {total} יחידות",
   "@groupTaskProgressCount": {
