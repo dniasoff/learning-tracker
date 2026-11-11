@@ -330,6 +330,9 @@ describe('social graph callable state', () => {
       paused: false,
     });
     const summaryId = socialProfileDocId(parentAuth.uid, CHILD);
+    await db.collection('social_user_controls').doc(parentAuth.uid).set({
+      active_social_child_profile_ids: [summaryId],
+    });
     const summaryReaders = db.collection('social_summaries').doc(summaryId).collection('readers');
     for (let i = 0; i < 55; i++) {
       const ownerUid = `follower-${i}`;
@@ -364,6 +367,11 @@ describe('social graph callable state', () => {
 
     assert.equal((await summaryReaders.get()).size, 0);
     assert.equal((await db.collection('social_profiles').doc(summaryId).get()).get('paused'), true);
+    assert.deepEqual(
+      (await db.collection('social_user_controls').doc(parentAuth.uid).get())
+        .get('active_social_child_profile_ids'),
+      [],
+    );
   });
 
   test('profile upsert returns a stable opaque id and cannot clear the parent pause', async () => {
@@ -577,6 +585,9 @@ describe('social graph callable state', () => {
 
   test('learner profile deletion removes its graph, requests, and private card', async () => {
     await seedAdultPair();
+    const readerRef = db.collection('social_summaries')
+      .doc(socialProfileDocId(strangerAuth.uid, OTHER))
+      .collection('readers').doc(parentAuth.uid);
     const sent = await call(fns.sendFollowRequest, {
       fromProfileId: CHILD,
       toSocialProfileId: socialProfileId(strangerAuth.uid, OTHER),
@@ -592,6 +603,7 @@ describe('social graph callable state', () => {
     assert.equal((await db.collection('social_follows').get()).size, 0);
     assert.equal((await db.collection('social_follow_requests').get()).size, 0);
     assert.equal((await db.collection('social_profiles').where('owner_uid', '==', parentAuth.uid).get()).size, 0);
+    assert.equal((await readerRef.get()).exists, false);
   });
 
   test('account data deletion removes all of its social edges and profile cards', async () => {

@@ -104,6 +104,19 @@ service cloud.firestore {
     // Shared read boundary for follower and school-staff progress. The
     // per-viewer ACL is server-maintained; follower and school grants occupy
     // separate arrays so either lane can revoke its grant independently.
+    function socialFollowerGrantIsActive(readerPath) {
+      let reader = get(readerPath).data;
+      let accountPath = /databases/$(database)/documents/social_user_controls/$(request.auth.uid);
+      return (reader.adult_follower_profile_ids is list
+              && reader.adult_follower_profile_ids.size() > 0)
+          || (reader.child_follower_profile_ids is list
+              && reader.child_follower_profile_ids.size() > 0
+              && exists(accountPath)
+              && get(accountPath).data.active_social_child_profile_ids is list
+              && reader.child_follower_profile_ids.hasAny(
+                get(accountPath).data.active_social_child_profile_ids));
+    }
+
     function socialChildFollowerSchoolAccess(summaryId, readerPath) {
       let childPath = /databases/$(database)/documents/social_profiles/$(summaryId);
       let parentPath = /databases/$(database)/documents/social_parent_controls/$(summaryId);
@@ -130,8 +143,7 @@ service cloud.firestore {
       let summaryProfilePath = /databases/$(database)/documents/social_profiles/$(summaryId);
       return isSignedIn() && exists(readerPath)
             && exists(summaryProfilePath)
-            && ((get(readerPath).data.follower_profile_ids is list
-                  && get(readerPath).data.follower_profile_ids.size() > 0
+            && ((socialFollowerGrantIsActive(readerPath)
                   && (get(summaryProfilePath).data.mode != 'child'
                     || socialChildFollowerSchoolAccess(summaryId, readerPath)))
               || (get(readerPath).data.school_ids is list
@@ -634,6 +646,11 @@ service cloud.firestore {
 
     match /social_parent_controls/{controlId} {
       // Reads as well as writes stay behind PIN-verified callables.
+      allow read, write: if false;
+    }
+
+    match /social_user_controls/{uid} {
+      // Server-maintained child-follower pause gate used by summary rules.
       allow read, write: if false;
     }
 

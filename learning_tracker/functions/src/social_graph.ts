@@ -38,6 +38,7 @@ const blocks = () => db.collection("social_blocks");
 const limits = () => db.collection("social_rate_limits");
 const memberships = () => db.collection("school_memberships");
 const controls = () => db.collection("social_parent_controls");
+const userControls = () => db.collection("social_user_controls");
 const auditLogs = () => db.collection("social_audit_logs");
 const searchCursors = () => db.collection("social_search_cursors");
 const summaries = () => db.collection("social_summaries");
@@ -209,6 +210,7 @@ type FollowerSummaryGrantChange = {
   summaryOwner: ProfileRef;
   follower: ProfileRef;
   allowed: boolean;
+  followerMode?: "adult" | "child";
   childSchoolIds?: readonly string[];
   followerSchoolIds?: readonly string[];
 };
@@ -231,6 +233,8 @@ async function setFollowerSummaryGrants(
     ref: FirebaseFirestore.DocumentReference;
     owner: ProfileRef;
     ids: Set<string>;
+    adultIds: Set<string>;
+    childIds: Set<string>;
     schools: string[];
     childByFollower: Record<string, string[]>;
     activeByFollower: Record<string, string[]>;
@@ -245,6 +249,8 @@ async function setFollowerSummaryGrants(
       ids: new Set<string>(Array.isArray(existing.get("follower_profile_ids"))
         ? existing.get("follower_profile_ids") as string[]
         : []),
+      adultIds: new Set<string>(stringList(existing.get("adult_follower_profile_ids"))),
+      childIds: new Set<string>(stringList(existing.get("child_follower_profile_ids"))),
       schools: Array.isArray(existing.get("school_ids"))
         ? existing.get("school_ids") as string[]
         : [],
@@ -261,12 +267,21 @@ async function setFollowerSummaryGrants(
     const followerId = profileDocId(change.follower);
     if (change.allowed) {
       value.ids.add(followerId);
+      if (change.followerMode === "child") {
+        value.childIds.add(followerId);
+        value.adultIds.delete(followerId);
+      } else if (change.followerMode === "adult") {
+        value.adultIds.add(followerId);
+        value.childIds.delete(followerId);
+      }
       if (change.childSchoolIds?.length) {
         value.childByFollower[followerId] = [...new Set(change.childSchoolIds)].slice(0, MAX_SCHOOLS);
         value.activeByFollower[followerId] = [...new Set(change.followerSchoolIds ?? [])].slice(0, MAX_SCHOOLS);
       }
     } else {
       value.ids.delete(followerId);
+      value.adultIds.delete(followerId);
+      value.childIds.delete(followerId);
       delete value.childByFollower[followerId];
       delete value.activeByFollower[followerId];
     }
@@ -282,6 +297,8 @@ async function setFollowerSummaryGrants(
         owner_uid: grant.owner.ownerUid,
         profile_id: grant.owner.profileId,
         follower_profile_ids: [...grant.ids],
+        adult_follower_profile_ids: [...grant.adultIds],
+        child_follower_profile_ids: [...grant.childIds],
         school_ids: grant.schools,
         child_school_ids: childSchoolIds,
         active_school_ids: activeSchoolIds,
@@ -488,8 +505,10 @@ export async function revokeSocialGrantsForMembershipChange(
   const activeIds = (await activeSchoolIds(profile)).filter((id) => id !== schoolId);
   const now = admin.firestore.Timestamp.now();
   const parentControlsRef = controls().doc(summaryId);
+  const ownerAccountRef = userControls().doc(ownerUid);
   await db.runTransaction(async (txn) => {
     const parentControls = mode === "child" ? await txn.get(parentControlsRef) : null;
+    const ownerAccount = mode === "child" ? await txn.get(ownerAccountRef) : null;
     txn.set(profileRefById, {
       active_school_ids: activeIds,
       ...(mode === "child" ? { paused: true } : {}),
@@ -502,6 +521,10 @@ export async function revokeSocialGrantsForMembershipChange(
         paused: true,
         controls_update_pending: true,
         updated_at: now,
+      }, { merge: true });
+      txn.set(ownerAccountRef, {
+        active_social_child_profile_ids: stringList(ownerAccount?.get("active_social_child_profile_ids"))
+          .filter((id) => id !== summaryId),
       }, { merge: true });
     }
   });
@@ -776,6 +799,7 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
   const child: ProfileRef = { ownerUid: uid, profileId };
   const socialRef = profileRef(child);
   const controlsRef = controls().doc(profileDocId(child));
+  const userRef = userControls().doc(uid);
   let joinedSchools: string[] = [];
   await db.runTransaction(async (txn) => {
     const learnerRef = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
@@ -791,6 +815,7 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
       throw new HttpsError("failed-precondition", "Allowed schools must be active memberships");
     }
     const social = await txn.get(socialRef);
+    const user = await txn.get(userRef);
     // Rules check this pause directly. If a page fails below, sharing stays
     // denied and a retry can safely restart from the first page.
     txn.set(socialRef, { paused: true, active_school_ids: joinedSchools }, { merge: true });
@@ -803,6 +828,10 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
       updated_at: now,
       updated_by: uid,
     });
+    txn.set(userRef, {
+      active_social_child_profile_ids: stringList(user.get("active_social_child_profile_ids"))
+        .filter((id) => id !== profileDocId(child)),
+    }, { merge: true });
     if (!social.exists) throw new HttpsError("failed-precondition", "Child social profile is unavailable");
   });
 
@@ -828,6 +857,7 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
         summaryOwner: target,
         follower: child,
         allowed: eligible,
+        followerMode: "child",
         ...(eligible ? { childSchoolIds: eligibleSchools, followerSchoolIds: followerSchools } : {}),
       });
     }
@@ -842,6 +872,8 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
         ownerUid: String(edge.get("from_owner_uid")),
         profileId: String(edge.get("from_profile_id")),
       };
+      const followerCard = await profileRef(follower).get();
+      const followerMode = followerCard.get("mode") === "adult" ? "adult" : "child";
       const [eligibleSchools, followerSchools] = await Promise.all([
         sharedAllowedSchoolIds(follower, child, allowed as string[]),
         activeSchoolIds(follower),
@@ -851,6 +883,7 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
         summaryOwner: child,
         follower,
         allowed: eligible,
+        followerMode,
         ...(eligible ? { childSchoolIds: eligibleSchools, followerSchoolIds: followerSchools } : {}),
       });
     }
@@ -861,6 +894,11 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
   const finalAllowed = (allowed as string[]).filter((schoolId) => finalSchools.includes(schoolId));
   const completedAt = admin.firestore.Timestamp.now();
   await db.runTransaction(async (txn) => {
+    const user = await txn.get(userRef);
+    const activeChildIds = stringList(user.get("active_social_child_profile_ids"))
+      .filter((id) => id !== profileDocId(child));
+    if (!data.paused) activeChildIds.push(profileDocId(child));
+    txn.set(userRef, { active_social_child_profile_ids: [...new Set(activeChildIds)] }, { merge: true });
     txn.set(socialRef, {
       paused: data.paused,
       active_school_ids: finalSchools,
@@ -1010,9 +1048,11 @@ export const reviewFollowRequest = onCall(CALL_OPTS, async (request) => {
     }
     const decision = data.decision as "accept" | "decline";
     if (decision === "accept") {
-      const [followerMemberships, summaryMemberships] = await Promise.all([
+      const followerUserRef = userControls().doc(from.ownerUid);
+      const [followerMemberships, summaryMemberships, followerUser] = await Promise.all([
         txn.get(schoolMembershipQuery(from.ownerUid, from.profileId)),
         txn.get(schoolMembershipQuery(to.ownerUid, to.profileId)),
+        fromProfile.mode === "child" ? txn.get(followerUserRef) : Promise.resolve(null),
       ]);
       const followerSchools = [...new Set(followerMemberships.docs.map((doc) => doc.get("school_id")))]
         .filter((id): id is string => typeof id === "string").slice(0, MAX_SCHOOLS);
@@ -1029,14 +1069,24 @@ export const reviewFollowRequest = onCall(CALL_OPTS, async (request) => {
       if (toProfile.mode === "child") {
         txn.set(profileRef(to), { active_school_ids: summarySchools }, { merge: true });
       }
+      if (fromProfile.mode === "child") {
+        txn.set(followerUserRef, {
+          active_social_child_profile_ids: [...new Set([
+            ...stringList(followerUser?.get("active_social_child_profile_ids")),
+            profileDocId(from),
+          ])],
+        }, { merge: true });
+      }
     }
     txn.update(reqRef, { state: decision === "accept" ? "accepted" : "declined", updated_at: now });
     if (decision === "accept") {
       txn.set(follows().doc(pairId(from, to)), {
         from_owner_uid: from.ownerUid,
         from_profile_id: from.profileId,
+        from_mode: fromProfile.mode,
         to_owner_uid: to.ownerUid,
         to_profile_id: to.profileId,
+        to_mode: toProfile.mode,
         state: "active",
         created_at: now,
       });
@@ -1360,6 +1410,19 @@ export const listSocialConnections = onCall(CALL_OPTS, async (request) => {
 
 /** Idempotent graph/request cleanup for profile and account deletion. */
 export async function cleanupSocialForProfile(ownerUid: string, profileId: string): Promise<void> {
+  const profile = { ownerUid, profileId };
+  const socialId = profileDocId(profile);
+  const accountControlRef = userControls().doc(ownerUid);
+  await db.runTransaction(async (txn) => {
+    const accountControls = await txn.get(accountControlRef);
+    if (accountControls.exists) {
+      txn.set(accountControlRef, {
+        active_social_child_profile_ids: stringList(accountControls.get("active_social_child_profile_ids"))
+          .filter((id) => id !== socialId),
+        updated_at: admin.firestore.Timestamp.now(),
+      }, { merge: true });
+    }
+  });
   const queries = [
     profiles().where("owner_uid", "==", ownerUid).where("profile_id", "==", profileId),
     searchCursors().where("owner_uid", "==", ownerUid).where("profile_id", "==", profileId),
@@ -1380,27 +1443,42 @@ export async function cleanupSocialForProfile(ownerUid: string, profileId: strin
       await batch.commit();
     }
   }
-  const profile = { ownerUid, profileId };
-  const readerGrants = await db.collectionGroup("readers")
-    .where("follower_profile_ids", "array-contains", profileDocId(profile)).get();
-  for (let i = 0; i < readerGrants.docs.length; i += 450) {
+  const readerQuery = db.collectionGroup("readers")
+    .where("follower_profile_ids", "array-contains", socialId);
+  await forEachQueryPage(readerQuery, async (docs) => {
     const batch = db.batch();
-    for (const doc of readerGrants.docs.slice(i, i + 450)) {
-      const ids = (doc.get("follower_profile_ids") as unknown[])
-        .filter((id) => id !== profileDocId(profile));
-      const schoolIds = doc.get("school_ids");
-      if (ids.length === 0 && (!Array.isArray(schoolIds) || schoolIds.length === 0)) {
+    for (const doc of docs) {
+      const ids = stringList(doc.get("follower_profile_ids")).filter((id) => id !== socialId);
+      const adultIds = stringList(doc.get("adult_follower_profile_ids"))
+        .filter((id) => id !== socialId);
+      const childIds = stringList(doc.get("child_follower_profile_ids"))
+        .filter((id) => id !== socialId);
+      const childGrants = stringListMap(doc.get("child_school_grants"));
+      const followerMemberships = stringListMap(doc.get("follower_school_memberships"));
+      delete childGrants[socialId];
+      delete followerMemberships[socialId];
+      const schoolIds = stringList(doc.get("school_ids"));
+      if (ids.length === 0 && schoolIds.length === 0) {
         batch.delete(doc.ref);
       } else {
-        batch.update(doc.ref, { follower_profile_ids: ids, updated_at: admin.firestore.Timestamp.now() });
+        batch.set(doc.ref, {
+          follower_profile_ids: ids,
+          adult_follower_profile_ids: adultIds,
+          child_follower_profile_ids: childIds,
+          child_school_ids: flattenSchoolMap(childGrants),
+          active_school_ids: flattenSchoolMap(followerMemberships),
+          child_school_grants: childGrants,
+          follower_school_memberships: followerMemberships,
+          updated_at: admin.firestore.Timestamp.now(),
+        }, { merge: true });
       }
     }
     await batch.commit();
-  }
+  });
   // Profile/account deletion must not claim completion while summary data or
   // nested reader grants remain. Let Admin SDK failures propagate to caller.
-  await db.recursiveDelete(summaries().doc(profileDocId(profile)));
-  await limits().doc(profileDocId({ ownerUid, profileId })).delete().catch(() => undefined);
+  await db.recursiveDelete(summaries().doc(socialId));
+  await limits().doc(socialId).delete().catch(() => undefined);
 }
 
 export async function cleanupSocialForAccount(ownerUid: string): Promise<void> {

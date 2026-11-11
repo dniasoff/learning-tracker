@@ -301,6 +301,8 @@ describe('social graph rules', () => {
           owner_uid: OWNER,
           profile_id: profileId,
           follower_profile_ids: ['approved-profile'],
+          adult_follower_profile_ids: ['approved-profile'],
+          child_follower_profile_ids: [],
           school_ids: [],
         }),
       ]);
@@ -313,7 +315,7 @@ describe('social graph rules', () => {
     await assertFails(getDoc(doc(anon(), profilePath)));
     await assertFails(setDoc(doc(owner(), profilePath), { forged: true }));
     await assertFails(deleteDoc(doc(owner(), profilePath)));
-    for (const path of [controlsPath, auditPath]) {
+    for (const path of [controlsPath, auditPath, `social_user_controls/${TUTOR}`]) {
       await assertFails(getDoc(doc(owner(), path)), `PIN-gated data denied directly for ${path}`);
       await assertFails(getDoc(doc(stranger(), path)), `unrelated account must not read ${path}`);
       await assertFails(getDoc(doc(anon(), path)), `anonymous must not read ${path}`);
@@ -334,6 +336,7 @@ describe('social graph rules', () => {
       'social_follows/client-create',
       'social_blocks/client-create',
       'social_rate_limits/client-create',
+      'social_user_controls/client-create',
       'social_search_cursors/client-create',
       'school_memberships/client-create',
     ]) {
@@ -389,6 +392,8 @@ describe('social graph rules', () => {
         owner_uid: OWNER,
         profile_id: profileId,
         follower_profile_ids: [],
+        adult_follower_profile_ids: [],
+        child_follower_profile_ids: [],
         school_ids: [],
       });
     });
@@ -399,6 +404,8 @@ describe('social graph rules', () => {
         owner_uid: OWNER,
         profile_id: profileId,
         follower_profile_ids: ['approved-profile'],
+        adult_follower_profile_ids: ['approved-profile'],
+        child_follower_profile_ids: [],
         school_ids: [],
       });
       await updateDoc(doc(ctx.firestore(), summaryPath), { points: 42 });
@@ -418,6 +425,8 @@ describe('social graph rules', () => {
         }),
         updateDoc(doc(db, readerPath), {
           follower_profile_ids: ['approved-profile'],
+          adult_follower_profile_ids: ['approved-profile'],
+          child_follower_profile_ids: [],
           school_ids: [],
           child_school_ids: ['school-1'],
           active_school_ids: ['school-1'],
@@ -449,6 +458,29 @@ describe('social graph rules', () => {
     await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
     await env.withSecurityRulesDisabled(async (ctx) => {
       await updateDoc(doc(ctx.firestore(), summaryControlsPath), { allowed_school_ids: [] });
+    });
+    await assertFails(getDoc(doc(tutor(), summaryPath)));
+  });
+
+  test('pausing a child follower cuts reads of adult summaries immediately', async () => {
+    const childProfileDocId = 'approved-child-profile';
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await Promise.all([
+        updateDoc(doc(db, readerPath), {
+          follower_profile_ids: [childProfileDocId],
+          adult_follower_profile_ids: [],
+          child_follower_profile_ids: [childProfileDocId],
+          school_ids: [],
+        }),
+        setDoc(doc(db, `social_user_controls/${TUTOR}`), {
+          active_social_child_profile_ids: [childProfileDocId],
+        }),
+      ]);
+    });
+    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), `social_user_controls/${TUTOR}`), { active_social_child_profile_ids: [] });
     });
     await assertFails(getDoc(doc(tutor(), summaryPath)));
   });
