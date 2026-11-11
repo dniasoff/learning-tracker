@@ -126,6 +126,8 @@ const _pinGatedEscalationPaths = <String>{
   // DNI-513: the parent Change history (also refuses tutored sessions).
   '/parent-mode/change-history',
   '/parent-mode/hidden-content',
+  // School/social profiles can expose a child's shared learning summary.
+  '/parent-mode/social',
   '/settings/lifetime',
   '/settings/lifetime/:curriculumId',
   // DNI-487 / ruling B11: Manage tutors carries the parent-only "Can edit

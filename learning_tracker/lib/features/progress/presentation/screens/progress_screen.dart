@@ -106,7 +106,15 @@ class ProgressScreen extends ConsumerWidget {
                     const SizedBox(height: 14),
                     ProgressTierCounterRow(showPoints: userMode.isChild),
                     const SizedBox(height: 18),
-                    if (!userMode.isChild)
+                    const _RecentActivityLensTile(),
+                    const SizedBox(height: 10),
+                    const _SiyumimMilestonesLensTile(),
+                    const SizedBox(height: 10),
+                    const _LifetimeKnowledgeLensTile(),
+                    const SizedBox(height: 22),
+                    const _PerTrackSection(),
+                    if (!userMode.isChild) ...[
+                      const SizedBox(height: 18),
                       Card(
                         child: ListTile(
                           leading: const Icon(Icons.groups_outlined),
@@ -117,14 +125,7 @@ class ProgressScreen extends ConsumerWidget {
                               context.router.push(SocialCommunityRoute()),
                         ),
                       ),
-                    if (!userMode.isChild) const SizedBox(height: 10),
-                    const _RecentActivityLensTile(),
-                    const SizedBox(height: 10),
-                    const _SiyumimMilestonesLensTile(),
-                    const SizedBox(height: 10),
-                    const _LifetimeKnowledgeLensTile(),
-                    const SizedBox(height: 22),
-                    const _PerTrackSection(),
+                    ],
                   ],
                 ),
               );
