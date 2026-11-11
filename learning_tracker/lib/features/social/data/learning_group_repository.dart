@@ -212,6 +212,17 @@ final class LearningGroupRepository {
     return List.unmodifiable(raw.map(LearningGroupTaskCard.fromWire));
   }
 
+  Future<void> reconcileDailyTasks({
+    required String profileId,
+    required String onDate,
+  }) async {
+    final raw = await _invoke('listMyLearningGroupDailyTasks', {
+      'profileId': profileId,
+      'onDate': onDate,
+    });
+    if (raw is! List) throw const FormatException('Invalid group daily tasks');
+  }
+
   Future<void> respondToTask({
     required String groupId,
     required String taskId,

@@ -13698,6 +13698,18 @@ abstract class AppLocalizations {
   /// **'Member shares'**
   String get groupTaskAssignments;
 
+  /// No description provided for @groupTaskLearnProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Group task progress'**
+  String get groupTaskLearnProgress;
+
+  /// No description provided for @groupTaskProgressCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{completed} of {total} units complete'**
+  String groupTaskProgressCount(int completed, int total);
+
   /// No description provided for @groupTaskNoDeadline.
   ///
   /// In en, this message translates to:

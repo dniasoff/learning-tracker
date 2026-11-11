@@ -14,11 +14,14 @@ import {
   requireAuth,
   requiredString,
 } from "./groups";
-import { allocateGroupTask, AllocationUnit } from "./group_task_allocator";
+import { allocateGroupTask, AllocationUnit, rebalanceMissedWork, RebalanceParticipant } from "./group_task_allocator";
 import {
   groupTaskCurriculumIds,
   groupTaskPaceUnits,
+  groupTaskLeafRefs,
   groupTaskWorkloadPerPaceUnit,
+  groupTaskUnitsForRefs,
+  reassignGroupTaskUnits,
   listGroupTaskScopes,
   resolveGroupTaskUnits,
 } from "./group_task_catalog";
@@ -33,6 +36,7 @@ const MAX_CAPACITY_PER_DAY = 1000;
 const MAX_TASK_CREATIONS_PER_DAY = 3;
 const MAX_PREFERENCE_UPDATES_PER_DAY = 20;
 const tasks = (groupId: string) => db.collection("learning_groups").doc(groupId).collection("tasks");
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function digest(...values: string[]): string {
   return crypto.createHash("sha256").update(values.join("\0")).digest("hex");
@@ -70,6 +74,181 @@ function flattenRefs(units: readonly AllocationUnit[], out = new Set<string>()):
     flattenRefs(unit.children, out);
   }
   return out;
+}
+
+async function groupTaskProgress(groupId: string, readerUid: string, readerProfileId: string,
+  assignment: FirebaseFirestore.DocumentSnapshot, curriculumId: string): Promise<{ completed: number; total: number } | null> {
+  const ownerUid = String(assignment.get("owner_uid"));
+  const ownerProfileId = String(assignment.get("profile_id"));
+  const ownerProfileKey = digest(ownerUid, ownerProfileId);
+  const learner = db.collection("users").doc(ownerUid).collection("learner_profiles").doc(ownerProfileId);
+  const snapshot = await db.runTransaction(async (txn) => {
+    const group = await requireActiveGroup(txn, groupRef(groupId));
+    const [ownerAccount, ownerProfile, readerAccount, readerProfile, acl, ownerSocial, ownerControls, ownerUserControls,
+      readerSocial, readerControls, readerUserControls, eventPage, voidPage] = await Promise.all([
+      txn.get(memberRef(groupId, ownerUid)), txn.get(profileMemberRef(groupId, ownerUid, ownerProfileId)),
+      txn.get(memberRef(groupId, readerUid)), txn.get(profileMemberRef(groupId, readerUid, readerProfileId)),
+      txn.get(db.collection("social_summaries").doc(ownerProfileKey).collection("readers").doc(readerUid)),
+      txn.get(db.collection("social_profiles").doc(ownerProfileKey)),
+      txn.get(db.collection("social_parent_controls").doc(ownerProfileKey)),
+      txn.get(db.collection("social_user_controls").doc(ownerUid)),
+      txn.get(db.collection("social_profiles").doc(digest(readerUid, readerProfileId))),
+      txn.get(db.collection("social_parent_controls").doc(digest(readerUid, readerProfileId))),
+      txn.get(db.collection("social_user_controls").doc(readerUid)),
+      txn.get(learner.collection("learning_events").where("source", "==", String(assignment.get("sub_track_id"))).limit(5000)),
+      txn.get(learner.collection("learning_events").where("kind", "==", "void").limit(5000)),
+    ]);
+    if (group.get("status") !== "active" || !ownerAccount.exists || ownerAccount.get("state") !== "active" ||
+        !ownerProfile.exists || ownerProfile.get("state") !== "active" ||
+        !Array.isArray(ownerAccount.get("active_profile_ids")) || !(ownerAccount.get("active_profile_ids") as string[]).includes(ownerProfileId) ||
+        !readerAccount.exists || readerAccount.get("state") !== "active" || !readerProfile.exists || readerProfile.get("state") !== "active" ||
+        !Array.isArray(readerAccount.get("active_profile_ids")) || !(readerAccount.get("active_profile_ids") as string[]).includes(readerProfileId)) return null;
+    if (readerUid !== ownerUid) {
+      if (!acl.exists || !(acl.get("group_ids") as string[] | undefined)?.includes(groupId)) return null;
+      if (ownerProfile.get("mode") === "child" && (!ownerSocial.exists || ownerSocial.get("paused") === true ||
+          !ownerControls.exists || ownerControls.get("paused") === true || ownerControls.get("controls_update_pending") === true ||
+          !Array.isArray(ownerProfile.get("approved_reader_uids")) || !(ownerProfile.get("approved_reader_uids") as string[]).includes(readerUid) ||
+          !Array.isArray(ownerUserControls.get("active_social_child_profile_ids")) ||
+          !(ownerUserControls.get("active_social_child_profile_ids") as string[]).includes(ownerProfileKey))) return null;
+      const readerKey = digest(readerUid, readerProfileId);
+      if (readerProfile.get("mode") === "child" && (!readerSocial.exists || readerSocial.get("paused") === true ||
+          !readerControls.exists || readerControls.get("paused") === true || readerControls.get("controls_update_pending") === true ||
+          !Array.isArray(readerUserControls.get("active_social_child_profile_ids")) ||
+          !(readerUserControls.get("active_social_child_profile_ids") as string[]).includes(readerKey))) return null;
+    }
+    if (eventPage.size >= 5000 || voidPage.size >= 5000) return null;
+    return { events: eventPage.docs, voids: voidPage.docs };
+  });
+  if (!snapshot) return null;
+  const refs = Array.isArray(assignment.get("units"))
+    ? (assignment.get("units") as Array<Record<string, unknown>>).map((unit) => String(unit.ref ?? ""))
+    : [];
+  const total = refs.length;
+  if (total === 0) return { completed: 0, total };
+  const voids = new Set(snapshot.voids.map((event) => String(event.get("target_id"))));
+  const learned = new Set(snapshot.events.filter((event) => event.get("kind") === "learn" && !voids.has(event.id))
+    .map((event) => String(event.get("ref"))));
+  let completed = 0;
+  for (const ref of refs) {
+    const leaves = groupTaskLeafRefs(curriculumId, ref);
+    if (learned.has(ref) || leaves.every((leaf) => learned.has(leaf))) completed++;
+  }
+  return { completed, total };
+}
+
+function remainingStudyDates(start: string, deadline: string, studyDays: number[]): string[] {
+  const allowed = new Set(studyDays);
+  const result: string[] = [];
+  for (let stamp = Date.parse(`${start}T00:00:00.000Z`), end = Date.parse(`${deadline}T00:00:00.000Z`); stamp <= end; stamp += DAY_MS) {
+    const day = new Date(stamp).getUTCDay() || 7;
+    if (allowed.has(day)) result.push(new Date(stamp).toISOString().slice(0, 10));
+  }
+  return result;
+}
+
+/** Reflows overdue schedule refs atomically, keeping the original member first. */
+async function rebalanceMissedGroupTask(groupId: string, taskId: string, onDate: string): Promise<boolean> {
+  const group = db.collection("learning_groups").doc(groupId);
+  const taskRef = tasks(groupId).doc(taskId);
+  return db.runTransaction(async (txn) => {
+    const [groupSnap, task] = await Promise.all([txn.get(group), txn.get(taskRef)]);
+    if (!groupSnap.exists || groupSnap.get("status") !== "active" || !task.exists || task.get("status") !== "published") return false;
+    const version = Number(task.get("allocation_version") ?? 1);
+    const allocationRef = taskRef.collection("allocations").doc(`v${version}`);
+    const assignments = await txn.get(allocationRef.collection("members").limit(MAX_GROUP_MEMBERS));
+    const activeAssignments: Array<{ snap: FirebaseFirestore.QueryDocumentSnapshot; member: Record<string, unknown>; refs: string[]; overdue: boolean }> = [];
+    const curriculumId = String(task.get("curriculum_id"));
+    const deadline = timestampDate(task.get("deadline"));
+    if (!deadline || deadline <= onDate) return false;
+    for (const assignment of assignments.docs) {
+      if (assignment.get("state") !== "active") continue;
+      const uid = String(assignment.get("owner_uid"));
+      const profileId = String(assignment.get("profile_id"));
+      const [account, memberProfile] = await Promise.all([
+        txn.get(memberRef(groupId, uid)), txn.get(profileMemberRef(groupId, uid, profileId)),
+      ]);
+      if (!account.exists || account.get("state") !== "active" || !memberProfile.exists || memberProfile.get("state") !== "active" ||
+          !Array.isArray(account.get("active_profile_ids")) || !(account.get("active_profile_ids") as string[]).includes(profileId)) continue;
+      const dailyTasks = (assignment.get("daily_tasks") as Array<Record<string, unknown>> | undefined) ?? [];
+      const overdue = dailyTasks.filter((daily) => typeof daily.date === "string" && daily.date < onDate && daily.reconciled_at == null);
+      if (overdue.length === 0) {
+        activeAssignments.push({ snap: assignment, member: assignment.data(), refs: [], overdue: false });
+        continue;
+      }
+      const learner = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
+      const source = String(assignment.get("sub_track_id"));
+      const [learnEvents, voidEvents] = await Promise.all([
+        txn.get(learner.collection("learning_events").where("source", "==", source).limit(2000)),
+        txn.get(learner.collection("learning_events").where("kind", "==", "void").limit(2000)),
+      ]);
+      if (learnEvents.size >= 2000 || voidEvents.size >= 2000) return false;
+      const voided = new Set(voidEvents.docs.map((event) => String(event.get("target_id"))));
+      const learned = new Set(learnEvents.docs.filter((event) => event.get("kind") === "learn" && !voided.has(event.id))
+        .map((event) => String(event.get("ref"))));
+      const refs = overdue.flatMap((daily) => Array.isArray(daily.refs) ? daily.refs.filter((ref): ref is string => typeof ref === "string") : [])
+        .filter((ref) => !learned.has(ref) && !groupTaskLeafRefs(curriculumId, ref).every((leaf) => learned.has(leaf)));
+      activeAssignments.push({ snap: assignment, member: assignment.data(), refs: [...new Set(refs)], overdue: true });
+    }
+    const missedOwners = activeAssignments.filter((entry) => entry.overdue);
+    const owner = missedOwners[0];
+    if (!owner) return false;
+    const subTrackRefs = activeAssignments.map((entry) => db.collection("users").doc(String(entry.member.owner_uid))
+      .collection("learner_profiles").doc(String(entry.member.profile_id)).collection("sub_tracks").doc(String(entry.member.sub_track_id)));
+    const subTracks = await txn.getAll(...subTrackRefs);
+    const subTrackByPath = new Map(subTracks.map((snap) => [snap.ref.path, snap]));
+    const now = admin.firestore.Timestamp.now();
+      const participantInputs: RebalanceParticipant[] = activeAssignments.map((entry) => {
+        const studyDays = Array.isArray(entry.member.study_days) ? entry.member.study_days as number[] : [];
+        const allRefs = ((entry.member.daily_tasks as Array<Record<string, unknown>> | undefined) ?? [])
+          .flatMap((daily) => Array.isArray(daily.refs) ? daily.refs.filter((ref): ref is string => typeof ref === "string") : []);
+        const weightRows = groupTaskUnitsForRefs(curriculumId, [...new Set([...allRefs, ...owner.refs])]);
+        const workloadByRef = Object.fromEntries(weightRows.map((unit) => [unit.ref, unit.weight]));
+        const workloadPerPaceUnit = Number(entry.member.workload_per_pace_unit ?? 1);
+        return {
+          memberId: entry.snap.id,
+          capacityPerDay: Number(entry.member.capacity_per_study_day),
+          workloadPerPaceUnit,
+          paceUnit: String(entry.member.pace_unit),
+          workloadByRef,
+          futureDays: remainingStudyDates(onDate, deadline, studyDays),
+          dailyTasks: ((entry.member.daily_tasks as Array<Record<string, unknown>> | undefined) ?? [])
+            .filter((daily) => typeof daily.date === "string" && daily.date >= onDate)
+            .map((daily) => ({ date: String(daily.date), refs: Array.isArray(daily.refs) ? daily.refs.filter((ref): ref is string => typeof ref === "string") : [],
+              workload: Number(daily.workload ?? 0), paceUnit: String(daily.paceUnit ?? entry.member.pace_unit), paceAmount: Number(daily.paceAmount ?? 0) })),
+        };
+      });
+      const rebalanced = rebalanceMissedWork({ ownerMemberId: owner.snap.id, missedRefs: owner.refs, participants: participantInputs });
+      const movedByTarget = new Map<string, string[]>();
+      for (const move of rebalanced.transferred) {
+        const refs = movedByTarget.get(move.toMemberId) ?? [];
+        refs.push(move.ref);
+        movedByTarget.set(move.toMemberId, refs);
+      }
+      const affected = new Set([owner.snap.id, ...movedByTarget.keys()]);
+      for (const memberId of affected) {
+        const entry = activeAssignments.find((candidate) => candidate.snap.id === memberId)!;
+        const updatedTasks = (rebalanced.schedules[memberId] ?? []).map((daily) => ({ date: daily.date, refs: daily.refs,
+          workload: daily.workload, paceUnit: daily.paceUnit, paceAmount: daily.paceAmount }));
+        const historical = ((entry.member.daily_tasks as Array<Record<string, unknown>> | undefined) ?? [])
+          .filter((daily) => typeof daily.date === "string" && daily.date < onDate)
+          .map((daily) => memberId === owner.snap.id ? { ...daily, reconciled_at: now } : daily);
+        const incomingRefs = movedByTarget.get(memberId) ?? [];
+        const outgoingRefs = memberId === owner.snap.id ? owner.refs.filter((ref) => rebalanced.transferred.some((move) => move.ref === ref)) : [];
+        const currentUnits = Array.isArray(entry.member.units) ? entry.member.units as Array<{ ref: string; label: string; level: string; weight: number }> : [];
+        const newUnits = reassignGroupTaskUnits(curriculumId, currentUnits, outgoingRefs, incomingRefs);
+        const subTrackRef = subTrackRefs[activeAssignments.indexOf(entry)];
+        const subTrack = subTrackByPath.get(subTrackRef.path);
+        if (!subTrack?.exists) throw new HttpsError("failed-precondition", "A group task track is unavailable for rebalancing");
+        txn.update(entry.snap.ref, { daily_tasks: [...historical, ...updatedTasks], units: newUnits,
+          workload: newUnits.reduce((sum, unit) => sum + Number(unit.weight ?? 0), 0), updated_at: now });
+        txn.update(subTrackRef, { ground: newUnits.map((unit) => ({ level: unit.level, ref: unit.ref })) });
+      }
+      if (rebalanced.unassigned.length > 0) txn.update(taskRef, {
+        rebalance_unassigned_refs: admin.firestore.FieldValue.arrayUnion(...rebalanced.unassigned),
+        rebalance_updated_at: now,
+      });
+    return true;
+  });
 }
 
 async function activeRoster(txn: FirebaseFirestore.Transaction, groupId: string) {
@@ -157,13 +336,17 @@ export const listLearningGroupTasks = onCall(CALL_OPTS, async (request) => {
       const assignmentPage = await task.ref.collection("allocations").doc("v1").collection("members").limit(MAX_GROUP_MEMBERS).get();
       const namedAssignments = await Promise.all(assignmentPage.docs.map(async (assignment) => {
         const socialProfileId = digest(String(assignment.get("owner_uid")), String(assignment.get("profile_id")));
-        const social = await db.collection("social_profiles").doc(socialProfileId).get();
+        const [social, progress] = await Promise.all([
+          db.collection("social_profiles").doc(socialProfileId).get(),
+          groupTaskProgress(ref.id, uid, profileId, assignment, String(task.get("curriculum_id"))),
+        ]);
         return {
           memberId: assignment.id,
           displayName: social.get("display_name") ?? "Learner",
           units: assignment.get("units"),
           workload: assignment.get("workload"),
           dailyTasks: assignment.get("daily_tasks"),
+          progress,
         };
       }));
       allocation = {
@@ -549,6 +732,8 @@ export const allocateLearningGroupTask = onCall(CALL_OPTS, async (request) => {
         capacity_in_pace_units: allocation.capacityInPaceUnits,
         pace_unit: paceUnit,
         capacity_per_study_day: capacity,
+        study_days: studyDays,
+        workload_per_pace_unit: workloadPerPaceUnit,
         daily_tasks: scheduleRefs,
         state: "active",
         created_at: now,
@@ -669,11 +854,24 @@ export const listMyLearningGroupDailyTasks = onCall(CALL_OPTS, async (request) =
   for (const membership of memberships.docs) {
     const groupId = membership.ref.path.split("/")[1];
     if (!groupId) continue;
-    const group = await db.collection("learning_groups").doc(groupId).get();
+    const groupRefValue = db.collection("learning_groups").doc(groupId);
+    const memberAllowed = await db.runTransaction(async (txn) => {
+      await requireActiveGroup(txn, groupRefValue);
+      const [account, profile] = await Promise.all([
+        txn.get(memberRef(groupId, uid)), txn.get(profileMemberRef(groupId, uid, profileId)),
+      ]);
+      return account.exists && account.get("state") === "active" && profile.exists && profile.get("state") === "active" &&
+        Array.isArray(account.get("active_profile_ids")) && (account.get("active_profile_ids") as string[]).includes(profileId);
+    });
+    if (!memberAllowed) continue;
+    const group = await groupRefValue.get();
     if (!group.exists || group.get("status") !== "active") continue;
     const memberId = memberTaskId(groupId, { uid, profileId });
     const groupTasks = await db.collection("learning_groups").doc(groupId).collection("tasks").where("status", "==", "published").limit(50).get();
     for (const task of groupTasks.docs) {
+      for (let attempt = 0; attempt < MAX_GROUP_MEMBERS; attempt++) {
+        if (!await rebalanceMissedGroupTask(groupId, task.id, onDate)) break;
+      }
       const assignment = await task.ref.collection("allocations").doc("v1").collection("members").doc(memberId).get();
       if (!assignment.exists || assignment.get("state") !== "active") continue;
       const daily = (assignment.get("daily_tasks") as Array<Record<string, unknown>> | undefined) ?? [];

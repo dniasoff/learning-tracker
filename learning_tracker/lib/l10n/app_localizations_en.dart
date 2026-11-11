@@ -8380,6 +8380,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupTaskAssignments => 'Member shares';
 
   @override
+  String get groupTaskLearnProgress => 'Group task progress';
+
+  @override
+  String groupTaskProgressCount(int completed, int total) {
+    return '$completed of $total units complete';
+  }
+
+  @override
   String get groupTaskNoDeadline => 'No deadline';
 
   @override

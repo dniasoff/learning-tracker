@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { allocateGroupTask } from '../lib/group_task_allocator.js';
-import { groupTaskCurriculumIds, listGroupTaskScopes, resolveGroupTaskUnits } from '../lib/group_task_catalog.js';
+import { allocateGroupTask, rebalanceMissedWork } from '../lib/group_task_allocator.js';
+import { groupTaskCurriculumIds, groupTaskLeafRefs, listGroupTaskScopes, resolveGroupTaskUnits } from '../lib/group_task_catalog.js';
 
 const member = (memberId, rankedRefs = [], capacityPerStudyDay = 10, studyDays = [1, 2, 3, 4, 5, 6, 7], paceUnit = 'mishna', workloadPerPaceUnit = 1) => ({
   memberId, rankedRefs, paceUnit, capacityPerStudyDay, workloadPerPaceUnit, studyDays,
@@ -13,6 +13,30 @@ const allocate = (units, members, deadline = '2026-11-20') => allocateGroupTask(
 const ownedRefs = (plan) => plan.members.flatMap((entry) => entry.units.map((item) => item.ref));
 
 describe('deterministic whole-unit group allocation', () => {
+  test('rebalances missed refs into the original member remaining capacity before the group', () => {
+    const plan = rebalanceMissedWork({
+      ownerMemberId: 'owner',
+      missedRefs: ['A', 'B', 'C'],
+      participants: [
+        { memberId: 'owner', capacityPerDay: 2, workloadPerPaceUnit: 1, paceUnit: 'mishna', workloadByRef: { A: 1, B: 1, C: 1 }, futureDays: ['2026-11-12'], dailyTasks: [] },
+        { memberId: 'peer', capacityPerDay: 2, workloadPerPaceUnit: 1, paceUnit: 'mishna', workloadByRef: { A: 1, B: 1, C: 1 }, futureDays: ['2026-11-12'], dailyTasks: [] },
+      ],
+    });
+    assert.deepEqual(plan.keptByOwner, ['A', 'B']);
+    assert.deepEqual(plan.transferred, [{ ref: 'C', fromMemberId: 'owner', toMemberId: 'peer' }]);
+    assert.deepEqual(plan.unassigned, []);
+  });
+
+  test('leaves missed units unassigned when neither the owner nor group has capacity', () => {
+    const plan = rebalanceMissedWork({
+      ownerMemberId: 'owner', missedRefs: ['A'], participants: [
+        { memberId: 'owner', capacityPerDay: 1, workloadPerPaceUnit: 1, paceUnit: 'mishna', workloadByRef: { A: 2 }, futureDays: ['2026-11-12'], dailyTasks: [] },
+      ],
+    });
+    assert.deepEqual(plan.unassigned, ['A']);
+    assert.deepEqual(plan.transferred, []);
+  });
+
   test('uses canonical Mishnayos weights and perakim from the content hierarchy', () => {
     const scopes = listGroupTaskScopes('mishnayos');
     const kelim = scopes.find((scope) => scope.ref === 'Mishnah Kelim');
@@ -23,6 +47,13 @@ describe('deterministic whole-unit group allocation', () => {
     assert.equal(selected.length, 1);
     assert.equal(selected[0].children.length, 30);
     assert.equal(selected[0].children.reduce((sum, perek) => sum + perek.weight, 0), kelim.weight);
+  });
+
+  test('expands a progress unit to the canonical leaf refs that must all be learned', () => {
+    assert.deepEqual(groupTaskLeafRefs('mishnayos', 'Mishnah Tamid 1'), [
+      'Mishnah Tamid 1:1', 'Mishnah Tamid 1:2', 'Mishnah Tamid 1:3', 'Mishnah Tamid 1:4',
+    ]);
+    assert.deepEqual(groupTaskLeafRefs('mishnayos', 'unknown ref'), ['unknown ref']);
   });
 
   test('offers only supported canonical curricula and excludes the weekly Shnayim Mikra cycle', () => {

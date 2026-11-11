@@ -4630,6 +4630,14 @@
   "groupTaskWaiting": "ממתינים לתגובות ולהעדפות",
   "groupTaskPublished": "המשימות חולקו",
   "groupTaskAssignments": "חלקי הלימוד של החברים",
+  "groupTaskLearnProgress": "התקדמות במשימות הקבוצה",
+  "groupTaskProgressCount": "הושלמו {completed} מתוך {total} יחידות",
+  "@groupTaskProgressCount": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "groupTaskNoDeadline": "ללא מועד סיום",
   "groupTaskStatusLine": "{status} · {deadline}",
   "@groupTaskStatusLine": {

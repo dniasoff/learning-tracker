@@ -6789,6 +6789,14 @@
   "groupTaskWaiting": "Waiting for responses and preferences",
   "groupTaskPublished": "Assignments published",
   "groupTaskAssignments": "Member shares",
+  "groupTaskLearnProgress": "Group task progress",
+  "groupTaskProgressCount": "{completed} of {total} units complete",
+  "@groupTaskProgressCount": {
+    "placeholders": {
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
   "groupTaskNoDeadline": "No deadline",
   "groupTaskStatusLine": "{status} · {deadline}",
   "@groupTaskStatusLine": {

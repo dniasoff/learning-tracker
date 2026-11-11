@@ -8290,6 +8290,14 @@ class AppLocalizationsHe extends AppLocalizations {
   String get groupTaskAssignments => 'חלקי הלימוד של החברים';
 
   @override
+  String get groupTaskLearnProgress => 'התקדמות במשימות הקבוצה';
+
+  @override
+  String groupTaskProgressCount(int completed, int total) {
+    return 'הושלמו $completed מתוך $total יחידות';
+  }
+
+  @override
   String get groupTaskNoDeadline => 'ללא מועד סיום';
 
   @override

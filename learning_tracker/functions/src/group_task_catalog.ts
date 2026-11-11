@@ -100,6 +100,57 @@ export function resolveGroupTaskUnits(curriculumId: string, scopeRefs: readonly 
   return [...chosen.values()].sort((a, b) => a.sortOrder - b.sortOrder).map((node) => unit(node, all));
 }
 
+/** Leaf refs needed to count a canonical group unit as complete. */
+export function groupTaskLeafRefs(curriculumId: string, ref: string): string[] {
+  const all = nodes(curriculumId);
+  const byRef = new Map(all.map((node) => [node.ref, node]));
+  if (!byRef.has(ref)) return [ref];
+  const descendants = all.filter((node) => {
+    let parentRef = node.parentRef;
+    while (parentRef) {
+      if (parentRef === ref) return true;
+      parentRef = byRef.get(parentRef)?.parentRef ?? null;
+    }
+    return false;
+  });
+  const leafRefs = descendants.filter((node) => !all.some((child) => child.parentRef === node.ref)).map((node) => node.ref);
+  return leafRefs.length > 0 ? leafRefs : [ref];
+}
+
+export function groupTaskUnitsForRefs(curriculumId: string, refs: readonly string[]): Array<{ ref: string; label: string; level: string; weight: number }> {
+  const byRef = new Map(nodes(curriculumId).map((node) => [node.ref, node]));
+  return [...new Set(refs)].flatMap((ref) => {
+    const node = byRef.get(ref);
+    return node ? [{ ref: node.ref, label: node.label, level: node.level, weight: node.weight }] : [];
+  });
+}
+
+/** Moves scheduled canonical units while retaining the unmoved sibling work. */
+export function reassignGroupTaskUnits(
+  curriculumId: string,
+  current: readonly { ref: string; label: string; level: string; weight: number }[],
+  movedRefs: readonly string[],
+  incomingRefs: readonly string[] = [],
+): Array<{ ref: string; label: string; level: string; weight: number }> {
+  const all = nodes(curriculumId);
+  const byRef = new Map(all.map((node) => [node.ref, node]));
+  const moved = new Set(movedRefs);
+  const result = new Map<string, { ref: string; label: string; level: string; weight: number }>();
+  for (const unit of current) {
+    if (moved.has(unit.ref)) continue;
+    const movedChildren = [...moved].some((ref) => byRef.get(ref)?.parentRef === unit.ref);
+    if (!movedChildren) {
+      result.set(unit.ref, unit);
+      continue;
+    }
+    for (const child of all.filter((node) => node.parentRef === unit.ref && !moved.has(node.ref))) {
+      result.set(child.ref, { ref: child.ref, label: child.label, level: child.level, weight: child.weight });
+    }
+  }
+  for (const unit of groupTaskUnitsForRefs(curriculumId, incomingRefs)) result.set(unit.ref, unit);
+  return [...result.values()].sort((a, b) => a.ref.localeCompare(b.ref));
+}
+
 export function groupTaskCurriculumIds(): string[] {
   return [...nodesByCurriculum.keys()].filter((id) => id !== "shnayim_mikra" && PACE_UNITS[id] !== undefined).sort();
 }

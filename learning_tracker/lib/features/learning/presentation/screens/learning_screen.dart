@@ -22,6 +22,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/erev_ban
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/also_learning_slot.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/catch_up_cards_slot.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/erev_planned_slot.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/group_task_progress_slot.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/lock_ignored_notice.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
@@ -150,6 +151,7 @@ class LearningScreen extends ConsumerWidget {
                           context.router.push(const SchedulerRoute()),
                     ),
                     const ErevPlannedSlot(),
+                    const GroupTaskProgressSlot(),
                     const AlsoLearningSlot(),
                     const MainTrackUpToActions(),
                     const SizedBox(height: 36),

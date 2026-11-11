@@ -44,6 +44,82 @@ export interface GroupAllocation {
   unassignedRefs: string[];
 }
 
+export interface RebalanceParticipant {
+  memberId: string;
+  capacityPerDay: number;
+  workloadPerPaceUnit: number;
+  paceUnit: string;
+  workloadByRef: Readonly<Record<string, number>>;
+  futureDays: string[];
+  dailyTasks: DailyTask[];
+}
+
+export interface RebalancedSchedule {
+  schedules: Record<string, DailyTask[]>;
+  keptByOwner: string[];
+  transferred: Array<{ ref: string; fromMemberId: string; toMemberId: string }>;
+  unassigned: string[];
+}
+
+/** Places missed work into the original owner's remaining capacity first. */
+export function rebalanceMissedWork(args: {
+  ownerMemberId: string;
+  missedRefs: string[];
+  participants: RebalanceParticipant[];
+}): RebalancedSchedule {
+  const byId = new Map(args.participants.map((member) => [member.memberId, member]));
+  const owner = byId.get(args.ownerMemberId);
+  if (!owner || new Set(args.participants.map((member) => member.memberId)).size !== args.participants.length) {
+    throw new Error("Rebalance participants are invalid");
+  }
+  const schedules = new Map(args.participants.map((member) => [member.memberId,
+    member.dailyTasks.map((task) => ({ ...task, refs: [...task.refs] }))]));
+  const append = (member: RebalanceParticipant, ref: string): boolean => {
+    const workload = member.workloadByRef[ref];
+    if (!Number.isFinite(workload) || workload < 1) return false;
+    const daily = schedules.get(member.memberId)!;
+    for (const date of member.futureDays) {
+      let task = daily.find((item) => item.date === date);
+      const current = task?.workload ?? 0;
+      if (current + workload > member.capacityPerDay * member.workloadPerPaceUnit) continue;
+      if (!task) {
+        task = { date, refs: [], workload: 0, paceUnit: member.paceUnit, paceAmount: 0 };
+        daily.push(task);
+      }
+      task.refs.push(ref);
+      task.workload += workload;
+      task.paceAmount += member.workloadPerPaceUnit > 1 ? 1 : workload;
+      return true;
+    }
+    return false;
+  };
+  const keptByOwner: string[] = [];
+  const transferred: RebalancedSchedule["transferred"] = [];
+  const unassigned: string[] = [];
+  for (const ref of [...new Set(args.missedRefs)].sort()) {
+    if (append(owner, ref)) {
+      keptByOwner.push(ref);
+      continue;
+    }
+    let assigned = false;
+    for (const candidate of args.participants.filter((member) => member.memberId !== owner.memberId)
+      .sort((a, b) => a.memberId.localeCompare(b.memberId))) {
+      if (!append(candidate, ref)) continue;
+      transferred.push({ ref, fromMemberId: owner.memberId, toMemberId: candidate.memberId });
+      assigned = true;
+      break;
+    }
+    if (!assigned) unassigned.push(ref);
+  }
+  for (const daily of schedules.values()) daily.sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    schedules: Object.fromEntries([...schedules.entries()].map(([id, daily]) => [id, daily])),
+    keptByOwner,
+    transferred,
+    unassigned,
+  };
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function assertInputs(units: readonly AllocationUnit[], members: readonly AllocationMember[], startDate: string, deadline: string): void {
