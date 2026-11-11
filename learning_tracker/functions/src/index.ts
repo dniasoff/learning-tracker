@@ -85,3 +85,22 @@ export {
   searchSchoolMembers,
   listSocialConnections,
 } from "./social_graph";
+
+// School profiles, membership, invitations, moderation, and staff summary access.
+export {
+  createSchool,
+  getSchoolProfile,
+  createSchoolInvite,
+  joinSchoolWithInvite,
+  listMySchools,
+  listSchoolRoster,
+  removeSchoolMember,
+  leaveSchool,
+  addSchoolAdmin,
+  removeSchoolAdmin,
+  transferSchoolAdmin,
+  reportSchool,
+  setSchoolVerified,
+  setSchoolSuspended,
+  deleteSchool,
+} from "./schools";

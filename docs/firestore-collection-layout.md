@@ -35,6 +35,12 @@ social_blocks/{pairKey}                              — pairwise block state
 social_audit_logs/{entryId}                          — parent social-control audit events
 social_search_cursors/{cursorId}                     — short-lived opaque school-search cursors
 school_memberships/{membershipId}                    — server-owned read-model interface (school bead)
+schools/{schoolId}                                    — school identity and moderation state
+school_admins/{staffId}                               — server-maintained school administrator access
+school_invites/{inviteId}                             — hashed, expiring school invite state
+school_audit_logs/{entryId}                           — school admin and membership audit trail
+school_reports/{reportId}                             — school abuse reports for owner review
+school_rate_limits/{limitId}                          — per-account school action limits
 ```
 
 Ownership of the nested layout is enforced structurally: the security rules
@@ -111,10 +117,21 @@ the later community bead.
 | `social_search_cursors/{cursorId}` | Short-lived, caller/school/query-bound cursor state; expires after 15 minutes | Callable-only reads/writes; TTL cleanup |
 | `school_memberships/{membershipId}` | Interface consumed by ay8: `owner_uid`, `profile_id`, `school_id`, `state: active` | Admin SDK only in ay8; school bead supplies membership lifecycle and rules |
 
-The school-membership collection is only a read-model contract here. ay8 does
-not create schools, memberships, invites, or staff access. Until the school
-bead populates active membership records, school search and child allow-list
-updates fail closed.
+The `school_memberships` document ID is a SHA-256 digest of the school ID and
+learner account/profile pair. Its fields include `owner_uid`, `profile_id`,
+`school_id`, `mode`, `role`, `state`, and the join-time progress consent. ay8
+uses active membership records for school-scoped search and child allow-list
+checks. School functions maintain the membership records and the
+`social_summaries/{sha256(ownerUid + NUL + profileId)}/readers/{staffUid}` ACL.
+The reader ACL has independent `follower_profile_ids` and `school_ids` grants;
+staff can read only the sanitized social summary, never learner source data.
+
+School identity, admin, invite, report, audit, and rate-limit data are callable
+only. `createSchool` immediately creates an active unverified identity and
+assigns the creator as the first admin. Verification and suspension callables
+require the Firebase Auth custom claim `app_owner: true`; the operations-only
+`functions/scripts/set_app_owner_claim.mjs --uid <uid> [--revoke]` script is
+the only supported claim grant path.
 
 ---
 

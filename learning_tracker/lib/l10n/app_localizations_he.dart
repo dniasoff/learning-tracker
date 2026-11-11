@@ -7881,4 +7881,69 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get textReaderRetryTranslation => 'הקשה כדי לנסות שוב';
+
+  @override
+  String get schoolProfileTitle => 'בית ספר';
+
+  @override
+  String get schoolProfileUnavailable => 'פרופיל בית הספר אינו זמין.';
+
+  @override
+  String get schoolVerifiedBadge => 'מאומת';
+
+  @override
+  String schoolCreatedDate(String date) {
+    return 'נוצר בתאריך $date';
+  }
+
+  @override
+  String get schoolDateUnavailable => 'התאריך אינו זמין';
+
+  @override
+  String get schoolAdminsTitle => 'מנהלי בית הספר';
+
+  @override
+  String get schoolReportAction => 'דיווח על בית הספר';
+
+  @override
+  String get schoolReportTitle => 'מדוע מדווחים על בית הספר?';
+
+  @override
+  String get schoolReportImpersonation => 'התחזות';
+
+  @override
+  String get schoolReportAbuse => 'התנהגות פוגענית';
+
+  @override
+  String get schoolReportOther => 'בעיה אחרת';
+
+  @override
+  String get schoolReportSubmitted => 'הדיווח נשלח לבדיקה';
+
+  @override
+  String get schoolRosterTitle => 'חברי בית הספר';
+
+  @override
+  String get schoolChildMemberLabel => 'פרופיל ילד';
+
+  @override
+  String get schoolJoinTitle => 'הצטרפות לבית הספר';
+
+  @override
+  String get schoolStaffProgressNotice =>
+      'צוות בית הספר יוכל לצפות בהתקדמות הלימוד של הלומד. הצוות לא יוכל לשנות רשומות לימוד או לראות הגדרות חשבון פרטיות.';
+
+  @override
+  String get schoolProgressConsent =>
+      'אני מבין/ה ומסכים/ה שצוות בית הספר יוכל לצפות בהתקדמות שלי.';
+
+  @override
+  String get schoolParentProgressConsent =>
+      'אני מאשר/ת לילד להצטרף ומבין/ה שצוות בית הספר יוכל לצפות בהתקדמות שלו.';
+
+  @override
+  String get schoolJoinAction => 'הצטרפות לבית הספר';
+
+  @override
+  String get schoolJoinSucceeded => 'הצטרפת לבית הספר';
 }

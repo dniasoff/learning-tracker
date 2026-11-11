@@ -12971,6 +12971,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap to retry'**
   String get textReaderRetryTranslation;
+
+  /// No description provided for @schoolProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'School'**
+  String get schoolProfileTitle;
+
+  /// No description provided for @schoolProfileUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This school profile is unavailable.'**
+  String get schoolProfileUnavailable;
+
+  /// No description provided for @schoolVerifiedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get schoolVerifiedBadge;
+
+  /// No description provided for @schoolCreatedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {date}'**
+  String schoolCreatedDate(String date);
+
+  /// No description provided for @schoolDateUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Date unavailable'**
+  String get schoolDateUnavailable;
+
+  /// No description provided for @schoolAdminsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'School administrators'**
+  String get schoolAdminsTitle;
+
+  /// No description provided for @schoolReportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Report school'**
+  String get schoolReportAction;
+
+  /// No description provided for @schoolReportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Why are you reporting this school?'**
+  String get schoolReportTitle;
+
+  /// No description provided for @schoolReportImpersonation.
+  ///
+  /// In en, this message translates to:
+  /// **'Impersonation'**
+  String get schoolReportImpersonation;
+
+  /// No description provided for @schoolReportAbuse.
+  ///
+  /// In en, this message translates to:
+  /// **'Abuse'**
+  String get schoolReportAbuse;
+
+  /// No description provided for @schoolReportOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other concern'**
+  String get schoolReportOther;
+
+  /// No description provided for @schoolReportSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Report submitted for review'**
+  String get schoolReportSubmitted;
+
+  /// No description provided for @schoolRosterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'School members'**
+  String get schoolRosterTitle;
+
+  /// No description provided for @schoolChildMemberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Child profile'**
+  String get schoolChildMemberLabel;
+
+  /// No description provided for @schoolJoinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join school'**
+  String get schoolJoinTitle;
+
+  /// No description provided for @schoolStaffProgressNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'School staff will be able to view this learner’s progress. They cannot change learning records or see private account settings.'**
+  String get schoolStaffProgressNotice;
+
+  /// No description provided for @schoolProgressConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand and agree that school staff can view my progress.'**
+  String get schoolProgressConsent;
+
+  /// No description provided for @schoolParentProgressConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'I approve this child joining and understand school staff can view the child’s progress.'**
+  String get schoolParentProgressConsent;
+
+  /// No description provided for @schoolJoinAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Join school'**
+  String get schoolJoinAction;
+
+  /// No description provided for @schoolJoinSucceeded.
+  ///
+  /// In en, this message translates to:
+  /// **'You joined the school'**
+  String get schoolJoinSucceeded;
 }
 
 class _AppLocalizationsDelegate

@@ -244,11 +244,15 @@ describe('social graph rules', () => {
   const auditPath = 'social_audit_logs/social-audit';
   const ratePath = 'social_rate_limits/social-rate';
   const cursorPath = 'social_search_cursors/social-cursor';
+  const summaryPath = 'social_summaries/summary-card';
+  const readerPath = `${summaryPath}/readers/${STRANGER}`;
 
   beforeEach(async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await Promise.all([
+        setDoc(doc(db, 'schools/school-unverified'), { name: 'Unverified', verified: false }),
+        setDoc(doc(db, 'schools/school-verified'), { name: 'Verified', verified: true }),
         setDoc(doc(db, profilePath), {
           owner_uid: OWNER, profile_id: profileId, mode: 'child',
           display_name: 'Learner', display_name_search: 'learner', avatar_id: 0, paused: false,
@@ -276,6 +280,8 @@ describe('social graph rules', () => {
         }),
         setDoc(doc(db, ratePath), { day: '2026-11-10', request_count: 1 }),
         setDoc(doc(db, cursorPath), { owner_uid: OWNER, profile_id: profileId, expires_at: futureTs }),
+        setDoc(doc(db, summaryPath), { owner_uid: OWNER, profile_id: profileId, streak: {}, current_tracks: [], weekly_learning: {}, siyumim: [], computed_at: pastTs, schema_version: 1 }),
+        setDoc(doc(db, readerPath), { owner_uid: OWNER, profile_id: profileId, follower_profile_ids: [], school_ids: ['school-1'] }),
       ]);
     });
   });
@@ -341,6 +347,20 @@ describe('social graph rules', () => {
     )));
     await assertFails(getDoc(doc(owner(), membershipPath)));
     await assertFails(setDoc(doc(owner(), membershipPath), { forged: true }));
+    await assertFails(setDoc(doc(owner(), 'schools/school-1'), { name: 'Forged' }));
+    await assertFails(getDoc(doc(owner(), 'schools/school-1')));
+    await assertFails(updateDoc(doc(owner(), 'schools/school-unverified'), { verified: true }));
+    await assertFails(updateDoc(doc(owner(), 'schools/school-verified'), { verified: false }));
+    await assertFails(setDoc(doc(owner(), 'school_admins/forged'), { role: 'admin' }));
+    await assertFails(setDoc(doc(owner(), 'school_invites/forged'), { state: 'active' }));
+    await assertFails(setDoc(doc(owner(), 'school_reports/forged'), { state: 'closed' }));
+    await assertFails(getDoc(doc(owner(), readerPath)));
+    await assertFails(setDoc(doc(owner(), readerPath), { school_ids: ['forged'] }));
+    await assertSucceeds(getDoc(doc(owner(), summaryPath)));
+    await assertSucceeds(getDoc(doc(stranger(), summaryPath)));
+    await assertFails(setDoc(doc(owner(), summaryPath), { points: 99 }));
+    await assertFails(getDoc(doc(anon(), summaryPath)));
+    await assertFails(getDoc(doc(tutor(), 'social_summaries/summary-without-reader')));
     await assertFails(getDoc(doc(owner(), ratePath)));
     await assertFails(setDoc(doc(owner(), ratePath), { request_count: 0 }));
     await assertFails(getDoc(doc(owner(), cursorPath)));

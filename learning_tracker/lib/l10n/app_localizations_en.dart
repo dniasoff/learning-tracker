@@ -7968,4 +7968,69 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get textReaderRetryTranslation => 'Tap to retry';
+
+  @override
+  String get schoolProfileTitle => 'School';
+
+  @override
+  String get schoolProfileUnavailable => 'This school profile is unavailable.';
+
+  @override
+  String get schoolVerifiedBadge => 'Verified';
+
+  @override
+  String schoolCreatedDate(String date) {
+    return 'Created $date';
+  }
+
+  @override
+  String get schoolDateUnavailable => 'Date unavailable';
+
+  @override
+  String get schoolAdminsTitle => 'School administrators';
+
+  @override
+  String get schoolReportAction => 'Report school';
+
+  @override
+  String get schoolReportTitle => 'Why are you reporting this school?';
+
+  @override
+  String get schoolReportImpersonation => 'Impersonation';
+
+  @override
+  String get schoolReportAbuse => 'Abuse';
+
+  @override
+  String get schoolReportOther => 'Other concern';
+
+  @override
+  String get schoolReportSubmitted => 'Report submitted for review';
+
+  @override
+  String get schoolRosterTitle => 'School members';
+
+  @override
+  String get schoolChildMemberLabel => 'Child profile';
+
+  @override
+  String get schoolJoinTitle => 'Join school';
+
+  @override
+  String get schoolStaffProgressNotice =>
+      'School staff will be able to view this learner’s progress. They cannot change learning records or see private account settings.';
+
+  @override
+  String get schoolProgressConsent =>
+      'I understand and agree that school staff can view my progress.';
+
+  @override
+  String get schoolParentProgressConsent =>
+      'I approve this child joining and understand school staff can view the child’s progress.';
+
+  @override
+  String get schoolJoinAction => 'Join school';
+
+  @override
+  String get schoolJoinSucceeded => 'You joined the school';
 }

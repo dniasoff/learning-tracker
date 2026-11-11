@@ -46,6 +46,9 @@ import 'package:learning_tracker/features/settings/presentation/screens/about_sc
 import 'package:learning_tracker/features/settings/presentation/screens/curriculum_settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/features/social/presentation/screens/join_school_screen.dart';
+import 'package:learning_tracker/features/social/presentation/screens/school_profile_screen.dart';
+import 'package:learning_tracker/features/social/presentation/screens/school_roster_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/ground_picker_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/my_talmidim_screen.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/screens/school_year_sub_track_form_screen.dart';
@@ -434,6 +437,9 @@ class AppRouter extends RootStackRouter {
     ),
     // Deep-link entry: /invite?token=<grantId>
     AutoRoute(path: '/invite', page: AcceptInviteRoute.page),
+    AutoRoute(path: '/schools/join', page: JoinSchoolRoute.page),
+    AutoRoute(path: '/schools/:schoolId', page: SchoolProfileRoute.page),
+    AutoRoute(path: '/schools/:schoolId/roster', page: SchoolRosterRoute.page),
     AutoRoute(
       path: '/tutor/decline',
       page: DeclineInviteRoute.page,

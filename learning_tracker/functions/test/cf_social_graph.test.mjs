@@ -26,6 +26,7 @@ function pairDocId(fromUid, fromProfileId, toUid, toProfileId) {
 }
 
 async function member(uid, profileId, schoolId = SCHOOL) {
+  await db.collection('schools').doc(schoolId).set({ status: 'active' }, { merge: true });
   await db.collection('school_memberships').add({
     owner_uid: uid,
     profile_id: profileId,

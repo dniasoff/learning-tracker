@@ -126,8 +126,10 @@ async function sharedAllowedSchool(
     txn.get(schoolMembershipQuery(to.ownerUid, to.profileId)),
   ]);
   const fromSchools = new Set(fromSnap.docs.map((doc) => doc.get("school_id")));
-  return toSnap.docs.some((doc) => fromSchools.has(doc.get("school_id")) &&
-    allowedSchools.includes(String(doc.get("school_id"))));
+  const sharedIds = [...new Set(toSnap.docs.map((doc) => String(doc.get("school_id"))))].filter((id) =>
+    fromSchools.has(id) && allowedSchools.includes(id));
+  const activeSchools = await Promise.all(sharedIds.map((id) => txn.get(db.collection("schools").doc(id))));
+  return activeSchools.some((school) => school.exists && school.get("status") === "active");
 }
 
 async function requireEligibleChildPair(
@@ -264,6 +266,10 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
     const joinedSchools = new Set(memberSnap.docs.map((doc) => doc.get("school_id")));
     if ((allowed as string[]).some((schoolId) => !joinedSchools.has(schoolId))) {
       throw new HttpsError("failed-precondition", "Allowed schools must be active memberships");
+    }
+    const allowedSchools = await Promise.all((allowed as string[]).map((schoolId) => txn.get(db.collection("schools").doc(schoolId))));
+    if (allowedSchools.some((school) => !school.exists || school.get("status") !== "active")) {
+      throw new HttpsError("failed-precondition", "Allowed schools must be active");
     }
     const socialRef = profileRef({ ownerUid: uid, profileId });
     const social = await txn.get(socialRef);
@@ -589,6 +595,10 @@ export const searchSchoolMembers = onCall(CALL_OPTS, async (request) => {
       cursorAfter = String(cursorSnap.get("last_membership_id"));
     }
     const learner = await txn.get(db.collection("users").doc(uid).collection("learner_profiles").doc(profileId));
+    const school = await txn.get(db.collection("schools").doc(schoolId));
+    if (!school.exists || school.get("status") !== "active") {
+      throw new HttpsError("permission-denied", "School discovery is unavailable");
+    }
     if (!learner.exists) throw new HttpsError("not-found", "Learner profile is unavailable");
     if (learner.get("mode") !== "child" && learner.get("mode") !== "adult") {
       throw new HttpsError("failed-precondition", "Learner mode is unavailable");
