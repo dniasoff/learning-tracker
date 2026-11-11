@@ -90,6 +90,16 @@ async function setSummaryReader(ref: ProfileRef, uid: string, schoolId: string, 
   const reader = summaries().doc(summaryId(ref)).collection("readers").doc(uid);
   await db.runTransaction(async (txn) => {
     const snap = await txn.get(reader);
+    if (active) {
+      const [school, member, staff] = await Promise.all([
+        txn.get(schools().doc(schoolId)),
+        txn.get(memberships().doc(membershipId(schoolId, ref))),
+        txn.get(admins().doc(staffId(schoolId, uid))),
+      ]);
+      if (!school.exists || school.get("status") !== "active" ||
+          !member.exists || member.get("state") !== "active" ||
+          !staff.exists || staff.get("state") !== "active") return;
+    }
     const existing = snap.get("school_ids");
     const schoolIds: string[] = Array.isArray(existing)
       ? existing.filter((value): value is string => typeof value === "string") : [];
@@ -502,11 +512,13 @@ export const setSchoolSuspended = onCall(CALL_OPTS, async (request) => {
   if (typeof data.suspended !== "boolean") throw new HttpsError("invalid-argument", "suspended must be a boolean");
   const ref = schoolRef(data.schoolId);
   if (data.suspended) {
-    const school = await ref.get();
-    if (!school.exists || !["active", "suspended"].includes(String(school.get("status")))) {
-      throw new HttpsError("failed-precondition", "School cannot be suspended in its current state");
-    }
-    const revision = Number(school.get("membership_revision") ?? 0);
+    await db.runTransaction(async (txn) => {
+      const current = await txn.get(ref);
+      if (!current.exists || !["active", "suspended"].includes(String(current.get("status")))) {
+        throw new HttpsError("failed-precondition", "School cannot be suspended in its current state");
+      }
+      txn.update(ref, { status: "suspended", access_cleanup_pending: true, updated_at: admin.firestore.Timestamp.now() });
+    });
     const staffSnap = await admins().where("school_id", "==", ref.id).where("state", "==", "active").get();
     await Promise.all(staffSnap.docs.map((staff) =>
       revokeStaffSchoolAccess(String(staff.get("owner_uid")), ref.id),
@@ -521,13 +533,19 @@ export const setSchoolSuspended = onCall(CALL_OPTS, async (request) => {
     await refreshSchoolReaders(ref.id, true);
     await db.runTransaction(async (txn) => {
       const current = await txn.get(ref);
-      if (!current.exists || !["active", "suspended"].includes(String(current.get("status"))) || Number(current.get("membership_revision") ?? 0) !== revision) {
-        throw new HttpsError("aborted", "School memberships changed during suspension; retry the operation");
+      if (!current.exists || current.get("status") !== "suspended") {
+        throw new HttpsError("aborted", "School changed during suspension; retry the operation");
       }
-      txn.update(ref, { status: "suspended", updated_at: admin.firestore.Timestamp.now() });
+      txn.update(ref, { access_cleanup_pending: false, updated_at: admin.firestore.Timestamp.now() });
     });
   } else {
-    await ref.update({ status: "active", updated_at: admin.firestore.Timestamp.now() });
+    await db.runTransaction(async (txn) => {
+      const current = await txn.get(ref);
+      if (!current.exists || current.get("status") !== "suspended" || current.get("access_cleanup_pending") === true) {
+        throw new HttpsError("failed-precondition", "School cannot be unsuspended while access cleanup is pending");
+      }
+      txn.update(ref, { status: "active", updated_at: admin.firestore.Timestamp.now() });
+    });
     const memberSnap = await memberships().where("school_id", "==", ref.id).where("state", "==", "active").get();
     for (const member of memberSnap.docs) {
       await refreshSocialMembershipMirror(summaryId({
@@ -559,7 +577,9 @@ export const deleteSchool = onCall(CALL_OPTS, async (request) => {
     }
     await requireAdmin(txn, ref.id, uid);
     const members = await txn.get(memberships().where("school_id", "==", ref.id));
-    return { members, revision: Number(school.get("membership_revision") ?? 0) };
+    txn.update(ref, { status: "deleting", access_cleanup_pending: true, updated_at: admin.firestore.Timestamp.now() });
+    txn.set(audit().doc(), { school_id: ref.id, actor_uid: uid, action: "school_deletion_started", at: admin.firestore.Timestamp.now() });
+    return { members };
   });
   const staffSnap = await admins().where("school_id", "==", ref.id).where("state", "==", "active").get();
   await Promise.all(staffSnap.docs.map((staff) =>
@@ -572,15 +592,6 @@ export const deleteSchool = onCall(CALL_OPTS, async (request) => {
     }, ref.id);
   }
   await refreshSchoolReaders(ref.id, true);
-  await db.runTransaction(async (txn) => {
-    const school = await txn.get(ref);
-    if (!school.exists || !["active", "suspended"].includes(String(school.get("status"))) || Number(school.get("membership_revision") ?? 0) !== preflight.revision) {
-      throw new HttpsError("aborted", "School memberships changed during deletion; retry the operation");
-    }
-    await requireAdmin(txn, ref.id, uid);
-    txn.update(ref, { status: "deleting", updated_at: admin.firestore.Timestamp.now() });
-    txn.set(audit().doc(), { school_id: ref.id, actor_uid: uid, action: "school_deletion_started", at: admin.firestore.Timestamp.now() });
-  });
   const [memberSnap, adminSnap, inviteSnap] = await Promise.all([
     memberships().where("school_id", "==", ref.id).get(),
     admins().where("school_id", "==", ref.id).get(),
@@ -595,7 +606,7 @@ export const deleteSchool = onCall(CALL_OPTS, async (request) => {
   const batch = db.batch();
   [...adminSnap.docs, ...inviteSnap.docs].forEach((doc) => batch.delete(doc.ref));
   await batch.commit();
-  await refreshSchoolReaders(ref.id);
+  await refreshSchoolReaders(ref.id, true);
   await ref.update({ status: "deleted", deleted_at: admin.firestore.Timestamp.now() });
   return { success: true };
 });

@@ -220,6 +220,14 @@ async function setFollowerSummaryGrants(
   txn: FirebaseFirestore.Transaction,
   changes: readonly FollowerSummaryGrantChange[],
 ): Promise<void> {
+  const schoolIds = [...new Set(changes.flatMap((change) => [
+    ...(change.childSchoolIds ?? []), ...(change.followerSchoolIds ?? []),
+  ]))];
+  const schoolStates = new Map<string, boolean>();
+  await Promise.all(schoolIds.map(async (schoolId) => {
+    const school = await txn.get(db.collection("schools").doc(schoolId));
+    schoolStates.set(schoolId, school.exists && school.get("status") === "active");
+  }));
   const refs = new Map<string, FirebaseFirestore.DocumentReference>();
   for (const change of changes) {
     const ref = summaryReaderRef(change.summaryOwner, change.follower.ownerUid);
@@ -241,6 +249,9 @@ async function setFollowerSummaryGrants(
     exists: boolean;
   }>();
   for (const change of changes) {
+    const childSchoolIds = [...new Set(change.childSchoolIds ?? [])]
+      .filter((schoolId) => schoolStates.get(schoolId) === true);
+    const allowed = change.allowed && (!change.childSchoolIds?.length || childSchoolIds.length > 0);
     const ref = summaryReaderRef(change.summaryOwner, change.follower.ownerUid);
     const existing = snapshots.get(ref.path)!;
     const value = grants.get(ref.path) ?? {
@@ -265,7 +276,7 @@ async function setFollowerSummaryGrants(
       exists: existing.exists,
     };
     const followerId = profileDocId(change.follower);
-    if (change.allowed) {
+    if (allowed) {
       value.ids.add(followerId);
       if (change.followerMode === "child") {
         value.childIds.add(followerId);
@@ -275,8 +286,9 @@ async function setFollowerSummaryGrants(
         value.childIds.delete(followerId);
       }
       if (change.childSchoolIds?.length) {
-        value.childByFollower[followerId] = [...new Set(change.childSchoolIds)].slice(0, MAX_SCHOOLS);
-        value.activeByFollower[followerId] = [...new Set(change.followerSchoolIds ?? [])].slice(0, MAX_SCHOOLS);
+        value.childByFollower[followerId] = childSchoolIds.slice(0, MAX_SCHOOLS);
+        value.activeByFollower[followerId] = [...new Set(change.followerSchoolIds ?? [])]
+          .filter((schoolId) => schoolStates.get(schoolId) === true).slice(0, MAX_SCHOOLS);
       }
     } else {
       value.ids.delete(followerId);
@@ -369,6 +381,18 @@ async function activeSchoolIds(ref: ProfileRef): Promise<string[]> {
     .filter((id): id is string => typeof id === "string" && id.length > 0))].slice(0, MAX_SCHOOLS);
 }
 
+async function activeSchoolIdsInTransaction(
+  txn: FirebaseFirestore.Transaction,
+  ref: ProfileRef,
+): Promise<string[]> {
+  const membershipSnap = await txn.get(schoolMembershipQuery(ref.ownerUid, ref.profileId));
+  const candidates = [...new Set(membershipSnap.docs.map((doc) => doc.get("school_id"))
+    .filter((id): id is string => typeof id === "string" && id.length > 0))].slice(0, MAX_SCHOOLS);
+  const schoolSnaps = await Promise.all(candidates.map((id) => txn.get(db.collection("schools").doc(id))));
+  return candidates.filter((_, index) => schoolSnaps[index].exists &&
+    schoolSnaps[index].get("status") === "active");
+}
+
 async function sharedAllowedSchoolIds(
   first: ProfileRef,
   second: ProfileRef,
@@ -418,6 +442,7 @@ function flattenSchoolMap(value: Record<string, string[]>): string[] {
 
 async function updateFollowerMembershipMirror(
   summaryId: string,
+  profile: ProfileRef,
   membershipIds: readonly string[],
   lostSchoolId?: string,
   revokeChildGrant = false,
@@ -425,42 +450,47 @@ async function updateFollowerMembershipMirror(
   const query = db.collectionGroup("readers")
     .where("follower_profile_ids", "array-contains", summaryId);
   await forEachQueryPage(query, async (docs) => {
-    const batch = db.batch();
-    for (const doc of docs) {
-      const ids = stringList(doc.get("follower_profile_ids"));
-      const childGrants = stringListMap(doc.get("child_school_grants"));
-      const followerMemberships = stringListMap(doc.get("follower_school_memberships"));
-      followerMemberships[summaryId] = [...membershipIds];
-      const grantSchools = childGrants[summaryId];
-      if (revokeChildGrant) {
-        delete childGrants[summaryId];
-        ids.splice(ids.indexOf(summaryId), ids.includes(summaryId) ? 1 : 0);
-      } else if (grantSchools && lostSchoolId) {
-        const remaining = grantSchools.filter((id) => id !== lostSchoolId);
-        if (remaining.length === 0) {
+    await db.runTransaction(async (txn) => {
+      const activeIds = (await activeSchoolIdsInTransaction(txn, profile))
+        .filter((id) => membershipIds.includes(id));
+      const readerSnaps = await Promise.all(docs.map((doc) => txn.get(doc.ref)));
+      readerSnaps.forEach((current, index) => {
+        if (!current.exists) return;
+        const doc = current;
+        const ids = stringList(doc.get("follower_profile_ids"));
+        const childGrants = stringListMap(doc.get("child_school_grants"));
+        const followerMemberships = stringListMap(doc.get("follower_school_memberships"));
+        followerMemberships[summaryId] = activeIds;
+        const grantSchools = childGrants[summaryId];
+        if (revokeChildGrant) {
           delete childGrants[summaryId];
           ids.splice(ids.indexOf(summaryId), ids.includes(summaryId) ? 1 : 0);
-        } else {
-          childGrants[summaryId] = remaining;
+        } else if (grantSchools && lostSchoolId) {
+          const remaining = grantSchools.filter((id) => id !== lostSchoolId);
+          if (remaining.length === 0) {
+            delete childGrants[summaryId];
+            ids.splice(ids.indexOf(summaryId), ids.includes(summaryId) ? 1 : 0);
+          } else {
+            childGrants[summaryId] = remaining;
+          }
         }
-      }
-      const childSchoolIds = flattenSchoolMap(childGrants);
-      const activeSchoolIds = flattenSchoolMap(followerMemberships);
-      const schoolIds = stringList(doc.get("school_ids"));
-      if (ids.length === 0 && schoolIds.length === 0) {
-        batch.delete(doc.ref);
-      } else {
-        batch.set(doc.ref, {
-          follower_profile_ids: ids,
-          child_school_ids: childSchoolIds,
-          active_school_ids: activeSchoolIds,
-          child_school_grants: childGrants,
-          follower_school_memberships: followerMemberships,
-          updated_at: admin.firestore.Timestamp.now(),
-        }, { merge: true });
-      }
-    }
-    await batch.commit();
+        const childSchoolIds = flattenSchoolMap(childGrants);
+        const activeSchoolIds = flattenSchoolMap(followerMemberships);
+        const schoolIds = stringList(doc.get("school_ids"));
+        if (ids.length === 0 && schoolIds.length === 0) {
+          txn.delete(docs[index].ref);
+        } else {
+          txn.set(docs[index].ref, {
+            follower_profile_ids: ids,
+            child_school_ids: childSchoolIds,
+            active_school_ids: activeSchoolIds,
+            child_school_grants: childGrants,
+            follower_school_memberships: followerMemberships,
+            updated_at: admin.firestore.Timestamp.now(),
+          }, { merge: true });
+        }
+      });
+    });
   });
 }
 
@@ -474,9 +504,13 @@ export async function refreshSocialMembershipMirror(summaryId: string): Promise<
   if (typeof ownerUid !== "string" || typeof profileId !== "string") {
     throw new Error("Social profile membership identity is incomplete");
   }
-  const activeIds = await activeSchoolIds({ ownerUid, profileId });
-  await profileSnap.ref.set({ active_school_ids: activeIds, updated_at: admin.firestore.Timestamp.now() }, { merge: true });
-  await updateFollowerMembershipMirror(summaryId, activeIds);
+  const profile = { ownerUid, profileId };
+  const activeIds = await db.runTransaction(async (txn) => {
+    const active = await activeSchoolIdsInTransaction(txn, profile);
+    txn.set(profileSnap.ref, { active_school_ids: active, updated_at: admin.firestore.Timestamp.now() }, { merge: true });
+    return active;
+  });
+  await updateFollowerMembershipMirror(summaryId, profile, activeIds);
 }
 
 /** Adds the server-owned live school-access mirror after staff eligibility succeeds. */
@@ -489,7 +523,13 @@ export async function grantSocialStaffSchoolAccess(
   }
   const ref = userControls().doc(authUid);
   await db.runTransaction(async (txn) => {
-    const existing = await txn.get(ref);
+    const staffId = opaqueId("school-staff", schoolId, authUid);
+    const [existing, school, staff] = await Promise.all([
+      txn.get(ref), txn.get(db.collection("schools").doc(schoolId)),
+      txn.get(db.collection("school_admins").doc(staffId)),
+    ]);
+    if (!school.exists || school.get("status") !== "active" ||
+        !staff.exists || staff.get("state") !== "active") return;
     const schoolIds = stringList(existing.get("active_staff_school_ids"));
     txn.set(ref, {
       active_staff_school_ids: [...new Set([...schoolIds, schoolId])],
@@ -592,7 +632,7 @@ export async function revokeSocialGrantsForMembershipChange(
 
   // Update every summary the departing profile follows. Child grants are
   // removed from this profile; adult-to-adult grants remain intact.
-  await updateFollowerMembershipMirror(summaryId, activeIds, schoolId, mode === "child");
+  await updateFollowerMembershipMirror(summaryId, profile, activeIds, schoolId, mode === "child");
 
   // Remove the lost school from staff ACLs on this profile's summary. A child
   // summary also pauses and clears all follower grants until a parent reviews
@@ -963,10 +1003,10 @@ export const setChildSocialControls = onCall(CALL_OPTS, async (request) => {
     await applyPage(changes);
   });
 
-  const finalSchools = await activeSchoolIds(child);
-  const finalAllowed = (allowed as string[]).filter((schoolId) => finalSchools.includes(schoolId));
   const completedAt = admin.firestore.Timestamp.now();
   await db.runTransaction(async (txn) => {
+    const finalSchools = await activeSchoolIdsInTransaction(txn, child);
+    const finalAllowed = (allowed as string[]).filter((schoolId) => finalSchools.includes(schoolId));
     const user = await txn.get(userRef);
     const activeChildIds = stringList(user.get("active_social_child_profile_ids"))
       .filter((id) => id !== profileDocId(child));

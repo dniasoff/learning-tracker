@@ -17,6 +17,7 @@ import {
 } from './_cf_helpers.mjs';
 const {
   grantSocialStaffSchoolAccess,
+  refreshSocialMembershipMirror,
   revokeSocialGrantsForMembershipChange,
   revokeStaffSchoolAccess,
 } = await import('../lib/social_graph.js');
@@ -696,6 +697,13 @@ describe('social graph callable state', () => {
 
   test('staff school revocation clears the mirror and paginates ACL cleanup', async () => {
     const userControlRef = db.collection('social_user_controls').doc(strangerAuth.uid);
+    for (const schoolId of [SCHOOL, 'school-2']) {
+      await db.collection('schools').doc(schoolId).set({ status: 'active' });
+      await db.collection('school_admins').doc(createHash('sha256')
+        .update(['school-staff', schoolId, strangerAuth.uid].join('\0')).digest('hex')).set({
+        school_id: schoolId, owner_uid: strangerAuth.uid, state: 'active',
+      });
+    }
     await grantSocialStaffSchoolAccess(strangerAuth.uid, SCHOOL);
     await grantSocialStaffSchoolAccess(strangerAuth.uid, 'school-2');
     assert.deepEqual(
@@ -724,6 +732,42 @@ describe('social graph callable state', () => {
       assert.deepEqual((await readerRef.get()).get('school_ids'), ['school-2']);
     }
     assert.equal((await onlyStaffGrant.get()).exists, false);
+  });
+
+  test('school status fences concurrent staff grants and membership mirror refreshes', async () => {
+    await seedSocialProfile(strangerAuth.uid, 'school-member', 'adult');
+    const created = await call(fns.createSchool, { name: 'Fence School' }, parentAuth);
+    const invite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+    await call(fns.joinSchoolWithInvite, {
+      inviteCode: invite.inviteCode, profileId: 'school-member', progressConsent: true,
+    }, strangerAuth);
+    await call(fns.addSchoolAdmin, {
+      schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'school-member',
+    }, parentAuth);
+
+    await Promise.all([
+      grantSocialStaffSchoolAccess(strangerAuth.uid, created.schoolId),
+      refreshSocialMembershipMirror(socialProfileDocId(strangerAuth.uid, 'school-member')),
+      call(fns.setSchoolSuspended, { schoolId: created.schoolId, suspended: true }, {
+        uid: parentAuth.uid, token: { app_owner: true },
+      }),
+    ]);
+
+    assert.equal((await db.collection('schools').doc(created.schoolId).get()).get('status'), 'suspended');
+    assert.deepEqual((await db.collection('social_user_controls').doc(strangerAuth.uid).get())
+      .get('active_staff_school_ids') ?? [], []);
+    assert.deepEqual((await db.collection('social_profiles').doc(socialProfileDocId(strangerAuth.uid, 'school-member')).get())
+      .get('active_school_ids') ?? [], []);
+    const memberSummary = db.collection('social_summaries').doc(socialProfileDocId(strangerAuth.uid, 'school-member'));
+    assert.equal((await memberSummary.collection('readers').doc(parentAuth.uid).get()).exists, false);
+
+    await call(fns.setSchoolSuspended, { schoolId: created.schoolId, suspended: false }, {
+      uid: parentAuth.uid, token: { app_owner: true },
+    });
+    assert.deepEqual((await db.collection('social_user_controls').doc(strangerAuth.uid).get())
+      .get('active_staff_school_ids'), [created.schoolId]);
+    assert.deepEqual((await db.collection('social_profiles').doc(socialProfileDocId(strangerAuth.uid, 'school-member')).get())
+      .get('active_school_ids'), [created.schoolId]);
   });
 
   test('profile deletion fails if the social summary recursive delete fails', async () => {
