@@ -1358,6 +1358,8 @@
   "notifReminderTime": "שעת תזכורת",
   "notifStreakAlert": "התראת רצף",
   "notifStreakAlertSubtitle": "שמרו על האש בוערת!",
+  "notifStreakSaver": "שומר רצף",
+  "notifStreakSaverSubtitle": "קבלו ספירה לאחור ב־22:00 אם עדיין לא למדתם היום",
   "notifHotStreakBadge": "רצף לוהט",
   "notifStreakAlertTime": "שעת התראת רצף",
   "notifRewardMilestones": "התראות פרסים",

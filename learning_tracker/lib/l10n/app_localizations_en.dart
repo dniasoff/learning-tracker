@@ -2480,6 +2480,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifStreakAlertSubtitle => 'Keep your fire burning!';
 
   @override
+  String get notifStreakSaver => 'Streak Saver';
+
+  @override
+  String get notifStreakSaverSubtitle =>
+      'Get a countdown at 10:00 PM if you have not learned today';
+
+  @override
   String get notifHotStreakBadge => 'HOT STREAK';
 
   @override

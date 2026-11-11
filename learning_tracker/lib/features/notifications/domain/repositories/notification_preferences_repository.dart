@@ -22,6 +22,7 @@ abstract class NotificationPreferencesRepository {
   static const String _streakAlertEnabledBase = 'streak_alert_enabled';
   static const String _streakAlertHourBase = 'streak_alert_hour';
   static const String _streakAlertMinuteBase = 'streak_alert_minute';
+  static const String _streakSaverEnabledBase = 'streak_saver_enabled';
 
   static const String _rewardNotificationEnabledBase =
       'reward_notification_enabled';
@@ -76,6 +77,8 @@ abstract class NotificationPreferencesRepository {
       keyForProfile(_streakAlertHourBase, profileId);
   static String streakAlertMinuteKey(String profileId) =>
       keyForProfile(_streakAlertMinuteBase, profileId);
+  static String streakSaverEnabledKey(String profileId) =>
+      keyForProfile(_streakSaverEnabledBase, profileId);
 
   static String rewardNotificationEnabledKey(String profileId) =>
       keyForProfile(_rewardNotificationEnabledBase, profileId);

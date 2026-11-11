@@ -332,6 +332,57 @@ abstract class _$StreakAlertEnabled extends $AsyncNotifier<bool> {
   }
 }
 
+/// Per-profile switch for the 22:00 streak-saver reminder (enabled by default).
+
+@ProviderFor(StreakSaverEnabled)
+final streakSaverEnabledProvider = StreakSaverEnabledProvider._();
+
+/// Per-profile switch for the 22:00 streak-saver reminder (enabled by default).
+final class StreakSaverEnabledProvider
+    extends $AsyncNotifierProvider<StreakSaverEnabled, bool> {
+  /// Per-profile switch for the 22:00 streak-saver reminder (enabled by default).
+  StreakSaverEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'streakSaverEnabledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$streakSaverEnabledHash();
+
+  @$internal
+  @override
+  StreakSaverEnabled create() => StreakSaverEnabled();
+}
+
+String _$streakSaverEnabledHash() =>
+    r'f30c4698a9dc365c75d297389d0ba0c6864f0eee';
+
+/// Per-profile switch for the 22:00 streak-saver reminder (enabled by default).
+
+abstract class _$StreakSaverEnabled extends $AsyncNotifier<bool> {
+  FutureOr<bool> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<bool>, bool>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<bool>, bool>,
+              AsyncValue<bool>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// Manages the streak alert time.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
@@ -975,3 +1026,45 @@ final class StreakAlertSyncEffectProvider
 
 String _$streakAlertSyncEffectHash() =>
     r'd3bbab20cc93df2a9e8d995df2f66fe64566235d';
+
+/// Independently evaluates the 22:00 streak saver and keeps its notification
+/// separate from the configurable per-curriculum streak alert.
+
+@ProviderFor(streakSaverSyncEffect)
+final streakSaverSyncEffectProvider = StreakSaverSyncEffectProvider._();
+
+/// Independently evaluates the 22:00 streak saver and keeps its notification
+/// separate from the configurable per-curriculum streak alert.
+
+final class StreakSaverSyncEffectProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  /// Independently evaluates the 22:00 streak saver and keeps its notification
+  /// separate from the configurable per-curriculum streak alert.
+  StreakSaverSyncEffectProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'streakSaverSyncEffectProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$streakSaverSyncEffectHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    return streakSaverSyncEffect(ref);
+  }
+}
+
+String _$streakSaverSyncEffectHash() =>
+    r'528bbcb91bc8498b7358f9350d24f548f589117c';

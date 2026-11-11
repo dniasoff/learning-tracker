@@ -187,6 +187,26 @@ void main() {
     });
   });
 
+  group('StreakSaverEnabled', () {
+    test('defaults on and persists per-profile toggle', () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = _makeContainer();
+      addTearDown(container.dispose);
+      expect(await container.read(streakSaverEnabledProvider.future), isTrue);
+      await container.read(streakSaverEnabledProvider.notifier).toggle();
+      expect(container.read(streakSaverEnabledProvider).value, isFalse);
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getBool(
+          NotificationPreferencesRepository.streakSaverEnabledKey(
+            _testProfileId,
+          ),
+        ),
+        isFalse,
+      );
+    });
+  });
+
   group('RewardNotificationEnabled', () {
     test('defaults to true', () async {
       SharedPreferences.setMockInitialValues({});

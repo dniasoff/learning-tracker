@@ -6,6 +6,9 @@ import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
+import 'package:learning_tracker/domain/learner_state/civil_date.dart';
+import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
+import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/notifications/data/repositories/shared_prefs_streak_alert_markers.dart';
@@ -16,6 +19,8 @@ import 'package:learning_tracker/features/notifications/domain/services/curricul
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_scheduler.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
+import 'package:learning_tracker/features/notifications/domain/services/streak_saver_notifications.dart';
+import 'package:learning_tracker/features/notifications/domain/services/today_learning_done.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
@@ -210,6 +215,38 @@ class StreakAlertEnabled extends _$StreakAlertEnabled {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool(
           NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
+          next,
+        );
+        return next;
+      },
+    );
+  }
+}
+
+/// Per-profile switch for the 22:00 streak-saver reminder (enabled by default).
+@riverpod
+class StreakSaverEnabled extends _$StreakSaverEnabled {
+  @override
+  Future<bool> build() async {
+    final profileId =
+        ref.watch(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(
+          NotificationPreferencesRepository.streakSaverEnabledKey(profileId),
+        ) ??
+        true;
+  }
+
+  Future<void> toggle() async {
+    final next = !(state.value ?? true);
+    final profileId =
+        ref.read(selectedProfileIdProvider) ?? kNoProfilePreferenceSentinel;
+    state = await _guardedPersist(
+      'streak_saver_enabled_toggle_persist_failed',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(
+          NotificationPreferencesRepository.streakSaverEnabledKey(profileId),
           next,
         );
         return next;
@@ -767,6 +804,77 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
     // Fail closed: a learner state or lock-settings history that cannot be
     // read must not leave an alert that might fire inside a lock.
     await cancelUnlessStale();
+    rethrow;
+  }
+}
+
+/// Independently evaluates the 22:00 streak saver and keeps its notification
+/// separate from the configurable per-curriculum streak alert.
+@Riverpod(keepAlive: true)
+Future<void> streakSaverSyncEffect(Ref ref) async {
+  final enabled = await ref.watch(streakSaverEnabledProvider.future);
+  if (!ref.mounted) return;
+  final profileId = ref.watch(selectedProfileIdProvider);
+  if (profileId == null) return;
+  final notifications = StreakSaverNotifications();
+  Future<void> cancel() => notifications.cancel(profileId);
+  if (!enabled) {
+    await cancel();
+    return;
+  }
+  final scope = await ref.watch(activeLearnerScopeProvider.future);
+  if (!ref.mounted) return;
+  if (scope == null || scope.profileId != profileId) {
+    await cancel();
+    return;
+  }
+  try {
+    final state = await ref.watch(learnerStateProvider(scope).future);
+    if (!ref.mounted) return;
+    final settings = await ref.watch(learnerLockSettingsProvider(scope).future);
+    if (!ref.mounted) return;
+    final now = DateTime.now().toUtc();
+    final today = civilDate(now, settings);
+    final zone = LearnerZone.of(settings.at(now).timeZone);
+    final fireAt = zone.at(parseCivilDay(today), hour: 22, minute: 0);
+    final midnight = zone.at(
+      addCivilDays(parseCivilDay(today), 1),
+      hour: 0,
+      minute: 0,
+    );
+    final atRisk = state.curricula.entries.any(
+      (entry) =>
+          entry.value.evaluated &&
+          (entry.value.streak?.current ?? 0) > 0 &&
+          !learnedToday(state, settings, day: today, curriculumId: entry.key),
+    );
+    final inSacredTime = lockWindows(
+      settings,
+      now,
+      fireAt,
+    ).any((window) => window.contains(fireAt));
+    final deviceLocked = ref.read(deviceLockPredicateProvider)(fireAt);
+    if (shouldScheduleStreakSaver(
+      nowUtc: now,
+      fireAtUtc: fireAt,
+      atRisk: atRisk,
+      enabled: true,
+      sacredTime: inSacredTime,
+      deviceLocked: deviceLocked,
+    )) {
+      final l10n = lookupAppLocalizations(ref.read(currentAppLocaleProvider));
+      await notifications.schedule(
+        profileId: profileId,
+        fireAtUtc: fireAt,
+        midnightUtc: midnight,
+        title: l10n.notifStreakSaver,
+        body: l10n.notifStreakSaverSubtitle,
+      );
+    } else {
+      await cancel();
+    }
+  } catch (_) {
+    await cancel();
     rethrow;
   }
 }

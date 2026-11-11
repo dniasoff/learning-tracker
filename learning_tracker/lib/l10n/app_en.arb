@@ -1990,6 +1990,8 @@
   "notifReminderTime": "Reminder Time",
   "notifStreakAlert": "Streak Alert",
   "notifStreakAlertSubtitle": "Keep your fire burning!",
+  "notifStreakSaver": "Streak Saver",
+  "notifStreakSaverSubtitle": "Get a countdown at 10:00 PM if you have not learned today",
   "notifHotStreakBadge": "HOT STREAK",
   "notifStreakAlertTime": "Streak Alert Time",
   "notifRewardMilestones": "Reward Notifications",

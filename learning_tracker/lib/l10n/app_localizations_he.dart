@@ -2461,6 +2461,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get notifStreakAlertSubtitle => 'שמרו על האש בוערת!';
 
   @override
+  String get notifStreakSaver => 'שומר רצף';
+
+  @override
+  String get notifStreakSaverSubtitle =>
+      'קבלו ספירה לאחור ב־22:00 אם עדיין לא למדתם היום';
+
+  @override
   String get notifHotStreakBadge => 'רצף לוהט';
 
   @override

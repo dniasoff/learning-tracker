@@ -4271,6 +4271,18 @@ abstract class AppLocalizations {
   /// **'Keep your fire burning!'**
   String get notifStreakAlertSubtitle;
 
+  /// No description provided for @notifStreakSaver.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak Saver'**
+  String get notifStreakSaver;
+
+  /// No description provided for @notifStreakSaverSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get a countdown at 10:00 PM if you have not learned today'**
+  String get notifStreakSaverSubtitle;
+
   /// No description provided for @notifHotStreakBadge.
   ///
   /// In en, this message translates to:

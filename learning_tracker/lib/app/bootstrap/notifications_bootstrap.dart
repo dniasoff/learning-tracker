@@ -76,6 +76,7 @@ Future<void> bootstrapNotifications({
     container.read(notificationSettingsCloudSyncEffectProvider);
     container.read(reminderSyncEffectProvider);
     container.read(streakAlertSyncEffectProvider);
+    container.read(streakSaverSyncEffectProvider);
     // WS5.per-profile (DEC-28): schedule reminders for ALL profiles, not just
     // the currently-active one, so inactive profiles' reminders fire on schedule.
     container.read(allProfilesReminderBootstrapProvider);

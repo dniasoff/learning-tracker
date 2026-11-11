@@ -28,6 +28,8 @@ class NotificationsScreen extends ConsumerWidget {
         );
     final streakAlertEnabled =
         ref.watch(streakAlertEnabledProvider).value ?? true;
+    final streakSaverEnabled =
+        ref.watch(streakSaverEnabledProvider).value ?? true;
     final streakAlertTime =
         ref.watch(streakAlertTimeProvider).value ??
         const TimeOfDay(
@@ -40,6 +42,7 @@ class NotificationsScreen extends ConsumerWidget {
     // Activate sync effects so scheduling reacts to setting changes.
     ref.watch(reminderSyncEffectProvider);
     ref.watch(streakAlertSyncEffectProvider);
+    ref.watch(streakSaverSyncEffectProvider);
 
     return Scaffold(
       backgroundColor: context.colors.surfaceF3,
@@ -145,6 +148,22 @@ class NotificationsScreen extends ConsumerWidget {
                         }
                       }
                     : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SettingsGroupCard(
+            children: [
+              _NotificationSwitchRow(
+                key: const Key('streak_saver_toggle'),
+                icon: Icons.hourglass_bottom_rounded,
+                iconTint: context.colors.notifStreakIconTint,
+                iconBg: context.colors.notifStreakIconBg,
+                title: l10n.notifStreakSaver,
+                subtitle: l10n.notifStreakSaverSubtitle,
+                value: streakSaverEnabled,
+                onChanged: (_) =>
+                    ref.read(streakSaverEnabledProvider.notifier).toggle(),
               ),
             ],
           ),
