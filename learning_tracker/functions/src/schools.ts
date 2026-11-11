@@ -594,6 +594,12 @@ export const deleteSchool = onCall(CALL_OPTS, async (request) => {
 
 /** Idempotent membership/admin cleanup used by profile and account deletion. */
 export async function cleanupSchoolAccess(ownerUid: string, profileId?: string): Promise<void> {
+  let adminQuery: FirebaseFirestore.Query = admins().where("owner_uid", "==", ownerUid);
+  if (profileId) adminQuery = adminQuery.where("profile_id", "==", profileId);
+  const adminSnap = await adminQuery.get();
+  await Promise.all(adminSnap.docs.map((doc) =>
+    revokeStaffSchoolAccess(ownerUid, String(doc.get("school_id"))),
+  ));
   let query: FirebaseFirestore.Query = memberships().where("owner_uid", "==", ownerUid);
   if (profileId) query = query.where("profile_id", "==", profileId);
   const members = await query.get();
@@ -603,14 +609,9 @@ export async function cleanupSchoolAccess(ownerUid: string, profileId?: string):
     await revokeSchoolDependentSocial(ref, schoolId);
     await revokeSchoolReaderForMember(schoolId, ref);
     await member.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now(), removal_reason: "account_deleted" });
-    await refreshSchoolReaders(schoolId);
   }
-  let adminQuery: FirebaseFirestore.Query = admins().where("owner_uid", "==", ownerUid);
-  if (profileId) adminQuery = adminQuery.where("profile_id", "==", profileId);
-  const adminSnap = await adminQuery.get();
   for (const doc of adminSnap.docs) {
     const schoolId = String(doc.get("school_id"));
-    await revokeStaffSchoolAccess(ownerUid, schoolId);
     const active = await admins().where("school_id", "==", schoolId).where("state", "==", "active").get();
     if (active.size > 1) {
       await revokeSchoolReaderForUid(schoolId, ownerUid);

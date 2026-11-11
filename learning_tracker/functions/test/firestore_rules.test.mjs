@@ -457,7 +457,7 @@ describe('social graph rules', () => {
   });
 
   test('staff reads require a live staff mirror and current learner membership', async () => {
-    const staffControlPath = `social_user_controls/${TUTOR}`;
+    const staffControlPath = `social_user_controls/${STAFF}`;
     await env.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await Promise.all([
@@ -471,18 +471,18 @@ describe('social graph rules', () => {
         setDoc(doc(db, staffControlPath), { active_staff_school_ids: ['school-1'] }),
       ]);
     });
-    await assertSucceeds(getDoc(doc(tutor(), summaryPath)));
+    await assertSucceeds(getDoc(doc(staff(), summaryPath)));
 
     await env.withSecurityRulesDisabled(async (ctx) => {
       await updateDoc(doc(ctx.firestore(), staffControlPath), { active_staff_school_ids: [] });
     });
-    await assertFails(getDoc(doc(tutor(), summaryPath)), 'removed staff mirror denies the old ACL');
+    await assertFails(getDoc(doc(staff(), summaryPath)), 'removed staff mirror denies the old ACL');
 
     await env.withSecurityRulesDisabled(async (ctx) => {
       await updateDoc(doc(ctx.firestore(), staffControlPath), { active_staff_school_ids: ['school-1'] });
       await updateDoc(doc(ctx.firestore(), summaryProfilePath), { active_school_ids: [] });
     });
-    await assertFails(getDoc(doc(tutor(), summaryPath)), 'learner leaving the school cuts staff access');
+    await assertFails(getDoc(doc(staff(), summaryPath)), 'learner leaving the school cuts staff access');
   });
 
   async function installChildFollowerGrant() {
