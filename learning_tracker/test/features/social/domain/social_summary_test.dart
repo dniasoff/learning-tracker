@@ -44,13 +44,27 @@ void main() {
       },
     });
 
-    expect(summary.streak.byCurriculum.single.currentDays, 3);
-    expect(summary.streak.overall?.bestDays, 9);
-    expect(summary.currentTracks.single.positionRef, 'Berakhot 4');
-    expect(summary.weeklyLearning.weekStart, '2026-11-08');
-    expect(summary.weeklyLearning.byCurriculum.single.chazaros, 1);
-    expect(summary.weeklyLearning.overall?.limudim, 8);
-    expect(summary.siyumim.single.ref, 'Berakhot');
+    expect(summary.streak!.byCurriculum.single.currentDays, 3);
+    expect(summary.streak!.overall?.bestDays, 9);
+    expect(summary.currentTracks!.single.positionRef, 'Berakhot 4');
+    expect(summary.weeklyLearning!.weekStart, '2026-11-08');
+    expect(summary.weeklyLearning!.byCurriculum.single.chazaros, 1);
+    expect(summary.weeklyLearning!.overall?.limudim, 8);
+    expect(summary.siyumim!.single.ref, 'Berakhot');
+  });
+
+  test('decodes owner-hidden sections as absent', () {
+    final summary = SocialSummary.fromWire({
+      'display_name': 'Learner',
+      'avatar_id': 2,
+      'computed_at': DateTime.utc(2026, 11, 10),
+      'schema_version': 1,
+    });
+
+    expect(summary.streak, isNull);
+    expect(summary.currentTracks, isNull);
+    expect(summary.weeklyLearning, isNull);
+    expect(summary.siyumim, isNull);
   });
 
   test('rejects private fields and any client-authored labels', () {

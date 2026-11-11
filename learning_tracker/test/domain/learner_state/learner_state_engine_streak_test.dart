@@ -102,6 +102,24 @@ void main() {
       expect(state[_tanach]!.streak!.current, 1);
     });
 
+    test(
+      'overall streak combines consecutive counted days across curricula',
+      () {
+        final state = run([
+          _learn(23),
+          _learn(24),
+          _learn(25, curriculumId: _tanach),
+          _learn(26),
+        ]);
+        expect(
+          state.overallStreak,
+          const CurriculumStreak(current: 4, best: 4, lastDay: '2026-03-26'),
+        );
+        expect(state[engineCurriculum]!.streak!.current, 1);
+        expect(state[_tanach]!.streak!.current, 1);
+      },
+    );
+
     test('a curriculum that is not evaluated has no streak', () {
       final state = engine.run(
         engineInputs(

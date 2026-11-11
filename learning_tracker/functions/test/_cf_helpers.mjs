@@ -55,6 +55,7 @@ const ROOT_COLLECTIONS = [
   'schools', 'school_admins', 'school_invites', 'school_audit_logs',
   'school_reports', 'school_rate_limits',
   'social_summaries',
+  'social_summary_visibility',
   'social_summary_rate_limits',
 ];
 

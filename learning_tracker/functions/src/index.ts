@@ -83,6 +83,8 @@ export {
   blockSocialProfile,
   unblockSocialProfile,
   publishSocialSummary,
+  getSocialSummaryVisibility,
+  setSocialSummaryVisibility,
   searchSchoolMembers,
   listSocialConnections,
 } from "./social_graph";

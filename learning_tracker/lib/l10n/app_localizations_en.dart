@@ -8162,4 +8162,63 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get schoolAdminMembershipRemovalBlocked =>
       'School administrators must remove or transfer their admin role before leaving or being removed as a member.';
+
+  @override
+  String get communityOverall => 'Overall';
+
+  @override
+  String get communityVisibilityTitle => 'What followers can see';
+
+  @override
+  String get communityVisibilityDescription =>
+      'Choose which parts of this profile’s learning progress are shared with followers and school staff.';
+
+  @override
+  String get communityVisibilityOverallStreak => 'Overall streak';
+
+  @override
+  String get communityVisibilityOverallWeekly =>
+      'Overall weekly learning and review totals';
+
+  @override
+  String get communityVisibilityTrackStreaks => 'Streak for each track';
+
+  @override
+  String get communityVisibilityTrackWeekly =>
+      'Weekly learning and review counts for each track';
+
+  @override
+  String get communityVisibilityCurrentTracks => 'Current tracks and position';
+
+  @override
+  String get communityVisibilitySiyumim => 'Siyumim';
+
+  @override
+  String get communityVisibilityPreview => 'Preview shared progress';
+
+  @override
+  String get communityVisibilityPreviewEmpty =>
+      'No progress sections are currently shared.';
+
+  @override
+  String communityTrackCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# current tracks',
+      one: '# current track',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String communitySiyumCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# siyumim',
+      one: '# siyum',
+    );
+    return '$_temp0';
+  }
 }

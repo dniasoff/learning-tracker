@@ -20,6 +20,23 @@ const SOCIAL_CURRICULA = new Set([
 ]);
 const SOCIAL_REF_RE = /^[\p{L}\p{N}][\p{L}\p{N} ,.:;’'"״׳–—-]{0,255}$/u;
 const SOCIAL_IDENTIFIER_RE = /^[A-Za-z0-9_.-]{1,64}$/;
+const SUMMARY_VISIBILITY_DEFAULTS = {
+  overall_streak: true,
+  overall_weekly: true,
+  per_track_streaks: true,
+  per_track_weekly: true,
+  current_tracks: true,
+  siyumim: true,
+} as const;
+
+type SocialSummaryVisibility = {
+  overall_streak: boolean;
+  overall_weekly: boolean;
+  per_track_streaks: boolean;
+  per_track_weekly: boolean;
+  current_tracks: boolean;
+  siyumim: boolean;
+};
 
 type ProfileRef = { ownerUid: string; profileId: string };
 type SocialProfile = ProfileRef & {
@@ -42,7 +59,87 @@ const userControls = () => db.collection("social_user_controls");
 const auditLogs = () => db.collection("social_audit_logs");
 const searchCursors = () => db.collection("social_search_cursors");
 const summaries = () => db.collection("social_summaries");
+const summaryVisibility = () => db.collection("social_summary_visibility");
 const summaryRateLimits = () => db.collection("social_summary_rate_limits");
+
+function summaryVisibilityFromStorage(value: unknown): SocialSummaryVisibility {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { ...SUMMARY_VISIBILITY_DEFAULTS };
+  }
+  const source = value as Record<string, unknown>;
+  return {
+    overall_streak: typeof source.overall_streak === "boolean"
+      ? source.overall_streak : SUMMARY_VISIBILITY_DEFAULTS.overall_streak,
+    overall_weekly: typeof source.overall_weekly === "boolean"
+      ? source.overall_weekly : SUMMARY_VISIBILITY_DEFAULTS.overall_weekly,
+    per_track_streaks: typeof source.per_track_streaks === "boolean"
+      ? source.per_track_streaks : SUMMARY_VISIBILITY_DEFAULTS.per_track_streaks,
+    per_track_weekly: typeof source.per_track_weekly === "boolean"
+      ? source.per_track_weekly : SUMMARY_VISIBILITY_DEFAULTS.per_track_weekly,
+    current_tracks: typeof source.current_tracks === "boolean"
+      ? source.current_tracks : SUMMARY_VISIBILITY_DEFAULTS.current_tracks,
+    siyumim: typeof source.siyumim === "boolean"
+      ? source.siyumim : SUMMARY_VISIBILITY_DEFAULTS.siyumim,
+  };
+}
+
+function parseSummaryVisibility(value: unknown): SocialSummaryVisibility {
+  const input = summaryObject(value, [
+    "overallStreak", "overallWeekly", "perTrackStreaks", "perTrackWeekly",
+    "currentTracks", "siyumim",
+  ], "visibility");
+  if (Object.keys(input).length !== 6 ||
+      Object.values(input).some((setting) => typeof setting !== "boolean")) {
+    throw new HttpsError("invalid-argument", "Visibility choices must be boolean");
+  }
+  return {
+    overall_streak: input.overallStreak as boolean,
+    overall_weekly: input.overallWeekly as boolean,
+    per_track_streaks: input.perTrackStreaks as boolean,
+    per_track_weekly: input.perTrackWeekly as boolean,
+    current_tracks: input.currentTracks as boolean,
+    siyumim: input.siyumim as boolean,
+  };
+}
+
+function summaryVisibilityForWire(value: SocialSummaryVisibility) {
+  return {
+    overallStreak: value.overall_streak,
+    overallWeekly: value.overall_weekly,
+    perTrackStreaks: value.per_track_streaks,
+    perTrackWeekly: value.per_track_weekly,
+    currentTracks: value.current_tracks,
+    siyumim: value.siyumim,
+  };
+}
+
+function applySummaryVisibility(
+  summary: Record<string, unknown>,
+  visibility: SocialSummaryVisibility,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  const streak = summary.streak as Record<string, unknown>;
+  const visibleStreak: Record<string, unknown> = {};
+  if (visibility.per_track_streaks) visibleStreak.by_curriculum = streak.by_curriculum;
+  if (visibility.overall_streak && streak.overall !== undefined) {
+    visibleStreak.overall = streak.overall;
+  }
+  if (Object.keys(visibleStreak).length > 0) result.streak = visibleStreak;
+
+  const weekly = summary.weekly_learning as Record<string, unknown>;
+  const visibleWeekly: Record<string, unknown> = {};
+  if (visibility.per_track_weekly) visibleWeekly.by_curriculum = weekly.by_curriculum;
+  if (visibility.overall_weekly && weekly.overall !== undefined) {
+    visibleWeekly.overall = weekly.overall;
+  }
+  if (Object.keys(visibleWeekly).length > 0) {
+    visibleWeekly.week_start = weekly.week_start;
+    result.weekly_learning = visibleWeekly;
+  }
+  if (visibility.current_tracks) result.current_tracks = summary.current_tracks;
+  if (visibility.siyumim) result.siyumim = summary.siyumim;
+  return result;
+}
 
 function opaqueId(...parts: string[]): string {
   return crypto.createHash("sha256").update(parts.join("\0")).digest("hex");
@@ -529,7 +626,7 @@ export async function grantSocialStaffSchoolAccess(
       txn.get(db.collection("school_admins").doc(staffId)),
     ]);
     if (!school.exists || school.get("status") !== "active" ||
-        !staff.exists || staff.get("state") !== "active") return;
+        !staff.exists || staff.get("state") !== "active" || staff.get("removal_pending") === true) return;
     const schoolIds = stringList(existing.get("active_staff_school_ids"));
     txn.set(ref, {
       active_staff_school_ids: [...new Set([...schoolIds, schoolId])],
@@ -846,13 +943,14 @@ export const publishSocialSummary = onCall(CALL_OPTS, async (request) => {
   const profile: ProfileRef = { ownerUid: uid, profileId };
   const learnerRef = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
   const summaryRef = summaries().doc(profileDocId(profile));
+  const visibilityRef = summaryVisibility().doc(profileDocId(profile));
   const rateRef = summaryRateLimits().doc(profileDocId(profile));
   const now = admin.firestore.Timestamp.now();
   const minute = Math.floor(now.toMillis() / 60_000);
 
   await db.runTransaction(async (txn) => {
-    const [learner, rate] = await Promise.all([
-      txn.get(learnerRef), txn.get(rateRef),
+    const [learner, rate, visibilitySnap] = await Promise.all([
+      txn.get(learnerRef), txn.get(rateRef), txn.get(visibilityRef),
     ]);
     if (!learner.exists) throw new HttpsError("not-found", "Learner profile is unavailable");
     const mode = learner.get("mode");
@@ -882,7 +980,95 @@ export const publishSocialSummary = onCall(CALL_OPTS, async (request) => {
     txn.set(summaryRef, {
       display_name: profileName.trim(),
       avatar_id: avatarId,
-      ...normalized,
+      ...applySummaryVisibility(normalized, summaryVisibilityFromStorage(visibilitySnap.data())),
+      computed_at: now,
+      schema_version: 1,
+    });
+    txn.set(rateRef, { minute, count: count + 1, updated_at: now });
+  });
+  return { success: true, summaryId: profileDocId(profile) };
+});
+
+/** Reads the owner's callable-only summary visibility choices. */
+export const getSocialSummaryVisibility = onCall(CALL_OPTS, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  exactKeys(data, ["profileId", "parentSessionId"]);
+  const profileId = requiredString(data.profileId, "profileId");
+  if (!ULID_RE.test(profileId)) throw new HttpsError("invalid-argument", "profileId must be a valid ULID");
+  if (data.parentSessionId !== undefined && typeof data.parentSessionId !== "string") {
+    throw new HttpsError("invalid-argument", "parentSessionId must be a string");
+  }
+  const profile: ProfileRef = { ownerUid: uid, profileId };
+  const learnerRef = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
+  const visibilityRef = summaryVisibility().doc(profileDocId(profile));
+  return db.runTransaction(async (txn) => {
+    const learner = await txn.get(learnerRef);
+    if (!learner.exists) throw new HttpsError("not-found", "Learner profile is unavailable");
+    const mode = learner.get("mode");
+    if (mode !== "child" && mode !== "adult") {
+      throw new HttpsError("failed-precondition", "Learner mode is unavailable");
+    }
+    if (mode === "child") {
+      await assertActiveParentSessionInTransaction(txn, uid, profileId, data.parentSessionId);
+    } else if (data.parentSessionId !== undefined) {
+      throw new HttpsError("invalid-argument", "parentSessionId is only valid for a child profile");
+    }
+    const choices = await txn.get(visibilityRef);
+    return { visibility: summaryVisibilityForWire(summaryVisibilityFromStorage(choices.data())) };
+  });
+});
+
+/** Saves choices and atomically republishes the current sanitized snapshot. */
+export const setSocialSummaryVisibility = onCall(CALL_OPTS, async (request) => {
+  const uid = requireAuth(request);
+  const data = (request.data ?? {}) as Record<string, unknown>;
+  exactKeys(data, ["profileId", "parentSessionId", "visibility", "summary"]);
+  const profileId = requiredString(data.profileId, "profileId");
+  if (!ULID_RE.test(profileId)) throw new HttpsError("invalid-argument", "profileId must be a valid ULID");
+  const normalized = normalizeSocialSummary(data.summary);
+  const visibility = parseSummaryVisibility(data.visibility);
+  if (data.parentSessionId !== undefined && typeof data.parentSessionId !== "string") {
+    throw new HttpsError("invalid-argument", "parentSessionId must be a string");
+  }
+
+  const profile: ProfileRef = { ownerUid: uid, profileId };
+  const learnerRef = db.collection("users").doc(uid).collection("learner_profiles").doc(profileId);
+  const summaryRef = summaries().doc(profileDocId(profile));
+  const visibilityRef = summaryVisibility().doc(profileDocId(profile));
+  const rateRef = summaryRateLimits().doc(profileDocId(profile));
+  const now = admin.firestore.Timestamp.now();
+  const minute = Math.floor(now.toMillis() / 60_000);
+
+  await db.runTransaction(async (txn) => {
+    const [learner, rate] = await Promise.all([txn.get(learnerRef), txn.get(rateRef)]);
+    if (!learner.exists) throw new HttpsError("not-found", "Learner profile is unavailable");
+    const mode = learner.get("mode");
+    if (mode !== "child" && mode !== "adult") {
+      throw new HttpsError("failed-precondition", "Learner mode is unavailable");
+    }
+    if (mode === "child") {
+      await assertActiveParentSessionInTransaction(txn, uid, profileId, data.parentSessionId);
+    } else if (data.parentSessionId !== undefined) {
+      throw new HttpsError("invalid-argument", "parentSessionId is only valid for a child profile");
+    }
+
+    const previousMinute = Number(rate.get("minute"));
+    const count = previousMinute === minute ? Number(rate.get("count") ?? 0) : 0;
+    if (count >= 30) throw new HttpsError("resource-exhausted", "Summary publish limit reached");
+    const profileName = learner.get("display_name");
+    if (typeof profileName !== "string" || !profileName.trim() || profileName.length > 60) {
+      throw new HttpsError("failed-precondition", "Profile display name is unavailable");
+    }
+    const avatarValue = learner.get("avatar");
+    const parsedAvatar = typeof avatarValue === "number" ? avatarValue : Number(avatarValue);
+    const avatarId = Number.isInteger(parsedAvatar) && parsedAvatar >= 0 && parsedAvatar <= 9
+      ? parsedAvatar : 0;
+    txn.set(visibilityRef, { ...visibility, updated_at: now });
+    txn.set(summaryRef, {
+      display_name: profileName.trim(),
+      avatar_id: avatarId,
+      ...applySummaryVisibility(normalized, visibility),
       computed_at: now,
       schema_version: 1,
     });
@@ -1592,6 +1778,7 @@ export async function cleanupSocialForProfile(ownerUid: string, profileId: strin
     }
     await batch.commit();
   });
+  await summaryVisibility().doc(socialId).delete();
   // Profile/account deletion must not claim completion while summary data or
   // nested reader grants remain. Let Admin SDK failures propagate to caller.
   await db.recursiveDelete(summaries().doc(socialId));

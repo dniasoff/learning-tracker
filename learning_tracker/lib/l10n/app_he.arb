@@ -4557,5 +4557,24 @@
   "schoolParentProgressConsent": "אני מאשר/ת לילד להצטרף ומבין/ה שצוות בית הספר יוכל לצפות בהתקדמות שלו.",
   "schoolJoinAction": "הצטרפות לבית הספר",
   "schoolJoinSucceeded": "הצטרפת לבית הספר",
-  "schoolAdminMembershipRemovalBlocked": "מנהלי בית הספר צריכים להסיר או להעביר את תפקיד הניהול לפני עזיבה או הסרה כחברים."
+  "schoolAdminMembershipRemovalBlocked": "מנהלי בית הספר צריכים להסיר או להעביר את תפקיד הניהול לפני עזיבה או הסרה כחברים.",
+  "communityOverall": "כללי",
+  "communityVisibilityTitle": "מה העוקבים יכולים לראות",
+  "communityVisibilityDescription": "בחירת חלקי ההתקדמות בלימוד שישותפו עם העוקבים ועם צוות בית הספר.",
+  "communityVisibilityOverallStreak": "רצף כללי",
+  "communityVisibilityOverallWeekly": "סיכומי לימוד וחזרה שבועיים כלליים",
+  "communityVisibilityTrackStreaks": "רצף לכל מסלול",
+  "communityVisibilityTrackWeekly": "מספרי לימוד וחזרה שבועיים לכל מסלול",
+  "communityVisibilityCurrentTracks": "מסלולים נוכחיים ומיקום",
+  "communityVisibilitySiyumim": "סיומים",
+  "communityVisibilityPreview": "תצוגה מקדימה של ההתקדמות המשותפת",
+  "communityVisibilityPreviewEmpty": "לא משותפים כרגע חלקי התקדמות.",
+  "communityTrackCount": "{count, plural, =1{מסלול נוכחי אחד} other{{count} מסלולים נוכחיים}}",
+  "@communityTrackCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "communitySiyumCount": "{count, plural, =1{סיום אחד} other{{count} סיומים}}",
+  "@communitySiyumCount": {
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

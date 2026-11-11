@@ -188,6 +188,148 @@ describe('school profile and membership callables', () => {
     assert.equal((await db.collection('school_admins').doc(staffId(created.schoolId, strangerAuth.uid)).get()).get('state'), 'active');
   });
 
+  test('staff refresh cannot re-grant access after the admin removal fence', async () => {
+    await seedSocialProfile(parentAuth.uid, 'owner-profile', 'adult');
+    await seedSocialProfile(strangerAuth.uid, 'target-profile', 'adult');
+    const created = await call(fns.createSchool, { name: 'Fenced Staff Removal', profileId: 'owner-profile' }, parentAuth);
+    const invite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+    await call(fns.joinSchoolWithInvite, { inviteCode: invite.inviteCode, profileId: 'target-profile', progressConsent: true }, strangerAuth);
+    await call(fns.addSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth);
+
+    let releaseFence;
+    let signalFence;
+    const fenceCommitted = new Promise((resolve) => { signalFence = resolve; });
+    const waitAtFence = new Promise((resolve) => { releaseFence = resolve; });
+    const originalRunTransaction = db.runTransaction;
+    let pauseAfterFirstTransaction = true;
+    db.runTransaction = async function (...args) {
+      const result = await originalRunTransaction.apply(this, args);
+      if (pauseAfterFirstTransaction) {
+        pauseAfterFirstTransaction = false;
+        signalFence();
+        await waitAtFence;
+      }
+      return result;
+    };
+    try {
+      const removal = call(fns.removeSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid }, parentAuth);
+      await Promise.race([
+        fenceCommitted,
+        removal.then(() => { throw new Error('admin removal completed without fencing the staff row'); }),
+      ]);
+      const staffRef = db.collection('school_admins').doc(staffId(created.schoolId, strangerAuth.uid));
+      assert.equal((await staffRef.get()).get('state'), 'removing');
+      await grantSocialStaffSchoolAccess(strangerAuth.uid, created.schoolId);
+      releaseFence();
+      await removal;
+      assert.equal((await staffRef.get()).get('state'), 'removed');
+    } finally {
+      releaseFence();
+      db.runTransaction = originalRunTransaction;
+    }
+    const controls = await db.collection('social_user_controls').doc(strangerAuth.uid).get();
+    assert.deepEqual(controls.get('active_staff_school_ids') ?? [], []);
+    const reader = await db.collection('social_summaries').doc(summaryId(parentAuth.uid, 'owner-profile'))
+      .collection('readers').doc(strangerAuth.uid).get();
+    assert.equal(reader.exists, false);
+  });
+
+  test('staff refresh cannot re-grant access to the outgoing admin during transfer', async () => {
+    await seedSocialProfile(parentAuth.uid, 'owner-profile', 'adult');
+    await seedSocialProfile(strangerAuth.uid, 'target-profile', 'adult');
+    const created = await call(fns.createSchool, { name: 'Fenced Admin Transfer', profileId: 'owner-profile' }, parentAuth);
+    const invite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+    await call(fns.joinSchoolWithInvite, { inviteCode: invite.inviteCode, profileId: 'target-profile', progressConsent: true }, strangerAuth);
+    await call(fns.addSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth);
+
+    let releaseFence;
+    let signalFence;
+    const fenceCommitted = new Promise((resolve) => { signalFence = resolve; });
+    const waitAtFence = new Promise((resolve) => { releaseFence = resolve; });
+    const originalRunTransaction = db.runTransaction;
+    let pauseAfterFirstTransaction = true;
+    db.runTransaction = async function (...args) {
+      const result = await originalRunTransaction.apply(this, args);
+      if (pauseAfterFirstTransaction) {
+        pauseAfterFirstTransaction = false;
+        signalFence();
+        await waitAtFence;
+      }
+      return result;
+    };
+    try {
+      const transfer = call(fns.transferSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'target-profile' }, parentAuth);
+      await Promise.race([
+        fenceCommitted,
+        transfer.then(() => { throw new Error('admin transfer completed without fencing the source staff row'); }),
+      ]);
+      const sourceRef = db.collection('school_admins').doc(staffId(created.schoolId, parentAuth.uid));
+      assert.equal((await sourceRef.get()).get('state'), 'removing');
+      await grantSocialStaffSchoolAccess(parentAuth.uid, created.schoolId);
+      releaseFence();
+      await transfer;
+      assert.equal((await sourceRef.get()).get('state'), 'transferred');
+    } finally {
+      releaseFence();
+      db.runTransaction = originalRunTransaction;
+    }
+    assert.deepEqual((await db.collection('social_user_controls').doc(parentAuth.uid).get())
+      .get('active_staff_school_ids') ?? [], []);
+    assert.deepEqual((await db.collection('social_user_controls').doc(strangerAuth.uid).get())
+      .get('active_staff_school_ids'), [created.schoolId]);
+  });
+
+  test('account cleanup fences a non-last admin before staff refresh can re-grant access', async () => {
+    await db.collection('users').doc(parentAuth.uid).set({ email: 'admin@example.com' });
+    await seedSocialProfile(parentAuth.uid, 'owner-profile', 'adult');
+    await seedSocialProfile(strangerAuth.uid, 'member-profile', 'adult');
+    const created = await call(fns.createSchool, { name: 'Fenced Non-Last Admin Cleanup', profileId: 'owner-profile' }, parentAuth);
+    const ownerInvite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+    await call(fns.joinSchoolWithInvite, { inviteCode: ownerInvite.inviteCode, profileId: 'owner-profile', progressConsent: true }, parentAuth);
+    const memberInvite = await call(fns.createSchoolInvite, { schoolId: created.schoolId }, parentAuth);
+    await call(fns.joinSchoolWithInvite, { inviteCode: memberInvite.inviteCode, profileId: 'member-profile', progressConsent: true }, strangerAuth);
+    await call(fns.addSchoolAdmin, { schoolId: created.schoolId, targetUid: strangerAuth.uid, profileId: 'member-profile' }, parentAuth);
+
+    let releaseFence;
+    let signalFence;
+    const fenceCommitted = new Promise((resolve) => { signalFence = resolve; });
+    const waitAtFence = new Promise((resolve) => { releaseFence = resolve; });
+    const originalRunTransaction = db.runTransaction;
+    let pauseAtFence = true;
+    db.runTransaction = async function (...args) {
+      const result = await originalRunTransaction.apply(this, args);
+      if (pauseAtFence && (await db.collection('school_admins').doc(staffId(created.schoolId, parentAuth.uid)).get()).get('state') === 'removing') {
+        pauseAtFence = false;
+        signalFence();
+        await waitAtFence;
+      }
+      return result;
+    };
+    try {
+      const deletion = call(fns.deleteAccountData, {}, parentAuth);
+      await Promise.race([
+        fenceCommitted,
+        deletion.then(() => { throw new Error('account deletion completed without fencing the staff row'); }),
+      ]);
+      const school = await db.collection('schools').doc(created.schoolId).get();
+      assert.equal(school.get('status'), 'active');
+      assert.equal((await db.collection('school_admins').doc(staffId(created.schoolId, parentAuth.uid)).get()).get('state'), 'removing');
+      await grantSocialStaffSchoolAccess(parentAuth.uid, created.schoolId);
+      releaseFence();
+      await deletion;
+    } finally {
+      releaseFence();
+      db.runTransaction = originalRunTransaction;
+    }
+    assert.deepEqual((await db.collection('social_user_controls').doc(parentAuth.uid).get())
+      .get('active_staff_school_ids') ?? [], []);
+    assert.equal((await db.collection('school_admins').doc(staffId(created.schoolId, parentAuth.uid)).get()).get('state'), 'removed');
+    assert.equal((await db.collection('school_admins').doc(staffId(created.schoolId, strangerAuth.uid)).get()).get('state'), 'active');
+    const reader = await db.collection('social_summaries').doc(summaryId(strangerAuth.uid, 'member-profile'))
+      .collection('readers').doc(parentAuth.uid).get();
+    assert.equal(reader.exists, false);
+  });
+
   test('admin removal of a member deletes that member school read grant', async () => {
     await seedSocialProfile(strangerAuth.uid, 'member-profile', 'adult');
     const created = await call(fns.createSchool, { name: 'Removal School' }, parentAuth);

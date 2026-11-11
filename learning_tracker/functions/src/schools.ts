@@ -498,29 +498,45 @@ export const removeSchoolAdmin = onCall(CALL_OPTS, async (request) => {
   exactKeys(data, ["schoolId", "targetUid"]);
   const schoolId = schoolRef(data.schoolId).id;
   const targetUid = requiredString(data.targetUid, "targetUid");
+  const targetRef = admins().doc(staffId(schoolId, targetUid));
   await db.runTransaction(async (txn) => {
     await requireActiveSchool(txn, schools().doc(schoolId));
     await requireAdmin(txn, schoolId, uid);
     if (uid === targetUid) throw new HttpsError("failed-precondition", "Transfer admin rights before leaving the school");
-    const target = await txn.get(admins().doc(staffId(schoolId, targetUid)));
-    if (!target.exists || target.get("state") !== "active") throw new HttpsError("not-found", "School administrator is unavailable");
+    const target = await txn.get(targetRef);
+    if (!target.exists || !["active", "removing"].includes(String(target.get("state")))) {
+      throw new HttpsError("not-found", "School administrator is unavailable");
+    }
+    if (target.get("state") === "removing" && target.get("removal_action") !== "removed") {
+      throw new HttpsError("failed-precondition", "A different administrator change is already in progress");
+    }
+    if (target.get("state") === "active") {
+      txn.update(targetRef, {
+        state: "removing", removal_action: "removed", removal_started_at: admin.firestore.Timestamp.now(),
+      });
+    }
   });
   await revokeStaffSchoolAccess(targetUid, schoolId);
   await revokeSchoolReaderForUid(schoolId, targetUid);
+  // A second pass catches grants committed before the removing fence. New
+  // refreshes cannot grant because the admin row is no longer active.
+  await revokeStaffSchoolAccess(targetUid, schoolId);
   await db.runTransaction(async (txn) => {
     await requireActiveSchool(txn, schools().doc(schoolId));
     await requireAdmin(txn, schoolId, uid);
     if (uid === targetUid) throw new HttpsError("failed-precondition", "Transfer admin rights before leaving the school");
-    const ref = admins().doc(staffId(schoolId, targetUid));
-    const target = await txn.get(ref);
-    if (!target.exists || target.get("state") !== "active") throw new HttpsError("not-found", "School administrator is unavailable");
-    txn.update(ref, { state: "removed", ended_at: admin.firestore.Timestamp.now() });
+    const target = await txn.get(targetRef);
+    if (!target.exists || target.get("state") !== "removing" || target.get("removal_action") !== "removed") {
+      throw new HttpsError("aborted", "School administrator removal changed; retry the operation");
+    }
+    txn.update(targetRef, { state: "removed", ended_at: admin.firestore.Timestamp.now() });
     const memberRef = memberships().doc(membershipId(schoolId, { ownerUid: targetUid, profileId: String(target.get("profile_id") ?? "") }));
     txn.set(memberRef, { role: "member", updated_at: admin.firestore.Timestamp.now() }, { merge: true });
     txn.update(schools().doc(schoolId), { membership_revision: admin.firestore.FieldValue.increment(1), updated_at: admin.firestore.Timestamp.now() });
     txn.set(audit().doc(), { school_id: schoolId, actor_uid: uid, subject_uid: targetUid, action: "school_admin_removed", at: admin.firestore.Timestamp.now() });
   });
   await refreshSchoolReaders(schoolId);
+  await revokeStaffSchoolAccess(targetUid, schoolId);
   return { success: true };
 });
 
@@ -533,28 +549,49 @@ export const transferSchoolAdmin = onCall(CALL_OPTS, async (request) => {
   const profileId = requiredString(data.profileId, "profileId");
   if (uid === targetUid) throw new HttpsError("invalid-argument", "A different administrator must receive the transfer");
   const now = admin.firestore.Timestamp.now();
+  const sourceRef = admins().doc(staffId(schoolId, uid));
   await db.runTransaction(async (txn) => {
     await requireActiveSchool(txn, schools().doc(schoolId));
-    await requireAdmin(txn, schoolId, uid);
+    const source = await txn.get(sourceRef);
+    if (!source.exists || !["active", "removing"].includes(String(source.get("state")))) {
+      throw new HttpsError("permission-denied", "School administrator access required");
+    }
+    if (source.get("state") === "removing" &&
+        (source.get("removal_action") !== "transferred" || source.get("transferred_to_uid") !== targetUid ||
+         source.get("transferred_to_profile_id") !== profileId)) {
+      throw new HttpsError("failed-precondition", "A different administrator change is already in progress");
+    }
     const memberRef = memberships().doc(membershipId(schoolId, { ownerUid: targetUid, profileId }));
     const member = await txn.get(memberRef);
     if (!member.exists || member.get("state") !== "active") throw new HttpsError("failed-precondition", "Only an active member can receive admin rights");
+    if (source.get("state") === "active") {
+      txn.update(sourceRef, {
+        state: "removing", removal_action: "transferred", transferred_to_uid: targetUid,
+        transferred_to_profile_id: profileId, removal_started_at: now,
+      });
+    }
   });
   await revokeStaffSchoolAccess(uid, schoolId);
   await revokeSchoolReaderForUid(schoolId, uid);
+  await revokeStaffSchoolAccess(uid, schoolId);
   await db.runTransaction(async (txn) => {
     await requireActiveSchool(txn, schools().doc(schoolId));
-    const source = await requireAdmin(txn, schoolId, uid);
+    const source = await txn.get(sourceRef);
+    if (!source.exists || source.get("state") !== "removing" || source.get("removal_action") !== "transferred" ||
+        source.get("transferred_to_uid") !== targetUid || source.get("transferred_to_profile_id") !== profileId) {
+      throw new HttpsError("aborted", "School administrator transfer changed; retry the operation");
+    }
     const memberRef = memberships().doc(membershipId(schoolId, { ownerUid: targetUid, profileId }));
     const member = await txn.get(memberRef);
     if (!member.exists || member.get("state") !== "active") throw new HttpsError("failed-precondition", "Only an active member can receive admin rights");
     txn.set(admins().doc(staffId(schoolId, targetUid)), { school_id: schoolId, owner_uid: targetUid, profile_id: profileId, role: "admin", state: "active", created_at: now, updated_at: now });
-    txn.update(source.ref, { state: "transferred", ended_at: now, transferred_to_uid: targetUid });
+    txn.update(sourceRef, { state: "transferred", ended_at: now });
     txn.set(memberRef, { role: "admin", updated_at: now }, { merge: true });
     txn.update(schools().doc(schoolId), { membership_revision: admin.firestore.FieldValue.increment(1), updated_at: now });
     txn.set(audit().doc(), { school_id: schoolId, actor_uid: uid, subject_uid: targetUid, action: "school_admin_transferred", at: now });
   });
   await refreshSchoolReaders(schoolId);
+  await revokeStaffSchoolAccess(uid, schoolId);
   return { success: true };
 });
 
@@ -705,7 +742,35 @@ export async function cleanupSchoolAccess(ownerUid: string, profileId?: string):
     const schoolId = String(doc.get("school_id"));
     if (doc.get("state") === "active" && await beginLastAdminCleanup(schoolId, ownerUid)) {
       lastAdminCleanup.add(schoolId);
+      continue;
     }
+    const schoolRef = schools().doc(schoolId);
+    const adminRef = admins().doc(doc.id);
+    const fencedAsLast = await db.runTransaction(async (txn) => {
+      const [school, staff] = await Promise.all([txn.get(schoolRef), txn.get(adminRef)]);
+      if (!school.exists || school.get("status") === "deleted") return false;
+      if (school.get("cleanup_pending") === true) return true;
+      if (!staff.exists || staff.get("state") === "removed" || staff.get("state") === "transferred") return false;
+      if (staff.get("state") === "removing") {
+        if (staff.get("removal_action") !== "account_deleted") {
+          throw new HttpsError("aborted", "Another school administrator change is in progress; retry account deletion");
+        }
+        return false;
+      }
+      if (staff.get("state") !== "active") return false;
+      const activeAdmins = await txn.get(admins().where("school_id", "==", schoolId).where("state", "==", "active"));
+      if (activeAdmins.size <= 1) {
+        txn.update(schoolRef, {
+          status: "suspended", cleanup_pending: true, updated_at: admin.firestore.Timestamp.now(),
+        });
+        return true;
+      }
+      txn.update(adminRef, {
+        state: "removing", removal_action: "account_deleted", removal_started_at: admin.firestore.Timestamp.now(),
+      });
+      return false;
+    });
+    if (fencedAsLast) lastAdminCleanup.add(schoolId);
   }
   await Promise.all(adminSnap.docs.map((doc) =>
     revokeStaffSchoolAccess(ownerUid, String(doc.get("school_id"))),
@@ -725,15 +790,14 @@ export async function cleanupSchoolAccess(ownerUid: string, profileId?: string):
     if (lastAdminCleanup.has(schoolId)) {
       await finishLastAdminCleanup(schoolId, ownerUid);
     } else {
-      const active = await admins().where("school_id", "==", schoolId).where("state", "==", "active").get();
-      if (doc.get("state") === "active" && active.size <= 1) {
+      const currentAdmin = await doc.ref.get();
+      if (currentAdmin.get("state") !== "removing" || currentAdmin.get("removal_action") !== "account_deleted") {
         throw new HttpsError("aborted", "Last administrator cleanup was not fenced; retry account deletion");
       }
       await revokeSchoolReaderForUid(schoolId, ownerUid);
-      if (doc.get("state") === "active") {
-        await doc.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now() });
-      }
+      await doc.ref.update({ state: "removed", ended_at: admin.firestore.Timestamp.now() });
       await refreshSchoolReaders(schoolId);
+      await revokeStaffSchoolAccess(ownerUid, schoolId);
     }
   }
 }
