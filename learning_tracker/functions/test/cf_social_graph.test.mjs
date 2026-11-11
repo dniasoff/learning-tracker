@@ -15,7 +15,11 @@ import {
   socialProfileId,
   strangerAuth,
 } from './_cf_helpers.mjs';
-const { revokeSocialGrantsForMembershipChange } = await import('../lib/social_graph.js');
+const {
+  grantSocialStaffSchoolAccess,
+  revokeSocialGrantsForMembershipChange,
+  revokeStaffSchoolAccess,
+} = await import('../lib/social_graph.js');
 
 const SCHOOL = 'school-1';
 const CHILD = 'child-profile';
@@ -688,6 +692,38 @@ describe('social graph callable state', () => {
     await revokeSocialGrantsForMembershipChange(followerId, SCHOOL);
 
     assert.equal((await childSummaryReader.get()).exists, false);
+  });
+
+  test('staff school revocation clears the mirror and paginates ACL cleanup', async () => {
+    const userControlRef = db.collection('social_user_controls').doc(strangerAuth.uid);
+    await grantSocialStaffSchoolAccess(strangerAuth.uid, SCHOOL);
+    await grantSocialStaffSchoolAccess(strangerAuth.uid, 'school-2');
+    assert.deepEqual(
+      (await userControlRef.get()).get('active_staff_school_ids').sort(),
+      [SCHOOL, 'school-2'].sort(),
+    );
+
+    const readerRefs = [];
+    for (let index = 0; index < 55; index++) {
+      const readerRef = db.collection('social_summaries').doc(`staff-summary-${index}`)
+        .collection('readers').doc(strangerAuth.uid);
+      readerRefs.push(readerRef);
+      await readerRef.set({
+        school_ids: [SCHOOL, 'school-2'],
+        follower_profile_ids: [],
+      });
+    }
+    const onlyStaffGrant = db.collection('social_summaries').doc('staff-summary-only-grant')
+      .collection('readers').doc(strangerAuth.uid);
+    await onlyStaffGrant.set({ school_ids: [SCHOOL], follower_profile_ids: [] });
+
+    await revokeStaffSchoolAccess(strangerAuth.uid, SCHOOL);
+
+    assert.deepEqual((await userControlRef.get()).get('active_staff_school_ids'), ['school-2']);
+    for (const readerRef of readerRefs) {
+      assert.deepEqual((await readerRef.get()).get('school_ids'), ['school-2']);
+    }
+    assert.equal((await onlyStaffGrant.get()).exists, false);
   });
 
   test('profile deletion fails if the social summary recursive delete fails', async () => {
