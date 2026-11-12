@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
+import 'package:learning_tracker/app/version/minimum_app_version_gate.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
@@ -210,13 +211,15 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
       // DNI-481 (AD-36): the Sacred Time lock overlay wraps EVERYTHING the
       // router renders (tabs, pushed routes, dialogs, the switcher bar), and
       // the after-lock location prompt listens beside it.
-      builder: (context, child) => LearnerLocationPromptListener(
-        onSetLocation: _openLearnerLocationPicker,
-        // The lock follows the person using the device: in a tutored
-        // session it is the tutor's own lock, never the talmid's.
-        child: SacredTimeLockOverlay(
-          child: PersistentSwitcherScaffold(
-            child: child ?? const SizedBox.shrink(),
+      builder: (context, child) => MinimumAppVersionGate(
+        child: LearnerLocationPromptListener(
+          onSetLocation: _openLearnerLocationPicker,
+          // The lock follows the person using the device: in a tutored
+          // session it is the tutor's own lock, never the talmid's.
+          child: SacredTimeLockOverlay(
+            child: PersistentSwitcherScaffold(
+              child: child ?? const SizedBox.shrink(),
+            ),
           ),
         ),
       ),

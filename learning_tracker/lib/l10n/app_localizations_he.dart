@@ -46,6 +46,16 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get minimumAppVersionTitle => 'נא לעדכן';
+
+  @override
+  String get minimumAppVersionMessage =>
+      'הגרסה הזו אינה נתמכת עוד. יש לעדכן את האפליקציה כדי להמשיך.';
+
+  @override
+  String get minimumAppVersionUpdateAction => 'עדכון האפליקציה';
+
+  @override
   String get dashboard => 'לוח בקרה';
 
   @override

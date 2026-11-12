@@ -46,6 +46,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get minimumAppVersionTitle => 'Please update';
+
+  @override
+  String get minimumAppVersionMessage =>
+      'This version is no longer supported. Update the app to continue.';
+
+  @override
+  String get minimumAppVersionUpdateAction => 'Update app';
+
+  @override
   String get dashboard => 'Dashboard';
 
   @override

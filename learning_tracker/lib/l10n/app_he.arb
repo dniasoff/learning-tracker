@@ -18,6 +18,9 @@
     }
   },
   "aboutVersionWithBuild": "גרסה {version} (בנייה {buildNumber})",
+  "minimumAppVersionTitle": "נא לעדכן",
+  "minimumAppVersionMessage": "הגרסה הזו אינה נתמכת עוד. יש לעדכן את האפליקציה כדי להמשיך.",
+  "minimumAppVersionUpdateAction": "עדכון האפליקציה",
   "@aboutVersionWithBuild": {
     "placeholders": {
       "version": {

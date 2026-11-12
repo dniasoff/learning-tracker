@@ -101,6 +101,19 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function isValidLastSeenAppBuild(value) {
+      return value is int && value > 0 && value <= 2147483647;
+    }
+
+    function validLastSeenAppBuildMutation() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return !changed.hasAny(['last_seen_app_build'])
+          || (changed.hasOnly(['last_seen_app_build'])
+              && isValidLastSeenAppBuild(request.resource.data.get('last_seen_app_build', null))
+              && (!resource.data.keys().hasAny(['last_seen_app_build'])
+                  || request.resource.data.last_seen_app_build >= resource.data.last_seen_app_build));
+    }
+
     // Shared read boundary for follower and school-staff progress. The
     // per-viewer ACL is server-maintained; follower and school grants occupy
     // separate arrays so either lane can revoke its grant independently.
@@ -846,11 +859,20 @@ service cloud.firestore {
     // This is the layout the application actually reads and writes.
     // ════════════════════════════════════════════════════════════════════════
 
+    match /app_config/min_version {
+      // The minimum build is controlled through Firebase Admin/console only.
+      allow get: if isSignedIn();
+      allow list, create, update, delete: if false;
+    }
+
     match /users/{uid} {
 
       // Account user-profile document (users/{uid} itself).
       allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid);
+      allow create: if isOwner(uid)
+          && (!request.resource.data.keys().hasAny(['last_seen_app_build'])
+              || isValidLastSeenAppBuild(request.resource.data.last_seen_app_build));
+      allow update: if isOwner(uid) && validLastSeenAppBuildMutation();
       allow delete: if false;
 
       // Account profile snapshot — users/{uid}/profile/data

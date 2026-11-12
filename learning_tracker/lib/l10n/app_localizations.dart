@@ -164,6 +164,24 @@ abstract class AppLocalizations {
   /// **'Version {version} (build {buildNumber})'**
   String aboutVersionWithBuild(String version, String buildNumber);
 
+  /// No description provided for @minimumAppVersionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please update'**
+  String get minimumAppVersionTitle;
+
+  /// No description provided for @minimumAppVersionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This version is no longer supported. Update the app to continue.'**
+  String get minimumAppVersionMessage;
+
+  /// No description provided for @minimumAppVersionUpdateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Update app'**
+  String get minimumAppVersionUpdateAction;
+
   /// No description provided for @dashboard.
   ///
   /// In en, this message translates to:

@@ -826,6 +826,54 @@ describe('users/{uid} — owner-only (lockout boundary)', () => {
   });
 });
 
+describe('minimum app version and last-seen build rollout controls', () => {
+  test('signed-in users can read the minimum build, but clients cannot list or write it', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'app_config/min_version'), {
+        minimum_build_number: 718,
+      });
+    });
+
+    const path = 'app_config/min_version';
+    await assertSucceeds(getDoc(doc(owner(), path)));
+    await assertSucceeds(getDoc(doc(stranger(), path)));
+    await assertFails(getDoc(doc(anon(), path)));
+    await assertFails(getDocs(collection(owner(), 'app_config')));
+    await assertFails(setDoc(doc(owner(), path), { minimum_build_number: 1 }));
+    await assertFails(updateDoc(doc(owner(), path), { minimum_build_number: 1 }));
+    await assertFails(deleteDoc(doc(owner(), path)));
+  });
+
+  test('last_seen_app_build accepts only a positive monotonic build-only update', async () => {
+    const account = doc(owner(), `users/${OWNER}`);
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${OWNER}`), {
+        display_name: 'Owner',
+        created_at: Timestamp.now(),
+        updated_at: Timestamp.now(),
+      });
+    });
+
+    await assertSucceeds(updateDoc(account, { last_seen_app_build: 718 }));
+    await assertFails(updateDoc(account, { last_seen_app_build: 717 }));
+    await assertFails(updateDoc(account, { last_seen_app_build: 0 }));
+    await assertFails(updateDoc(account, { last_seen_app_build: 718.5 }));
+    await assertFails(updateDoc(account, {
+      last_seen_app_build: 719,
+      display_name: 'Changed with heartbeat',
+    }));
+    await assertFails(updateDoc(doc(stranger(), `users/${OWNER}`), {
+      last_seen_app_build: 719,
+    }));
+  });
+
+  test('a new account cannot be created with an invalid last_seen_app_build', async () => {
+    await assertFails(setDoc(doc(owner(), 'users/new-account'), {
+      last_seen_app_build: '718',
+    }));
+  });
+});
+
 // ── Path 4: users/{uid}/profile/{docId} — owner-only (tutor DENIED) ─────────
 describe('users/{uid}/profile/{docId} — owner-only; tutor with active access is DENIED', () => {
   test('owner can read and write profile/data', async () => {

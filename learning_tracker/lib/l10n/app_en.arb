@@ -18,6 +18,9 @@
     }
   },
   "aboutVersionWithBuild": "Version {version} (build {buildNumber})",
+  "minimumAppVersionTitle": "Please update",
+  "minimumAppVersionMessage": "This version is no longer supported. Update the app to continue.",
+  "minimumAppVersionUpdateAction": "Update app",
   "@aboutVersionWithBuild": {
     "placeholders": {
       "version": {
