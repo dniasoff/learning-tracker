@@ -7,11 +7,9 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
-/// AN-8: route names classified as authentication surfaces (sign-in, signup,
-/// account-picker, onboarding intro). [_PersistentSwitcherScaffoldState
-/// ._isAuthSurface] suppresses the persistent switcher bar whenever the top
-/// route's name is in this set — a signed-in account chip must never overlay
-/// one of these unauthenticated surfaces.
+/// Routes where the persistent profile switcher must be hidden. Authentication
+/// surfaces must not show a signed-in account chip over their forms, and the
+/// profile picker is intentionally full-bleed without the switcher chrome.
 ///
 /// `@visibleForTesting` (AUD-t-cross-40): exposed so the AN-8 regression test
 /// asserts against this SAME production set instead of hand-copying its own
@@ -19,12 +17,13 @@ import 'package:learning_tracker/features/tutoring/presentation/providers/active
 /// set silently loses an entry (regressing AN-8); importing the production
 /// constant means an edit here is the edit the test observes.
 @visibleForTesting
-const persistentSwitcherAuthRouteNames = {
+const persistentSwitcherSuppressedRouteNames = {
   'SignInRoute',
   'SignupRoute',
   'AccountPickerRoute',
   'IntroRoute',
   'OnboardingRoute',
+  'ProfilePickerRoute',
 };
 
 /// Global persistent profile/role switcher layer.
@@ -102,15 +101,11 @@ class _PersistentSwitcherScaffoldState
     return shellRouteNames.contains(topName);
   }
 
-  /// AN-8: True when the top route is an authentication surface (sign-in,
-  /// signup, account-picker, onboarding intro). These routes must NOT show the
-  /// persistent switcher bar — a logged-in account chip overlaying the sign-in
-  /// card is confusing (different identity) and the bar can obscure important
-  /// form content.
-  bool _isAuthSurface() {
+  /// True when the top route should hide the persistent switcher. This includes
+  /// auth surfaces and the full-bleed profile picker.
+  bool _isSwitcherSuppressedRoute() {
     final topName = ref.read(routerProvider).topRoute.name;
-    // These route names come from auto_route @RoutePage annotations.
-    return persistentSwitcherAuthRouteNames.contains(topName);
+    return persistentSwitcherSuppressedRouteNames.contains(topName);
   }
 
   @override
@@ -120,9 +115,10 @@ class _PersistentSwitcherScaffoldState
     );
 
     // Only overlay the bar on pushed sub-routes, and only once signed in. The
-    // shell owns the bar on its tab views; unauthenticated routes and auth
-    // surfaces (sign-in / signup / account-picker) show nothing (AN-8).
-    final showHeader = isAuthenticated && !_shellIsOnTop() && !_isAuthSurface();
+    // shell owns the bar on its tab views; auth routes (AN-8) and the profile
+    // picker show nothing so the picker's background reaches the status bar.
+    final showHeader =
+        isAuthenticated && !_shellIsOnTop() && !_isSwitcherSuppressedRoute();
     if (!showHeader) return widget.child;
 
     // TUT-04: when a tutor has entered a talmid's context, the amber "Tutor
