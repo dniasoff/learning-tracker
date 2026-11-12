@@ -4538,7 +4538,6 @@
   },
   "schoolProfileTitle": "בית ספר",
   "schoolProfileUnavailable": "פרופיל בית הספר אינו זמין.",
-  "schoolVerifiedBadge": "מאומת",
   "schoolCreatedDate": "נוצר בתאריך {date}",
   "@schoolCreatedDate": {
     "placeholders": {

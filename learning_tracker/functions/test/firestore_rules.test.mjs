@@ -257,8 +257,9 @@ describe('social graph rules', () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       const db = ctx.firestore();
       await Promise.all([
-        setDoc(doc(db, 'schools/school-unverified'), { name: 'Unverified', verified: false }),
-        setDoc(doc(db, 'schools/school-verified'), { name: 'Verified', verified: true }),
+        // Legacy records may retain this stale field; school docs stay
+        // entirely server-only regardless of its value.
+        setDoc(doc(db, 'schools/school-legacy'), { name: 'Legacy', verified: true }),
         setDoc(doc(db, profilePath), {
           owner_uid: OWNER, profile_id: profileId, mode: 'child',
           display_name: 'Learner', display_name_search: 'learner', avatar_id: 0, paused: false,
@@ -405,8 +406,8 @@ describe('social graph rules', () => {
     await assertFails(setDoc(doc(owner(), membershipPath), { forged: true }));
     await assertFails(setDoc(doc(owner(), 'schools/school-1'), { name: 'Forged' }));
     await assertFails(getDoc(doc(owner(), 'schools/school-1')));
-    await assertFails(updateDoc(doc(owner(), 'schools/school-unverified'), { verified: true }));
-    await assertFails(updateDoc(doc(owner(), 'schools/school-verified'), { verified: false }));
+    await assertFails(getDoc(doc(owner(), 'schools/school-legacy')));
+    await assertFails(updateDoc(doc(owner(), 'schools/school-legacy'), { name: 'Changed' }));
     await assertFails(setDoc(doc(owner(), 'school_admins/forged'), { role: 'admin' }));
     await assertFails(setDoc(doc(owner(), 'school_invites/forged'), { state: 'active' }));
     await assertFails(setDoc(doc(owner(), 'school_reports/forged'), { state: 'closed' }));

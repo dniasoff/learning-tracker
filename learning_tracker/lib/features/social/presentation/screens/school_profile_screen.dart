@@ -28,11 +28,6 @@ class SchoolProfileScreen extends ConsumerWidget {
               profile.name,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            if (profile.verified)
-              Chip(
-                avatar: const Icon(Icons.verified_outlined),
-                label: Text(l10n.schoolVerifiedBadge),
-              ),
             const SizedBox(height: 12),
             Text(
               l10n.schoolCreatedDate(

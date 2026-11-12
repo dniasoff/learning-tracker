@@ -265,13 +265,13 @@ export const createSchool = onCall(CALL_OPTS, async (request) => {
     if (existing.size >= MAX_SCHOOLS_PER_ACCOUNT) throw new HttpsError("resource-exhausted", "School administrator limit reached");
     txn.create(schoolRef, {
       name, created_by_uid: uid, created_by_profile_id: profileId,
-      created_at: now, updated_at: now, status: "active", verified: false, membership_revision: 0,
+      created_at: now, updated_at: now, status: "active", membership_revision: 0,
     });
     txn.create(adminRef, { school_id: schoolRef.id, owner_uid: uid, profile_id: profileId, role: "admin", state: "active", created_at: now });
   });
   await auditEvent(schoolRef.id, uid, "school_created");
   await refreshSchoolReaders(schoolRef.id);
-  return { schoolId: schoolRef.id, name, createdAt: now.toDate().toISOString(), verified: false };
+  return { schoolId: schoolRef.id, name, createdAt: now.toDate().toISOString() };
 });
 
 /** Public school identity lookup; memberships and member identities remain private. */
@@ -292,7 +292,7 @@ export const getSchoolProfile = onCall(CALL_OPTS, async (request) => {
     };
   }));
   return {
-    schoolId: ref.id, name: data.name, verified: data.verified === true,
+    schoolId: ref.id, name: data.name,
     createdAt: data.created_at?.toDate?.().toISOString() ?? null,
     admins: adminCards,
     status: data.status,
@@ -381,7 +381,7 @@ export const listMySchools = onCall(CALL_OPTS, async (request) => {
   return Promise.all(snap.docs.map(async (member) => {
     const school = await schools().doc(String(member.get("school_id"))).get();
     if (!school.exists || school.get("status") === "deleted") return null;
-    return { schoolId: school.id, name: school.get("name"), verified: school.get("verified") === true, role: member.get("role"), joinedAt: member.get("joined_at")?.toDate?.().toISOString() ?? null };
+    return { schoolId: school.id, name: school.get("name"), role: member.get("role"), joinedAt: member.get("joined_at")?.toDate?.().toISOString() ?? null };
   })).then((items) => items.filter(Boolean));
 });
 
@@ -615,16 +615,6 @@ export const reportSchool = onCall(CALL_OPTS, async (request) => {
 async function requireAppOwner(request: { auth?: { token?: Record<string, unknown> } | null }) {
   if (request.auth?.token?.app_owner !== true) throw new HttpsError("permission-denied", "App owner access is required");
 }
-export const setSchoolVerified = onCall(CALL_OPTS, async (request) => {
-  await requireAppOwner(request);
-  const data = request.data ?? {};
-  exactKeys(data, ["schoolId", "verified"]);
-  if (typeof data.verified !== "boolean") throw new HttpsError("invalid-argument", "verified must be a boolean");
-  const ref = schoolRef(data.schoolId);
-  await ref.update({ verified: data.verified, verified_at: data.verified ? admin.firestore.Timestamp.now() : null, updated_at: admin.firestore.Timestamp.now() });
-  await auditEvent(ref.id, request.auth!.uid, data.verified ? "school_verified" : "school_unverified");
-  return { success: true };
-});
 export const setSchoolSuspended = onCall(CALL_OPTS, async (request) => {
   await requireAppOwner(request);
   const data = request.data ?? {};

@@ -34,18 +34,19 @@ async function seedLastAdminSchool() {
 describe('school profile and membership callables', () => {
   beforeEach(async () => clearFirestore());
 
-  test('any account creates an unverified profile; only app_owner can verify or suspend', async () => {
+  test('any account can create a school; stale verification data is ignored and app_owner moderation remains', async () => {
     const created = await call(fns.createSchool, { name: 'Community Beit Midrash' }, parentAuth);
-    const school = await db.collection('schools').doc(created.schoolId).get();
-    assert.equal(school.get('verified'), false);
+    assert.equal(Object.hasOwn(created, 'verified'), false);
+    const schoolRef = db.collection('schools').doc(created.schoolId);
+    await schoolRef.update({ verified: true, verified_at: new Date() });
+    const school = await schoolRef.get();
+    assert.equal(school.get('verified'), true);
     assert.equal(school.get('status'), 'active');
     assert.equal((await db.collection('school_admins').doc(staffId(created.schoolId, parentAuth.uid)).get()).get('role'), 'admin');
     const profile = await call(fns.getSchoolProfile, { schoolId: created.schoolId }, strangerAuth);
-    assert.equal(profile.verified, false);
-    await expectHttpsError(call(fns.setSchoolVerified, { schoolId: created.schoolId, verified: true }, parentAuth), 'permission-denied');
+    assert.equal(profile.name, created.name);
+    assert.equal(Object.hasOwn(profile, 'verified'), false);
     await expectHttpsError(call(fns.setSchoolSuspended, { schoolId: created.schoolId, suspended: true }, { uid: parentAuth.uid, token: { admin: true } }), 'permission-denied');
-    await call(fns.setSchoolVerified, { schoolId: created.schoolId, verified: true }, { uid: parentAuth.uid, token: { app_owner: true } });
-    assert.equal((await db.collection('schools').doc(created.schoolId).get()).get('verified'), true);
     await call(fns.setSchoolSuspended, { schoolId: created.schoolId, suspended: true }, { uid: parentAuth.uid, token: { app_owner: true } });
     assert.equal((await db.collection('schools').doc(created.schoolId).get()).get('status'), 'suspended');
   });

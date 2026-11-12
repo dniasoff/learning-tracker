@@ -61,7 +61,6 @@ void main() {
       const profile = SchoolProfile(
         schoolId: 'school_12345678',
         name: 'בית מדרש',
-        verified: true,
         createdAt: null,
         adminNames: ['רבקה'],
         status: 'active',
@@ -83,7 +82,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('מאומת'), findsOneWidget);
+      expect(find.text('מאומת'), findsNothing);
       expect(find.text('מנהלי בית הספר'), findsOneWidget);
       expect(
         Directionality.of(tester.element(find.byType(Scaffold))),

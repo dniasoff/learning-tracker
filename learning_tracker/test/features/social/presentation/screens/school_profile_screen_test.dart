@@ -8,7 +8,7 @@ import 'package:learning_tracker/features/social/presentation/screens/school_pro
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {
-  testWidgets('school profile shows verification and submits reports', (
+  testWidgets('school profile shows admins and submits reports', (
     tester,
   ) async {
     final calls = <Map<String, Object?>>[];
@@ -19,7 +19,6 @@ void main() {
     const profile = SchoolProfile(
       schoolId: 'school_12345678',
       name: 'North School',
-      verified: true,
       createdAt: null,
       adminNames: ['Admin'],
       status: 'active',
@@ -39,7 +38,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Verified'), findsOneWidget);
+    expect(find.text('Verified'), findsNothing);
+    expect(find.text('Admin'), findsOneWidget);
     expect(
       find.text(
         'School administrators must remove or transfer their admin role before leaving or being removed as a member.',
@@ -62,7 +62,6 @@ void main() {
     const profile = SchoolProfile(
       schoolId: 'school_12345678',
       name: 'בית ספר צפון',
-      verified: false,
       createdAt: null,
       adminNames: ['מנהל'],
       status: 'active',

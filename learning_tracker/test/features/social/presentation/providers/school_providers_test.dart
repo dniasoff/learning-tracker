@@ -11,7 +11,6 @@ void main() {
       return {
         'schoolId': data['schoolId'],
         'name': 'North School',
-        'verified': false,
         'createdAt': null,
         'admins': <Object?>[],
         'status': 'active',
@@ -28,6 +27,5 @@ void main() {
 
     expect(calls, ['getSchoolProfile']);
     expect(profile.name, 'North School');
-    expect(profile.verified, isFalse);
   });
 }
