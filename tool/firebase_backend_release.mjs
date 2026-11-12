@@ -81,6 +81,27 @@ export function deployArgs(project, functionNames = null) {
   return ['deploy', '--only', targets, '--project', project];
 }
 
+/** A retry changes only the named Cloud Functions; rules and indexes ran already. */
+export function retryFunctionDeployArgs(project, functionNames) {
+  return ['deploy', '--only', functionNames.map((name) => `functions:${name}`).join(','), '--project', project];
+}
+
+/** Map Firebase's Cloud Run service names back to known exported function names. */
+export function failedDeployFunctionNames(output, functionNames) {
+  const normalizedExports = new Map(functionNames.map((name) => [name.toLowerCase().replace(/[^a-z0-9]/g, ''), name]));
+  const services = [...String(output ?? '').matchAll(/Could not create or update Cloud Run service\s+["'`]?([A-Za-z0-9_-]+)/gi)]
+    .map((match) => match[1]);
+  if (services.length === 0) return { names: [], unknown: [] };
+  const names = new Set();
+  const unknown = new Set();
+  for (const service of services) {
+    const name = normalizedExports.get(service.toLowerCase().replace(/[^a-z0-9]/g, ''));
+    if (name) names.add(name);
+    else unknown.add(service);
+  }
+  return { names: [...names], unknown: [...unknown] };
+}
+
 /** Export names from the built Firebase Functions entry point. */
 export function exportedFunctionNames(entryPath) {
   const require = createRequire(import.meta.url);
@@ -154,11 +175,11 @@ export function runBackendRelease({
 }) {
   if (!project) throw new ReleaseError('args', '--project is required');
   const steps = [];
-  const invoke = (step, args) => {
+  const invoke = (step, args, allowFailure = false) => {
     steps.push({ step, args });
     log(`$ firebase ${args.join(' ')}`);
     const r = run(args);
-    if (!r || r.status !== 0) {
+    if ((!r || r.status !== 0) && !allowFailure) {
       const why = r?.error?.message ?? (r?.stderr || r?.stdout || '').toString().trim();
       throw new ReleaseError(step, `firebase exited ${r?.status ?? 'without a status'}${why ? ` — ${why}` : ''}`);
     }
@@ -187,10 +208,31 @@ export function runBackendRelease({
     throw new ReleaseError('verify-undeploy', `still deployed after delete: ${remaining.join(', ')}`);
   }
   log(`Verified absent: ${RETIRED_CALLABLES.join(', ')}`);
-  invoke(
+  let result = invoke(
     'deploy',
     deployArgs(project, phraseTranslationEnabled ? null : deployFunctionNames),
+    true,
   );
+  for (let retry = 1; (!result || result.status !== 0) && retry <= 2; retry++) {
+    if (!Array.isArray(deployFunctionNames) || deployFunctionNames.length === 0) break;
+    const { names, unknown } = failedDeployFunctionNames(
+      `${result.stdout ?? ''}\n${result.stderr ?? ''}`,
+      deployFunctionNames,
+    );
+    if (names.length === 0 || unknown.length > 0) {
+      if (unknown.length > 0) log(`Cannot map failed Cloud Run services to exports: ${unknown.join(', ')}`);
+      break;
+    }
+    log(`Retrying failed functions (attempt ${retry}/2): ${names.join(', ')}`);
+    const args = retryFunctionDeployArgs(project, names);
+    steps.push({ step: `deploy-retry-${retry}`, args });
+    log(`$ firebase ${args.join(' ')}`);
+    result = run(args);
+  }
+  if (!result || result.status !== 0) {
+    const why = result?.error?.message ?? (result?.stderr || result?.stdout || '').toString().trim();
+    throw new ReleaseError('deploy', `firebase exited ${result?.status ?? 'without a status'}${why ? ` — ${why}` : ''}`);
+  }
   return steps;
 }
 
@@ -290,9 +332,7 @@ function main(argv) {
     return 1;
   }
   const phraseTranslationEnabled = process.env.PHRASE_TRANSLATION_ENABLED === 'true';
-  const deployFunctionNames = phraseTranslationEnabled
-    ? undefined
-    : exportedFunctionNames(join(projectDir, 'functions', 'lib', 'index.js'));
+  const deployFunctionNames = exportedFunctionNames(join(projectDir, 'functions', 'lib', 'index.js'));
   const deployTargetArgs = deployArgs(project, phraseTranslationEnabled ? null : deployFunctionNames);
   if (mode === 'dry-run') {
     console.log('DRY-RUN — the release would run, in order:');

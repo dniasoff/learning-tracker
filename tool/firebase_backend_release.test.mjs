@@ -23,7 +23,9 @@ import {
   ReleaseError,
   deleteArgs,
   deployArgs,
+  failedDeployFunctionNames,
   parseFunctionsList,
+  retryFunctionDeployArgs,
   runBackendRelease,
   validateReleaseWorkflow,
   writeProjectEnvironmentFile,
@@ -47,11 +49,12 @@ const fail = (stderr) => ({ status: 1, stdout: '', stderr });
 function fakeFirebase({ lists = [], del = ok, deploy = ok } = {}) {
   const calls = [];
   const queue = [...lists];
+  const deployQueue = Array.isArray(deploy) ? [...deploy] : null;
   const run = (args) => {
     calls.push(args);
     if (args[0] === 'functions:list') return queue.shift() ?? fail('unexpected list');
     if (args[0] === 'functions:delete') return del;
-    if (args[0] === 'deploy') return deploy;
+    if (args[0] === 'deploy') return deployQueue ? deployQueue.shift() ?? ok : deploy;
     return fail(`unexpected ${args[0]}`);
   };
   return { run, calls, kinds: () => calls.map((c) => c[0]) };
@@ -191,13 +194,76 @@ test('AC-3: a verification list that cannot be read stops before the deploy', ()
   assert.ok(!fb.kinds().includes('deploy'));
 });
 
-test('AC-6: a failed deploy fails the release and is not retried', () => {
+test('AC-6: a non-function deploy failure fails the release without retrying', () => {
   const fb = fakeFirebase({ lists: [listed(), listed()], deploy: fail('rules compile error') });
   assert.throws(
     () => runBackendRelease({ run: fb.run, project: PROJECT }),
     (e) => e.step === 'deploy' && /rules compile error/.test(e.message),
   );
   assert.equal(fb.kinds().filter((k) => k === 'deploy').length, 1);
+});
+
+test('Cloud Run service errors map to exported function names', () => {
+  assert.deepEqual(
+    failedDeployFunctionNames(
+      'Could not create or update Cloud Run service tutorrecordlearning.\nCould not create or update Cloud Run service listmyschools.',
+      ['tutorRecordLearning', 'listMySchools', 'getLearningGroup'],
+    ),
+    { names: ['tutorRecordLearning', 'listMySchools'], unknown: [] },
+  );
+  assert.deepEqual(
+    failedDeployFunctionNames('Could not create or update Cloud Run service mystery-function.', ['listMySchools']),
+    { names: [], unknown: ['mystery-function'] },
+  );
+});
+
+test('a partial Cloud Run failure retries only its mapped functions', () => {
+  const first = fail('Could not create or update Cloud Run service tutorrecordlearning.\nCould not create or update Cloud Run service listmyschools.');
+  const fb = fakeFirebase({ lists: [listed(), listed()], deploy: [first, ok] });
+  const steps = runBackendRelease({
+    run: fb.run,
+    project: PROJECT,
+    deployFunctionNames: ['tutorRecordLearning', 'listMySchools', 'getLearningGroup'],
+  });
+  assert.deepEqual(fb.calls.slice(-2), [
+    deployArgs(PROJECT),
+    retryFunctionDeployArgs(PROJECT, ['tutorRecordLearning', 'listMySchools']),
+  ]);
+  assert.deepEqual(steps.slice(-2).map(({ step }) => step), ['deploy', 'deploy-retry-1']);
+});
+
+test('function deploy retries reparse failures and stop after two retries', () => {
+  const fb = fakeFirebase({
+    lists: [listed(), listed()],
+    deploy: [
+      fail('Could not create or update Cloud Run service tutorrecordlearning.'),
+      fail('Could not create or update Cloud Run service listmyschools.'),
+      fail('Could not create or update Cloud Run service listmyschools.'),
+    ],
+  });
+  assert.throws(() => runBackendRelease({
+    run: fb.run,
+    project: PROJECT,
+    deployFunctionNames: ['tutorRecordLearning', 'listMySchools'],
+  }), (error) => error.step === 'deploy');
+  assert.deepEqual(fb.calls.slice(-3), [
+    deployArgs(PROJECT),
+    retryFunctionDeployArgs(PROJECT, ['tutorRecordLearning']),
+    retryFunctionDeployArgs(PROJECT, ['listMySchools']),
+  ]);
+});
+
+test('unknown Cloud Run services are not retried', () => {
+  const fb = fakeFirebase({
+    lists: [listed(), listed()],
+    deploy: fail('Could not create or update Cloud Run service unrecognized-function.'),
+  });
+  assert.throws(() => runBackendRelease({
+    run: fb.run,
+    project: PROJECT,
+    deployFunctionNames: ['listMySchools'],
+  }), (error) => error.step === 'deploy');
+  assert.equal(fb.calls.filter((args) => args[0] === 'deploy').length, 1);
 });
 
 test('project env file configures translation without touching emulator .env.local', () => {

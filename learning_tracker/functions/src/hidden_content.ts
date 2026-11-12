@@ -3,13 +3,18 @@ import { logger } from "firebase-functions/v1";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 
 import { db, CALL_OPTS } from "./shared";
-import { isKnownHiddenContentRef } from "./hidden_content_manifest";
 import { assertActiveParentSessionInTransaction } from "./parent_session_validation";
 import { ULID_RE } from "./write_with_change_log";
 
 const REQUEST_KEYS = new Set(["ownerUid", "profileId", "hiddenRefs", "grantId", "parentSessionId"]);
 const MAX_HIDDEN_REFS = 500;
 const MAX_REF_LENGTH = 500;
+let hiddenContentManifest: typeof import("./hidden_content_manifest") | undefined;
+
+function isKnownHiddenContentRef(ref: string): boolean {
+  hiddenContentManifest ??= require("./hidden_content_manifest") as typeof import("./hidden_content_manifest");
+  return hiddenContentManifest.isKnownHiddenContentRef(ref);
+}
 
 function validateHiddenRefs(value: unknown): string[] {
   if (!Array.isArray(value) || value.length > MAX_HIDDEN_REFS ||

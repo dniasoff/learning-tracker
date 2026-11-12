@@ -16,19 +16,23 @@ import {
   requiredString,
 } from "./groups";
 import { allocateGroupTask, AllocationUnit, rebalanceMissedWork, RebalanceParticipant } from "./group_task_allocator";
-import {
-  groupTaskCurriculumIds,
-  groupTaskPaceUnits,
-  groupTaskLeafRefs,
-  groupTaskWorkloadPerPaceUnit,
-  groupTaskUnitsForRefs,
-  reassignGroupTaskUnits,
-  listGroupTaskScopes,
-  resolveGroupTaskUnits,
-} from "./group_task_catalog";
 import { CALL_OPTS, db } from "./shared";
 import { newUlid } from "./write_with_change_log";
 import { sendGroupTaskPostedPush } from "./notifications";
+
+type GroupTaskCatalog = typeof import("./group_task_catalog");
+let groupTaskCatalog: GroupTaskCatalog | undefined;
+function catalog(): GroupTaskCatalog {
+  return groupTaskCatalog ??= require("./group_task_catalog") as GroupTaskCatalog;
+}
+const groupTaskCurriculumIds: GroupTaskCatalog["groupTaskCurriculumIds"] = (...args) => catalog().groupTaskCurriculumIds(...args);
+const groupTaskPaceUnits: GroupTaskCatalog["groupTaskPaceUnits"] = (...args) => catalog().groupTaskPaceUnits(...args);
+const groupTaskLeafRefs: GroupTaskCatalog["groupTaskLeafRefs"] = (...args) => catalog().groupTaskLeafRefs(...args);
+const groupTaskWorkloadPerPaceUnit: GroupTaskCatalog["groupTaskWorkloadPerPaceUnit"] = (...args) => catalog().groupTaskWorkloadPerPaceUnit(...args);
+const groupTaskUnitsForRefs: GroupTaskCatalog["groupTaskUnitsForRefs"] = (...args) => catalog().groupTaskUnitsForRefs(...args);
+const reassignGroupTaskUnits: GroupTaskCatalog["reassignGroupTaskUnits"] = (...args) => catalog().reassignGroupTaskUnits(...args);
+const listGroupTaskScopes: GroupTaskCatalog["listGroupTaskScopes"] = (...args) => catalog().listGroupTaskScopes(...args);
+const resolveGroupTaskUnits: GroupTaskCatalog["resolveGroupTaskUnits"] = (...args) => catalog().resolveGroupTaskUnits(...args);
 
 const MAX_GROUP_MEMBERS = 12;
 const MAX_SCOPES = 200;
