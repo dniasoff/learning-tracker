@@ -615,7 +615,13 @@ class _ReaderSegmentCard extends ConsumerWidget {
             : showTranslation &&
                   translationLanguage != 'sefaria' &&
                   segment.hebrewText.isNotEmpty
-            ? _aiGlosses(context, ref, segment, translationLanguage, glossStyle)
+            ? _translatedGlosses(
+                context,
+                ref,
+                segment,
+                translationLanguage,
+                glossStyle,
+              )
             : const [],
         showNumber: showNumber,
         showNikud: showNikud,
@@ -638,14 +644,19 @@ class _ReaderSegmentCard extends ConsumerWidget {
     );
   }
 
-  List<SegmentGloss> _aiGlosses(
+  List<SegmentGloss> _translatedGlosses(
     BuildContext context,
     WidgetRef ref,
     TextSegment segment,
     String language,
     TextStyle style,
   ) {
-    final key = PhraseTranslationKey(segment.sefariaRef, language);
+    final key = PhraseTranslationKey(
+      segment.sefariaRef,
+      language,
+      englishText: segment.englishText,
+      hebrewText: segment.hebrewText,
+    );
     final async = ref.watch(phraseTranslationProvider(key));
     final l10n = AppLocalizations.of(context)!;
     final values = <SegmentGloss>[];
@@ -673,7 +684,9 @@ class _ReaderSegmentCard extends ConsumerWidget {
         values.add(
           SegmentGloss(
             text: phrase.source,
-            direction: TextDirection.rtl,
+            direction: phrase.sourceLanguage == 'he'
+                ? TextDirection.rtl
+                : TextDirection.ltr,
             style: style.copyWith(fontSize: style.fontSize! * .92),
           ),
         );
@@ -703,12 +716,20 @@ class _ReaderSegmentCard extends ConsumerWidget {
           text: l10n.textReaderLoadingTranslation,
           direction: TextDirection.ltr,
           style: style,
+          showProgress: true,
+        ),
+      );
+      values.add(
+        SegmentGloss(
+          text: l10n.textReaderTranslationWifiNote,
+          direction: TextDirection.ltr,
+          style: style.copyWith(fontSize: style.fontSize! * .78),
         ),
       );
     } else {
       values.add(
         SegmentGloss(
-          text: l10n.textReaderTranslationUnavailable,
+          text: l10n.textReaderTranslationNotAvailableYet,
           direction: TextDirection.ltr,
           style: style.copyWith(color: Theme.of(context).colorScheme.error),
         ),

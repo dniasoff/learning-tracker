@@ -7977,6 +7977,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get textReaderLoadingTranslation => 'Loading translation…';
 
   @override
+  String get textReaderTranslationWifiNote =>
+      'Preparing an on-device language model. This may take a moment; Wi-Fi is recommended.';
+
+  @override
   String get textReaderTranslationNotAvailableYet =>
       'Translation not available yet';
 

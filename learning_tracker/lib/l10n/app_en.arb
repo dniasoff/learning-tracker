@@ -6613,6 +6613,7 @@
   "textReaderOfflineLabel": "Offline",
   "textReaderClose": "Close",
   "textReaderLoadingTranslation": "Loading translation…",
+  "textReaderTranslationWifiNote": "Preparing an on-device language model. This may take a moment; Wi-Fi is recommended.",
   "textReaderTranslationNotAvailableYet": "Translation not available yet",
   "textReaderTranslationUnavailable": "Translation unavailable offline or right now",
   "textReaderMachineTranslated": "Machine translated",

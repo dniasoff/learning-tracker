@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart'
     show kNoProfilePreferenceSentinel;
-import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,8 +25,7 @@ class ReaderLanguage {
       '${hebrewUi ? hebrewName : englishName} · $nativeName ($code)';
 }
 
-/// Common ISO 639-1 languages, shown with an English and Hebrew label plus
-/// the language's native name. The callable accepts any valid ISO language tag.
+/// Languages supported by ML Kit on-device translation.
 const readerLanguages = <ReaderLanguage>[
   ReaderLanguage('ar', 'Arabic', 'ערבית', 'العربية'),
   ReaderLanguage('bn', 'Bengali', 'בנגלית', 'বাংলা'),
@@ -62,8 +62,47 @@ const readerLanguages = <ReaderLanguage>[
   ReaderLanguage('tr', 'Turkish', 'טורקית', 'Türkçe'),
   ReaderLanguage('uk', 'Ukrainian', 'אוקראינית', 'Українська'),
   ReaderLanguage('ur', 'Urdu', 'אורדו', 'اردو'),
-  ReaderLanguage('yi', 'Yiddish', 'יידיש', 'ייִדיש'),
 ];
+
+/// Official ML Kit translation language codes. Keep [readerLanguages] within
+/// this set so the picker never offers a language without an installed model.
+const mlKitTranslationLanguageCodes = <String>{
+  'ar',
+  'bg',
+  'bn',
+  'cs',
+  'da',
+  'de',
+  'el',
+  'en',
+  'es',
+  'fa',
+  'fi',
+  'fr',
+  'he',
+  'hi',
+  'hr',
+  'hu',
+  'id',
+  'it',
+  'ja',
+  'ko',
+  'ms',
+  'nl',
+  'no',
+  'pl',
+  'pt',
+  'ro',
+  'ru',
+  'sr',
+  'sv',
+  'sw',
+  'th',
+  'tr',
+  'uk',
+  'ur',
+  'zh',
+};
 
 class ReaderTranslationLanguagePreference {
   static const defaultValue = 'sefaria';
@@ -117,26 +156,101 @@ class ReaderTranslationLanguageNotifier extends Notifier<String> {
 }
 
 class PhraseTranslationKey {
-  const PhraseTranslationKey(this.ref, this.language);
+  const PhraseTranslationKey(
+    this.ref,
+    this.language, {
+    this.englishText = '',
+    this.hebrewText = '',
+  });
   final String ref;
   final String language;
+  final String englishText;
+  final String hebrewText;
+
+  String get sourceText => englishText.isNotEmpty ? englishText : hebrewText;
+  String get sourceLanguage => englishText.isNotEmpty ? 'en' : 'he';
+
   @override
   bool operator ==(Object other) =>
       other is PhraseTranslationKey &&
       other.ref == ref &&
-      other.language == language;
+      other.language == language &&
+      other.englishText == englishText &&
+      other.hebrewText == hebrewText;
   @override
-  int get hashCode => Object.hash(ref, language);
+  int get hashCode => Object.hash(ref, language, englishText, hebrewText);
 }
 
 class PhraseTranslation {
-  const PhraseTranslation(this.source, this.translation);
+  const PhraseTranslation(
+    this.source,
+    this.translation, {
+    this.sourceLanguage = 'he',
+  });
   final String source;
   final String translation;
+  final String sourceLanguage;
 }
 
-String _localCacheKey(PhraseTranslationKey key) =>
-    'phrase_translation_${Uri.encodeComponent(key.ref)}_${key.language}_v1';
+String _localCacheKey(PhraseTranslationKey key) {
+  final sourceHash = sha256.convert(utf8.encode(key.sourceText));
+  return 'phrase_translation_${Uri.encodeComponent(key.ref)}_${key.language}_${sourceHash}_v2';
+}
+
+abstract interface class ReaderPhraseTranslator {
+  Future<String> translate({
+    required String source,
+    required String sourceLanguage,
+    required String targetLanguage,
+  });
+}
+
+final readerPhraseTranslatorProvider = Provider<ReaderPhraseTranslator>(
+  (ref) => _MlKitReaderPhraseTranslator(),
+);
+
+class _MlKitReaderPhraseTranslator implements ReaderPhraseTranslator {
+  static final Map<String, Future<void>> _modelDownloads = {};
+  final _modelManager = OnDeviceTranslatorModelManager();
+
+  TranslateLanguage _language(String code) => TranslateLanguage.values
+      .firstWhere((language) => language.bcpCode == code);
+
+  Future<void> _ensureModel(String languageCode) =>
+      _modelDownloads.putIfAbsent(languageCode, () async {
+        try {
+          if (!await _modelManager.isModelDownloaded(languageCode) &&
+              !await _modelManager.downloadModel(languageCode)) {
+            throw StateError('Could not download translation model');
+          }
+        } finally {
+          unawaited(_modelDownloads.remove(languageCode));
+        }
+      });
+
+  @override
+  Future<String> translate({
+    required String source,
+    required String sourceLanguage,
+    required String targetLanguage,
+  }) async {
+    final from = _language(sourceLanguage);
+    final to = _language(targetLanguage);
+    if (from == to) return source;
+    for (final language in {from, to}) {
+      await _ensureModel(language.bcpCode);
+    }
+    final translator = OnDeviceTranslator(
+      sourceLanguage: from,
+      targetLanguage: to,
+    );
+    try {
+      return await translator.translateText(source);
+    } finally {
+      await translator.close();
+    }
+  }
+}
 
 /// Explicit retry signal for a failed phrase-translation request.
 final phraseTranslationRetryProvider =
@@ -161,52 +275,55 @@ final phraseTranslationProvider =
       key,
     ) async {
       ref.watch(phraseTranslationRetryProvider(key));
-      final prefs = await SharedPreferences.getInstance();
-      final cacheKey = _localCacheKey(key);
-      final cached = prefs.getString(cacheKey);
-      if (cached != null) {
-        final rows = (jsonDecode(cached) as List).cast<Map<String, dynamic>>();
-        return rows
-            .map(
-              (row) => PhraseTranslation(
-                row['source'] as String,
-                row['translation'] as String,
-              ),
-            )
-            .toList();
-      }
-      final resolver = ref.read(accountFunctionsProvider);
-      final functions = await resolver();
-      late final HttpsCallableResult<Map<String, dynamic>> result;
       try {
-        result = await functions
-            .httpsCallable('translatePhrases')
-            .call<Map<String, dynamic>>({
-              'sefariaRef': key.ref,
-              'targetLanguage': key.language,
-            });
-      } on FirebaseFunctionsException catch (error) {
-        if (error.code == 'not-found' || error.code == 'unavailable') {
+        final prefs = await SharedPreferences.getInstance();
+        final cacheKey = _localCacheKey(key);
+        final cached = prefs.getString(cacheKey);
+        if (cached != null) {
+          final rows = (jsonDecode(cached) as List)
+              .cast<Map<String, dynamic>>();
+          return rows
+              .map(
+                (row) => PhraseTranslation(
+                  row['source'] as String,
+                  row['translation'] as String,
+                  sourceLanguage: row['sourceLanguage'] as String,
+                ),
+              )
+              .toList(growable: false);
+        }
+        if (key.sourceText.isEmpty ||
+            !mlKitTranslationLanguageCodes.contains(key.language)) {
           return const <PhraseTranslation>[];
         }
-        rethrow;
+        final translation = await ref
+            .read(readerPhraseTranslatorProvider)
+            .translate(
+              source: key.sourceText,
+              sourceLanguage: key.sourceLanguage,
+              targetLanguage: key.language,
+            );
+        if (translation.trim().isEmpty) {
+          return const <PhraseTranslation>[];
+        }
+        final phrase = PhraseTranslation(
+          key.sourceText,
+          translation,
+          sourceLanguage: key.sourceLanguage,
+        );
+        await prefs.setString(
+          cacheKey,
+          jsonEncode([
+            {
+              'source': phrase.source,
+              'translation': phrase.translation,
+              'sourceLanguage': phrase.sourceLanguage,
+            },
+          ]),
+        );
+        return [phrase];
+      } catch (_) {
+        // Translation is best-effort; every failure uses the reader fallback.
+        return const <PhraseTranslation>[];
       }
-      final phrases = (result.data['phrases'] as List)
-          .cast<Map<dynamic, dynamic>>()
-          .map(
-            (row) => PhraseTranslation(
-              row['source'] as String,
-              row['translation'] as String,
-            ),
-          )
-          .toList(growable: false);
-      await prefs.setString(
-        cacheKey,
-        jsonEncode(
-          phrases
-              .map((p) => {'source': p.source, 'translation': p.translation})
-              .toList(),
-        ),
-      );
-      return phrases;
     });

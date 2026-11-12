@@ -12984,6 +12984,12 @@ abstract class AppLocalizations {
   /// **'Loading translation…'**
   String get textReaderLoadingTranslation;
 
+  /// No description provided for @textReaderTranslationWifiNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing an on-device language model. This may take a moment; Wi-Fi is recommended.'**
+  String get textReaderTranslationWifiNote;
+
   /// No description provided for @textReaderTranslationNotAvailableYet.
   ///
   /// In en, this message translates to:

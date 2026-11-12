@@ -7890,6 +7890,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get textReaderLoadingTranslation => 'התרגום בטעינה…';
 
   @override
+  String get textReaderTranslationWifiNote =>
+      'מכינים מודל שפה במכשיר. הפעולה עשויה להימשך מעט; מומלץ להשתמש ב-Wi-Fi.';
+
+  @override
   String get textReaderTranslationNotAvailableYet => 'התרגום עדיין אינו זמין';
 
   @override

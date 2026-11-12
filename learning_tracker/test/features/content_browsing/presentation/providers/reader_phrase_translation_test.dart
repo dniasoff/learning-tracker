@@ -1,22 +1,33 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/providers/account_functions_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/reader_phrase_translation.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-class _MockFunctions extends Mock implements FirebaseFunctions {}
-
-class _MockCallable extends Mock implements HttpsCallable {}
-
-class _MockCallableResult extends Mock
-    implements HttpsCallableResult<Map<String, dynamic>> {}
 
 class _Profile extends SelectedProfileId {
   @override
   String? build() => 'profile-1';
+}
+
+class _FakeTranslator implements ReaderPhraseTranslator {
+  final calls =
+      <({String source, String sourceLanguage, String targetLanguage})>[];
+  Error? error;
+
+  @override
+  Future<String> translate({
+    required String source,
+    required String sourceLanguage,
+    required String targetLanguage,
+  }) async {
+    calls.add((
+      source: source,
+      sourceLanguage: sourceLanguage,
+      targetLanguage: targetLanguage,
+    ));
+    if (error case final failure?) throw failure;
+    return 'translated: $source';
+  }
 }
 
 void main() {
@@ -35,86 +46,92 @@ void main() {
     expect(prefs.getString('text_display_language_pprofile-1'), 'es');
   });
 
-  test('missing or unavailable callable resolves without retrying', () async {
-    for (final code in ['not-found', 'unavailable']) {
-      final functions = _MockFunctions();
-      final callable = _MockCallable();
-      when(
-        () => functions.httpsCallable('translatePhrases'),
-      ).thenReturn(callable);
-      when(
-        () => callable.call<Map<String, dynamic>>({
-          'sefariaRef': 'Mishnah Berakhot 1:1',
-          'targetLanguage': 'es',
-        }),
-      ).thenThrow(
-        FirebaseFunctionsException(
-          code: code,
-          message: 'translation endpoint unavailable',
-        ),
-      );
-      final container = ProviderContainer(
-        overrides: [
-          accountFunctionsProvider.overrideWithValue(() async => functions),
-        ],
-      );
-      addTearDown(container.dispose);
-      const key = PhraseTranslationKey('Mishnah Berakhot 1:1', 'es');
-
-      expect(
-        await container.read(phraseTranslationProvider(key).future),
-        isEmpty,
-      );
-      verify(
-        () => callable.call<Map<String, dynamic>>({
-          'sefariaRef': 'Mishnah Berakhot 1:1',
-          'targetLanguage': 'es',
-        }),
-      ).called(1);
-    }
+  test('reader languages match the supported on-device translation set', () {
+    final readerLanguageCodes = readerLanguages
+        .map((language) => language.code)
+        .toSet();
+    expect(
+      readerLanguageCodes.difference(mlKitTranslationLanguageCodes),
+      isEmpty,
+    );
+    expect(readerLanguages.any((language) => language.code == 'yi'), isFalse);
+    expect(readerLanguages.any((language) => language.code == 'sr'), isTrue);
   });
 
   test(
-    'phrase translations are reused from local storage without another callable',
+    'uses Sefaria English when available and caches per phrase and language',
     () async {
-      final functions = _MockFunctions();
-      final callable = _MockCallable();
-      final result = _MockCallableResult();
-      when(
-        () => functions.httpsCallable('translatePhrases'),
-      ).thenReturn(callable);
-      when(
-        () => callable.call<Map<String, dynamic>>({
-          'sefariaRef': 'Mishnah Berakhot 1:1',
-          'targetLanguage': 'es',
-        }),
-      ).thenAnswer((_) async => result);
-      when(() => result.data).thenReturn({
-        'phrases': [
-          {'source': 'מֵאֵימָתַי', 'translation': '¿Desde cuándo?'},
-        ],
-        'cached': false,
-      });
+      final translator = _FakeTranslator();
       final container = ProviderContainer(
         overrides: [
-          accountFunctionsProvider.overrideWithValue(() async => functions),
+          readerPhraseTranslatorProvider.overrideWithValue(translator),
         ],
       );
       addTearDown(container.dispose);
-      const key = PhraseTranslationKey('Mishnah Berakhot 1:1', 'es');
+      const key = PhraseTranslationKey(
+        'Genesis 1:1',
+        'es',
+        englishText: 'In the beginning',
+        hebrewText: 'בְּרֵאשִׁית',
+      );
+
       final first = await container.read(phraseTranslationProvider(key).future);
       container.invalidate(phraseTranslationProvider(key));
       final second = await container.read(
         phraseTranslationProvider(key).future,
       );
-      expect(first.single.translation, '¿Desde cuándo?');
-      expect(second.single.source, 'מֵאֵימָתַי');
-      verify(
-        () => callable.call<Map<String, dynamic>>({
-          'sefariaRef': 'Mishnah Berakhot 1:1',
-          'targetLanguage': 'es',
-        }),
-      ).called(1);
+
+      expect(first.single.source, 'In the beginning');
+      expect(first.single.sourceLanguage, 'en');
+      expect(first.single.translation, 'translated: In the beginning');
+      expect(second.single.translation, first.single.translation);
+      expect(translator.calls, [
+        (
+          source: 'In the beginning',
+          sourceLanguage: 'en',
+          targetLanguage: 'es',
+        ),
+      ]);
     },
   );
+
+  test('falls back to Hebrew when the segment has no English source', () async {
+    final translator = _FakeTranslator();
+    final container = ProviderContainer(
+      overrides: [readerPhraseTranslatorProvider.overrideWithValue(translator)],
+    );
+    addTearDown(container.dispose);
+    const key = PhraseTranslationKey(
+      'Mishnah Berakhot 1:1',
+      'fr',
+      hebrewText: 'מֵאֵימָתַי',
+    );
+
+    final result = await container.read(phraseTranslationProvider(key).future);
+
+    expect(result.single.source, 'מֵאֵימָתַי');
+    expect(result.single.sourceLanguage, 'he');
+    expect(translator.calls.single.sourceLanguage, 'he');
+  });
+
+  test('any translation failure returns the reader fallback value', () async {
+    final translator = _FakeTranslator()..error = StateError('model failed');
+    final container = ProviderContainer(
+      overrides: [readerPhraseTranslatorProvider.overrideWithValue(translator)],
+    );
+    addTearDown(container.dispose);
+
+    expect(
+      await container.read(
+        phraseTranslationProvider(
+          const PhraseTranslationKey(
+            'Genesis 1:1',
+            'es',
+            englishText: 'In the beginning',
+          ),
+        ).future,
+      ),
+      isEmpty,
+    );
+  });
 }

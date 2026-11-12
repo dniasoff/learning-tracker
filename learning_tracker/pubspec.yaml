@@ -121,6 +121,7 @@ dependencies:
   confetti: ^0.8.0
   cloud_functions: ^6.5.0
   firebase_app_check: ^0.4.4+1
+  google_mlkit_translation: ^0.14.0
 
 dev_dependencies:
   flutter_test:

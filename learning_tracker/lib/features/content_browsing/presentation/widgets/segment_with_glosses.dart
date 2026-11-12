@@ -44,12 +44,34 @@ class SegmentWithGlosses extends StatelessWidget {
               padding: const EdgeInsetsDirectional.only(top: 2),
               child: GestureDetector(
                 onTap: gloss.onTap,
-                child: _SegmentTextLine(
-                  text: gloss.text,
-                  direction: gloss.direction,
-                  style: gloss.style,
-                  marker: gloss.marker,
-                ),
+                child: gloss.showProgress
+                    ? Row(
+                        children: [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: gloss.style.color,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _SegmentTextLine(
+                              text: gloss.text,
+                              direction: gloss.direction,
+                              style: gloss.style,
+                              marker: gloss.marker,
+                            ),
+                          ),
+                        ],
+                      )
+                    : _SegmentTextLine(
+                        text: gloss.text,
+                        direction: gloss.direction,
+                        style: gloss.style,
+                        marker: gloss.marker,
+                      ),
               ),
             ),
       ],
@@ -65,6 +87,7 @@ class SegmentGloss {
     required this.style,
     this.marker,
     this.onTap,
+    this.showProgress = false,
   });
 
   final String text;
@@ -72,6 +95,7 @@ class SegmentGloss {
   final TextStyle style;
   final String? marker;
   final VoidCallback? onTap;
+  final bool showProgress;
 }
 
 class _SegmentTextLine extends StatelessWidget {

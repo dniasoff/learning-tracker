@@ -168,7 +168,12 @@ Widget _buildApp({
       ),
       if (translationLanguage != 'sefaria')
         phraseTranslationProvider(
-          PhraseTranslationKey(_kRef, translationLanguage),
+          PhraseTranslationKey(
+            _kRef,
+            translationLanguage,
+            englishText: 'From when may one recite',
+            hebrewText: 'מֵאֵימָתַי קוֹרִין',
+          ),
         ).overrideWith((ref) {
           if (leavePhraseTranslationLoading)
             return Completer<List<PhraseTranslation>>().future;
@@ -632,7 +637,7 @@ void main() {
   });
 
   testWidgets(
-    'AI language picker is searchable and shows ordered phrase pairs',
+    'language picker is searchable and shows ordered translation pairs',
     (tester) async {
       await tester.pumpWidget(
         _buildApp(
@@ -690,7 +695,7 @@ void main() {
   });
 
   testWidgets(
-    'AI translation loading and unavailable states retain Sefaria English',
+    'translation loading and unavailable states retain Sefaria English',
     (tester) async {
       await tester.pumpWidget(
         _buildApp(
@@ -702,6 +707,7 @@ void main() {
       );
       await tester.pump();
       expect(find.text('Loading translation…'), findsOneWidget);
+      expect(find.textContaining('Wi-Fi is recommended'), findsOneWidget);
       expect(find.text('From when may one recite'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
 
@@ -715,13 +721,15 @@ void main() {
       );
       await tester.pump();
       await tester.pump();
-      expect(
-        find.text('Translation unavailable offline or right now'),
-        findsOneWidget,
-      );
+      expect(find.text('Translation not available yet'), findsOneWidget);
       expect(find.text('From when may one recite'), findsOneWidget);
 
-      const key = PhraseTranslationKey(_kRef, 'fr');
+      const key = PhraseTranslationKey(
+        _kRef,
+        'fr',
+        englishText: 'From when may one recite',
+        hebrewText: 'מֵאֵימָתַי קוֹרִין',
+      );
       final container = ProviderScope.containerOf(
         tester.element(find.text('Tap to retry')),
       );
