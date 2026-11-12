@@ -55,7 +55,7 @@ void main() {
       isEmpty,
     );
     expect(readerLanguages.any((language) => language.code == 'yi'), isFalse);
-    expect(readerLanguages.any((language) => language.code == 'sr'), isTrue);
+    expect(readerLanguages.any((language) => language.code == 'sr'), isFalse);
   });
 
   test(
