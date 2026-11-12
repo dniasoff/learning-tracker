@@ -5,7 +5,6 @@ final class SchoolProfile {
   const SchoolProfile({
     required this.schoolId,
     required this.name,
-    required this.verified,
     required this.createdAt,
     required this.adminNames,
     required this.status,
@@ -13,7 +12,6 @@ final class SchoolProfile {
 
   final String schoolId;
   final String name;
-  final bool verified;
   final DateTime? createdAt;
   final List<String> adminNames;
   final String status;
@@ -24,15 +22,13 @@ final class SchoolProfile {
           (key) => !const {
             'schoolId',
             'name',
-            'verified',
             'createdAt',
             'admins',
             'status',
           }.contains(key),
         ) ||
         raw['schoolId'] is! String ||
-        raw['name'] is! String ||
-        raw['verified'] is! bool) {
+        raw['name'] is! String) {
       throw const FormatException('Invalid school profile response');
     }
     final rawAdmins = raw['admins'];
@@ -52,7 +48,6 @@ final class SchoolProfile {
     return SchoolProfile(
       schoolId: raw['schoolId'] as String,
       name: raw['name'] as String,
-      verified: raw['verified'] == true,
       createdAt: created is String ? DateTime.tryParse(created) : null,
       adminNames: List.unmodifiable(admins),
       status: raw['status'] is String ? raw['status'] as String : 'active',
@@ -64,39 +59,30 @@ final class SchoolMembership {
   const SchoolMembership({
     required this.schoolId,
     required this.name,
-    required this.verified,
     required this.role,
     required this.joinedAt,
   });
 
   final String schoolId;
   final String name;
-  final bool verified;
   final String role;
   final DateTime? joinedAt;
 
   factory SchoolMembership.fromWire(Object? raw) {
     if (raw is! Map ||
         raw.keys.any(
-          (key) => !const {
-            'schoolId',
-            'name',
-            'verified',
-            'role',
-            'joinedAt',
-          }.contains(key),
+          (key) =>
+              !const {'schoolId', 'name', 'role', 'joinedAt'}.contains(key),
         ) ||
         raw['schoolId'] is! String ||
         raw['name'] is! String ||
-        raw['role'] is! String ||
-        raw['verified'] is! bool) {
+        raw['role'] is! String) {
       throw const FormatException('Invalid school membership response');
     }
     final joined = raw['joinedAt'];
     return SchoolMembership(
       schoolId: raw['schoolId'] as String,
       name: raw['name'] as String,
-      verified: raw['verified'] == true,
       role: raw['role'] as String,
       joinedAt: joined is String ? DateTime.tryParse(joined) : null,
     );

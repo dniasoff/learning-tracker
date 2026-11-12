@@ -107,7 +107,6 @@ export {
   removeSchoolAdmin,
   transferSchoolAdmin,
   reportSchool,
-  setSchoolVerified,
   setSchoolSuspended,
   deleteSchool,
 } from "./schools";

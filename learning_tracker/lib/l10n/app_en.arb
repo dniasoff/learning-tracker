@@ -6694,7 +6694,6 @@
   },
   "schoolProfileTitle": "School",
   "schoolProfileUnavailable": "This school profile is unavailable.",
-  "schoolVerifiedBadge": "Verified",
   "schoolCreatedDate": "Created {date}",
   "@schoolCreatedDate": {
     "placeholders": {

@@ -13224,12 +13224,6 @@ abstract class AppLocalizations {
   /// **'This school profile is unavailable.'**
   String get schoolProfileUnavailable;
 
-  /// No description provided for @schoolVerifiedBadge.
-  ///
-  /// In en, this message translates to:
-  /// **'Verified'**
-  String get schoolVerifiedBadge;
-
   /// No description provided for @schoolCreatedDate.
   ///
   /// In en, this message translates to:
