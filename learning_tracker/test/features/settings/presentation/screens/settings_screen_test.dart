@@ -153,6 +153,47 @@ void main() {
   }
 
   group('SettingsScreen Widget Tests', () {
+    testWidgets('settings search matches Hebrew aliases and opens a row', (
+      tester,
+    ) async {
+      final router = _MockStackRouter();
+      when(
+        () => router.push<Object?>(
+          any<PageRouteInfo>(),
+          onFailure: any(named: 'onFailure'),
+        ),
+      ).thenAnswer((_) async => null);
+
+      await tester.pumpWidget(createTestWidget(router: router));
+      await pumpUntilSettled(tester);
+      await tester.tap(find.byType(SearchBar));
+      await tester.enterText(find.byType(TextField).first, 'מסלולים');
+      await tester.pumpAndSettle();
+
+      expect(find.text('Manage Tracks'), findsOneWidget);
+      await tester.tap(find.text('Manage Tracks'));
+      await tester.pump();
+      verify(
+        () => router.push<Object?>(
+          any(that: isA<TrackManagementHubRoute>()),
+          onFailure: any(named: 'onFailure'),
+        ),
+      ).called(1);
+    });
+
+    testWidgets('settings search hides device entries in tutor sessions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(createTestWidget(tutoredSession: true));
+      await pumpUntilSettled(tester);
+      await tester.tap(find.byType(SearchBar));
+      await tester.enterText(find.byType(TextField).first, 'permissions');
+      await tester.pumpAndSettle();
+
+      expect(find.text('App Permissions'), findsNothing);
+      expect(find.text('No matching settings'), findsOneWidget);
+    });
+
     testWidgets('About tile opens the About auto_route screen', (tester) async {
       final router = _MockStackRouter();
       when(

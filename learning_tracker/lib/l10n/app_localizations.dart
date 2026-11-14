@@ -6172,6 +6172,12 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get searchTitle;
 
+  /// Hint shown in the Settings search field.
+  String get settingsSearchHint;
+
+  /// Empty-state message shown when Settings search has no matches.
+  String get settingsSearchNoResults;
+
   /// No description provided for @searchHintEnterTerm.
   ///
   /// In en, this message translates to:

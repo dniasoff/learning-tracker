@@ -3638,6 +3638,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchTitle => 'Search';
 
   @override
+  String get settingsSearchHint => 'Search settings';
+
+  @override
+  String get settingsSearchNoResults => 'No matching settings';
+
+  @override
   String get searchHintEnterTerm => 'Enter a search term above';
 
   @override

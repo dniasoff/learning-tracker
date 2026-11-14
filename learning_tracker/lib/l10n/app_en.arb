@@ -2918,6 +2918,8 @@
     }
   },
   "searchTitle": "Search",
+  "settingsSearchHint": "Search settings",
+  "settingsSearchNoResults": "No matching settings",
   "searchHintEnterTerm": "Enter a search term above",
   "loadingText": "Loading text...",
   "captureBeforeTrackingHint": "Learnt before I started tracking",

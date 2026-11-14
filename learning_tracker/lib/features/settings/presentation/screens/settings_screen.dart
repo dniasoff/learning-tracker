@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,13 +81,184 @@ class SettingsScreen extends ConsumerWidget {
     // for the child's LEARNING management (not account-admin surfaces).
     final tutorPerms = ref.watch(activeTutorPermissionsProvider);
     final isTutorElevated = isTutoredSession;
+    final useHebrewTerms = ref.watch(useHebrewTermsProvider);
+
+    final searchEntries = <_SettingsSearchEntry>[
+      if (!isTutoredSession)
+        _SettingsSearchEntry(
+          title: l10n.settingsAppPermissions,
+          aliases: const ['permissions', 'app access', 'הרשאות', 'הרשאות אפליקציה'],
+          onSelected: () => context.pushRoute(PermissionPromptRoute()),
+        ),
+      if (isTutorElevated &&
+          (tutorPerms == null ||
+              tutorPerms.canEditLearning ||
+              tutorPerms.canEditPoints ||
+              tutorPerms.canEditRewards))
+        _SettingsSearchEntry(
+          title: l10n.parentSettingsTitle,
+          aliases: const ['parent settings', 'manage learning', 'tracks', 'ניהול הורים', 'מסלולים'],
+          onSelected: () => context.pushRoute(const ParentSettingsRoute()),
+        ),
+      if (hasActiveProfile && !isTutoredSession && !isChildProfile) ...[
+        _SettingsSearchEntry(
+          title: l10n.manageTracks,
+          aliases: const ['learning tracks', 'curriculum', 'מסלולים', 'תוכניות לימוד'],
+          onSelected: () => context.pushRoute(TrackManagementHubRoute()),
+        ),
+        _SettingsSearchEntry(
+          title: l10n.manageProfiles,
+          aliases: const ['learners', 'students', 'profiles', 'תלמידים', 'פרופילים'],
+          onSelected: () => context.pushRoute(const ManageLearnersRoute()),
+        ),
+      ],
+      if (hasActiveProfile && activeProfile != null)
+        _SettingsSearchEntry(
+          title: l10n.groupTitle,
+          aliases: const ['learning groups', 'group tasks', 'קבוצות', 'קבוצה', 'משימות קבוצתיות'],
+          onSelected: () => context.pushRoute(
+            LearningGroupsRoute(
+              profileId: activeProfile.profileId,
+              isAdult: activeProfile.mode == ProfileMode.adult,
+            ),
+          ),
+        ),
+      _SettingsSearchEntry(
+        title: '${l10n.calendarPreference}: ${l10n.calendarHebrew}',
+        aliases: const ['calendar', 'hebrew date', 'לוח שנה', 'תאריך עברי', 'לוח עברי'],
+        onSelected: () => unawaited(
+          ref.read(useHebrewDateProvider.notifier).set(true),
+        ),
+      ),
+      _SettingsSearchEntry(
+        title: '${l10n.calendarPreference}: ${l10n.calendarGregorian}',
+        aliases: const ['calendar', 'gregorian', 'לוח שנה', 'לוח לועזי'],
+        onSelected: () => unawaited(
+          ref.read(useHebrewDateProvider.notifier).set(false),
+        ),
+      ),
+      if (Localizations.localeOf(context).languageCode != 'he')
+        ...[
+          _SettingsSearchEntry(
+            title: '${l10n.hebrewTermsPreference}: ${l10n.calendarHebrew}',
+            aliases: const ['hebrew terms', 'learning terms', 'chazara', 'mishnah', 'מונחים', 'מילים בעברית'],
+            onSelected: () => unawaited(
+              ref.read(useHebrewTermsProvider.notifier).set(true),
+            ),
+          ),
+          _SettingsSearchEntry(
+            title: '${l10n.hebrewTermsPreference}: ${l10n.settingsPronunciation}',
+            aliases: const ['transliteration', 'latin terms', 'hebrew terms', 'מונחים באנגלית', 'תעתיק'],
+            onSelected: () => unawaited(
+              ref.read(useHebrewTermsProvider.notifier).set(false),
+            ),
+          ),
+        ],
+      if (!useHebrewTerms)
+        ...[
+          _SettingsSearchEntry(
+            title: '${l10n.settingsPronunciation}: ${l10n.settingsPronunciationAshkenazi}',
+            aliases: const ['pronunciation', 'ashkenazi', 'ashkenaz', 'הגייה', 'אשכנז'],
+            onSelected: () => unawaited(
+              ref
+                  .read(currentTransliterationVariantProvider.notifier)
+                  .set(TransliterationVariant.ashkenazi),
+            ),
+          ),
+          _SettingsSearchEntry(
+            title: '${l10n.settingsPronunciation}: ${l10n.settingsPronunciationSephardi}',
+            aliases: const ['pronunciation', 'sephardi', 'sefardi', 'הגייה', 'ספרד'],
+            onSelected: () => unawaited(
+              ref
+                  .read(currentTransliterationVariantProvider.notifier)
+                  .set(TransliterationVariant.sephardi),
+            ),
+          ),
+        ],
+      _SettingsSearchEntry(
+        title: '${l10n.settingsNikud}: ${l10n.settingsNikudWith}',
+        aliases: const ['vowels', 'vowel marks', 'nikud', 'nekudot', 'ניקוד', 'נקודות'],
+        onSelected: () => unawaited(ref.read(showNikudProvider.notifier).set(true)),
+      ),
+      _SettingsSearchEntry(
+        title: '${l10n.settingsNikud}: ${l10n.settingsNikudWithout}',
+        aliases: const ['vowels', 'nikud', 'no vowels', 'ללא ניקוד'],
+        onSelected: () => unawaited(ref.read(showNikudProvider.notifier).set(false)),
+      ),
+      if (hasActiveProfile && !isChildProfile && !isTutoredSession)
+        _SettingsSearchEntry(
+          title: l10n.addWhatYouLearned,
+          aliases: const ['lifetime learning', 'backfill', 'past learning', 'הוספת לימוד', 'לימוד קודם'],
+          onSelected: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const LifetimeMarkingScreen(),
+            ),
+          ),
+        ),
+      if (hasActiveProfile)
+        _SettingsSearchEntry(
+          title: l10n.notificationSettings,
+          aliases: const ['notifications', 'reminders', 'alerts', 'התראות', 'תזכורות'],
+          onSelected: () => context.pushRoute(const NotificationsRoute()),
+        ),
+      if (hasActiveProfile && !isTutoredSession && isChildProfile)
+        _SettingsSearchEntry(
+          title: l10n.parentMode,
+          aliases: const ['parent controls', 'parent pin', 'parent mode', 'הגדרות הורים', 'קוד הורים'],
+          onSelected: () => context.pushRoute(const ParentSettingsRoute()),
+        ),
+      _SettingsSearchEntry(
+        title: l10n.aboutTitle,
+        aliases: const ['about', 'app info', 'version', 'אודות', 'מידע על האפליקציה'],
+        onSelected: () => context.pushRoute(const AboutRoute()),
+      ),
+    ];
 
     return Scaffold(
       body: SafeArea(
         top: true,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+        child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: SearchAnchor(
+                builder: (context, controller) => SearchBar(
+                  controller: controller,
+                  hintText: l10n.settingsSearchHint,
+                  leading: const Icon(Icons.search),
+                  onTap: controller.openView,
+                  onChanged: (_) => controller.openView(),
+                ),
+                suggestionsBuilder: (context, controller) {
+                  final query = _normalizeSettingsQuery(controller.text);
+                  if (query.isEmpty) return const <Widget>[];
+                  final matches = searchEntries
+                      .where((entry) => entry.matches(query))
+                      .toList(growable: false);
+                  if (matches.isEmpty) {
+                    return [
+                      ListTile(title: Text(l10n.settingsSearchNoResults)),
+                    ];
+                  }
+                  return matches
+                      .map(
+                        (entry) => ListTile(
+                          leading: const Icon(Icons.tune_rounded),
+                          title: Text(entry.title),
+                          onTap: () {
+                            controller.closeView(entry.title);
+                            entry.onSelected();
+                          },
+                        ),
+                      )
+                      .toList(growable: false);
+                },
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                children: [
             // Profile header is the canonical learner + login-account switcher
             // (avatar, name, account email; tap → account actions sheet). Daniel
             // requires children to be able to switch learner and login account
@@ -399,12 +572,36 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
+class _SettingsSearchEntry {
+  const _SettingsSearchEntry({
+    required this.title,
+    required this.aliases,
+    required this.onSelected,
+  });
+
+  final String title;
+  final List<String> aliases;
+  final VoidCallback onSelected;
+
+  bool matches(String query) {
+    final terms = _normalizeSettingsQuery(query).split(' ');
+    final searchable = _normalizeSettingsQuery([title, ...aliases].join(' '));
+    return terms.every(searchable.contains);
+  }
+}
+
+String _normalizeSettingsQuery(String value) =>
+    value.toLowerCase().trim().replaceAll(RegExp(r'\s+'), ' ');
 
 // ─── Preference tiles ────────────────────────────────────────────────────────
 

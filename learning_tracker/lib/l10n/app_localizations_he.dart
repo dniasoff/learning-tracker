@@ -3597,6 +3597,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get searchTitle => 'חיפוש';
 
   @override
+  String get settingsSearchHint => 'חיפוש בהגדרות';
+
+  @override
+  String get settingsSearchNoResults => 'לא נמצאו הגדרות תואמות';
+
+  @override
   String get searchHintEnterTerm => 'הזינו מונח חיפוש למעלה';
 
   @override

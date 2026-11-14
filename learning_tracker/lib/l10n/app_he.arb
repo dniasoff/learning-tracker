@@ -1956,6 +1956,8 @@
     }
   },
   "searchTitle": "חיפוש",
+  "settingsSearchHint": "חיפוש בהגדרות",
+  "settingsSearchNoResults": "לא נמצאו הגדרות תואמות",
   "searchHintEnterTerm": "הזינו מונח חיפוש למעלה",
   "loadingText": "טוען טקסט...",
   "captureBeforeTrackingHint": "נלמד לפני שהתחלתי לעקוב",
