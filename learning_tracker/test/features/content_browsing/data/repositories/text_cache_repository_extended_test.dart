@@ -128,22 +128,46 @@ void main() {
       expect(result!.hebrewText, contains('&'));
     });
 
-    test('exact match is preferred over child aggregation', () async {
+    test(
+      'chapter child segments are preferred over a parent cache row',
+      () async {
+        await insertTextCache(
+          sefariaRef: 'Pirkei Avot 1',
+          hebrewText: 'whole chapter',
+          englishText: 'chapter en',
+        );
+        await insertTextCache(
+          sefariaRef: 'Pirkei Avot 1:1',
+          hebrewText: 'first mishna',
+          englishText: 'first mishna en',
+        );
+        await insertTextCache(
+          sefariaRef: 'Pirkei Avot 1:2',
+          hebrewText: 'second mishna',
+          englishText: 'second mishna en',
+        );
+
+        final result = await repository.getText('Pirkei Avot 1');
+
+        expect(result, isNotNull);
+        expect(result!.segments, hasLength(2));
+        expect(result.segments.first.hebrewText, 'first mishna');
+        expect(result.segments.first.englishText, 'first mishna en');
+        expect(result.segments.last.hebrewText, 'second mishna');
+        expect(result.segments.last.englishText, 'second mishna en');
+      },
+    );
+
+    test('chapter exact cache remains the fallback without child rows', () async {
       await insertTextCache(
         sefariaRef: 'Pirkei Avot 1',
         hebrewText: 'whole chapter',
         englishText: 'chapter en',
       );
-      await insertTextCache(
-        sefariaRef: 'Pirkei Avot 1:1',
-        hebrewText: 'first mishna',
-        englishText: 'first mishna en',
-      );
 
       final result = await repository.getText('Pirkei Avot 1');
 
       expect(result, isNotNull);
-      // Exact match: single segment with the chapter text.
       expect(result!.segments, hasLength(1));
       expect(result.segments.first.hebrewText, 'whole chapter');
     });

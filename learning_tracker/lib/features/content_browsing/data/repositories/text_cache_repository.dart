@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/database/content/daos/daily_content_dao.dart';
 import 'package:learning_tracker/core/database/content/daos/text_cache_dao.dart';
+import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 import 'package:learning_tracker/features/content_browsing/domain/entities/text_content.dart';
 
@@ -24,12 +25,21 @@ class TextCacheRepository {
   /// Retrieves text for a given Sefaria reference.
   ///
   /// Lookup order:
-  /// 1. Exact match in text_cache (pasuk/amud level)
-  /// 2. Exact match in daily_content (calendar-assigned daf/chapter text)
-  /// 3. Child-verse aggregation: combine all verses LIKE '$sefariaRef:%'
+  /// 1. Child-verse aggregation for chapter-level refs with cached children.
+  /// 2. Exact match in text_cache (pasuk/amud level or chapter fallback).
+  /// 3. Exact match in daily_content (calendar-assigned daf/chapter text).
   ///
   /// Hebrew text is decoded (HTML entities, parasha markers) before returning.
   Future<TextContent?> getText(String sefariaRef) async {
+    // Prefer child rows for chapter-level refs so Hebrew and English remain
+    // paired per pasuk in the reader. A cached parent row may contain both
+    // languages as whole-chapter blocks and would otherwise hide those rows.
+    final children = await textCacheDao.getChildTexts(sefariaRef);
+    if (_verseNumberOrNull(sefariaRef) == null && children.isNotEmpty) {
+      final content = _contentFromChildren(sefariaRef, children);
+      if (content != null) return content;
+    }
+
     final cached = await textCacheDao.getText(sefariaRef);
     if (cached != null) {
       return TextContent(
@@ -50,29 +60,9 @@ class TextCacheRepository {
     // "Pirkei Avot 1"), use them so each verse gets a number badge.
     // daily_content is the fallback for refs without child rows (e.g. Talmud
     // chapter blobs like "Berakhot 1").
-    final children = await textCacheDao.getChildTexts(sefariaRef);
     if (children.isNotEmpty) {
-      children.sort((a, b) {
-        final numA = _verseNumber(a.sefariaRef);
-        final numB = _verseNumber(b.sefariaRef);
-        return numA.compareTo(numB);
-      });
-      final segments = <TextSegment>[];
-      for (final c in children) {
-        final he = HebrewUtils.decodeHtmlEntities(c.hebrewText);
-        if (he.isEmpty && c.englishText.isEmpty) continue;
-        segments.add(
-          TextSegment(
-            sefariaRef: c.sefariaRef,
-            hebrewText: he,
-            englishText: HebrewUtils.cleanSefariaText(c.englishText),
-            number: _verseNumberOrNull(c.sefariaRef),
-          ),
-        );
-      }
-      if (segments.isNotEmpty) {
-        return TextContent(sefariaRef: sefariaRef, segments: segments);
-      }
+      final content = _contentFromChildren(sefariaRef, children);
+      if (content != null) return content;
     }
 
     // Last resort: daily_content blob (e.g. Talmud chapter or program refs
@@ -93,6 +83,32 @@ class TextCacheRepository {
     }
 
     return null;
+  }
+
+  TextContent? _contentFromChildren(
+    String sefariaRef,
+    List<TextCacheData> children,
+  ) {
+    children.sort((a, b) {
+      final numA = _verseNumber(a.sefariaRef);
+      final numB = _verseNumber(b.sefariaRef);
+      return numA.compareTo(numB);
+    });
+    final segments = <TextSegment>[];
+    for (final child in children) {
+      final hebrew = HebrewUtils.decodeHtmlEntities(child.hebrewText);
+      if (hebrew.isEmpty && child.englishText.isEmpty) continue;
+      segments.add(
+        TextSegment(
+          sefariaRef: child.sefariaRef,
+          hebrewText: hebrew,
+          englishText: HebrewUtils.cleanSefariaText(child.englishText),
+          number: _verseNumberOrNull(child.sefariaRef),
+        ),
+      );
+    }
+    if (segments.isEmpty) return null;
+    return TextContent(sefariaRef: sefariaRef, segments: segments);
   }
 
   static int _verseNumber(String sefariaRef) {
