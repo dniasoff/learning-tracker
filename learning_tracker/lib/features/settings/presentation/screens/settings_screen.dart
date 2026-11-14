@@ -25,6 +25,7 @@ import 'package:learning_tracker/features/settings/presentation/utils/send_logs_
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
+import 'package:learning_tracker/features/social/presentation/widgets/groups_entry_tile.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
@@ -221,6 +222,10 @@ class SettingsScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+            ],
+            if (hasActiveProfile) ...[
+              _SurfaceCard(child: const GroupsEntryTile()),
               const SizedBox(height: 12),
             ],
             _SurfaceCard(

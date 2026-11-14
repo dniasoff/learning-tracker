@@ -6743,6 +6743,7 @@
     "placeholders": { "count": { "type": "int" } }
   },
   "groupTitle": "Learning groups",
+  "groupsEntrySubtitle": "Find your group learning and tasks here.",
   "groupCreate": "Create group",
   "groupName": "Group name",
   "groupSchoolIdOptional": "School ID (leave blank for a private group)",

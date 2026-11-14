@@ -8248,6 +8248,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupTitle => 'Learning groups';
 
   @override
+  String get groupsEntrySubtitle => 'Find your group learning and tasks here.';
+
+  @override
   String get groupCreate => 'Create group';
 
   @override

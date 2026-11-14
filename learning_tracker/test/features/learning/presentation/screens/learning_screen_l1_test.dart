@@ -61,7 +61,9 @@ import 'package:learning_tracker/core/widgets/inline_async_error.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/social/presentation/widgets/groups_entry_tile.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/pending_capture_rollback.dart';
@@ -185,6 +187,7 @@ Widget _buildScreen({
   List<DailyTask> tasks = const [],
   Future<List<DailyTask>> Function()? tasksFactory,
   LearnerProfileEntity? selectedProfile,
+  LearnerProfileEntity? activeProfile,
   TutorPermissions? tutorPerms,
   Locale locale = const Locale('en'),
   bool disableRetry = false,
@@ -192,6 +195,7 @@ Widget _buildScreen({
   bool streakError = false,
   StackRouter? router,
 }) {
+  final active = activeProfile;
   final overrides = <Override>[
     useHebrewTermsProvider.overrideWith(
       locale.languageCode == 'he' ? _HebrewTermsOn.new : _HebrewTermsOff.new,
@@ -234,6 +238,10 @@ Widget _buildScreen({
     selectedProfileProvider.overrideWith(
       (ref) => Future.value(selectedProfile ?? _adultProfile()),
     ),
+    if (active != null) ...[
+      activeProfileIdProvider.overrideWithValue(active.profileId),
+      activeProfileProvider.overrideWith((ref) => Future.value(active)),
+    ],
     // Tutor session
     activeTutoredProfileSelectionProvider.overrideWith(
       tutorPerms != null
@@ -1127,4 +1135,20 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  testWidgets('Groups entry is visible on Learn for the active profile', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildScreen(
+        curricula: [CurriculumId.mishnayos],
+        activeProfile: _adultProfile(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(GroupsEntryTile), findsOneWidget);
+    expect(find.text('Learning groups'), findsOneWidget);
+  });
 }

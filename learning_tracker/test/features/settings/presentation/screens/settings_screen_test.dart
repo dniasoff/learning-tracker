@@ -125,6 +125,7 @@ void main() {
           ),
         ),
         activeProfileIdProvider.overrideWithValue(profile.profileId),
+        activeProfileProvider.overrideWith((ref) => Future.value(profile)),
         activeProfileDocIdProvider.overrideWith(
           () => _FixedActiveProfileDocId(profile.profileId),
         ),
@@ -177,6 +178,39 @@ void main() {
           onFailure: any(named: 'onFailure'),
         ),
       ).called(1);
+    });
+
+    testWidgets('Groups row opens the groups hub for the active profile', (
+      tester,
+    ) async {
+      final router = _MockStackRouter();
+      when(
+        () => router.push<Object?>(
+          any<PageRouteInfo>(),
+          onFailure: any(named: 'onFailure'),
+        ),
+      ).thenAnswer((_) async => null);
+
+      await tester.pumpWidget(createTestWidget(router: router));
+      await pumpUntilSettled(tester);
+      await tester.scrollUntilVisible(
+        find.text('Learning groups'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Learning groups'));
+      await tester.pump();
+
+      final route =
+          verify(
+                () => router.push<Object?>(
+                  captureAny<PageRouteInfo>(),
+                  onFailure: any(named: 'onFailure'),
+                ),
+              ).captured.single
+              as LearningGroupsRoute;
+      expect(route.profileId, _adultProfileId);
+      expect(route.isAdult, isTrue);
     });
 
     // WS4.settings (D2): Settings are grouped by scope (Device / Profile).

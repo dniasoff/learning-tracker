@@ -27,6 +27,7 @@ import 'package:learning_tracker/features/learning/presentation/widgets/lock_ign
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/scheduler.dart';
 import 'package:learning_tracker/features/shnayim_mikra/presentation/widgets/shnayim_mikra_weekly_slot.dart';
+import 'package:learning_tracker/features/social/presentation/widgets/groups_entry_tile.dart';
 import 'package:learning_tracker/features/sub_tracks/sub_tracks.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -151,6 +152,7 @@ class LearningScreen extends ConsumerWidget {
                           context.router.push(const SchedulerRoute()),
                     ),
                     const ErevPlannedSlot(),
+                    const Card(child: GroupsEntryTile()),
                     const GroupTaskProgressSlot(),
                     const AlsoLearningSlot(),
                     const MainTrackUpToActions(),

@@ -13440,6 +13440,12 @@ abstract class AppLocalizations {
   /// **'Learning groups'**
   String get groupTitle;
 
+  /// No description provided for @groupsEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Find your group learning and tasks here.'**
+  String get groupsEntrySubtitle;
+
   /// No description provided for @groupCreate.
   ///
   /// In en, this message translates to:

@@ -4584,6 +4584,7 @@
     "placeholders": { "count": { "type": "int" } }
   },
   "groupTitle": "קבוצות לימוד",
+  "groupsEntrySubtitle": "מצאו כאן את הלמידה והמשימות של הקבוצה.",
   "groupCreate": "יצירת קבוצה",
   "groupName": "שם הקבוצה",
   "groupSchoolIdOptional": "מזהה בית ספר (השאירו ריק לקבוצה פרטית)",

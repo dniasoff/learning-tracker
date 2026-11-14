@@ -8158,6 +8158,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get groupTitle => 'קבוצות לימוד';
 
   @override
+  String get groupsEntrySubtitle => 'מצאו כאן את הלמידה והמשימות של הקבוצה.';
+
+  @override
   String get groupCreate => 'יצירת קבוצה';
 
   @override
