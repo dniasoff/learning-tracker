@@ -36,6 +36,9 @@ class ContentIndex {
   /// Total number of indexed items across all curricula.
   int get size => _byRef.length;
 
+  /// All indexed items in curriculum insertion order.
+  List<ContentItem> get allItems => _byRef.values.toList(growable: false);
+
   /// Returns the [ContentItem] for [sefariaRef] in O(1), or null if no
   /// match exists in any curriculum.
   ContentItem? lookup(String sefariaRef) => _byRef[sefariaRef];

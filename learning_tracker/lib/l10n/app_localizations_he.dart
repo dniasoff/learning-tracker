@@ -3603,6 +3603,20 @@ class AppLocalizationsHe extends AppLocalizations {
   String get settingsSearchNoResults => 'לא נמצאו הגדרות תואמות';
 
   @override
+  String get dailyLearningProgramsTitle => 'תוכניות הלימוד להיום';
+
+  @override
+  String get dailyLearningProgramsSubtitle =>
+      'פתחו את הלימוד המתוכנן להיום בתוך האפליקציה.';
+
+  @override
+  String get dailyLearningProgramNoSchedule => 'אין לימוד מתוכנן בתוכנית זו להיום.';
+
+  @override
+  String get dailyLearningProgramNoOfflineText =>
+      'הטקסט הזה אינו זמין בספרייה המקומית.';
+
+  @override
   String get searchHintEnterTerm => 'הזינו מונח חיפוש למעלה';
 
   @override

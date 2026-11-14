@@ -3644,6 +3644,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSearchNoResults => 'No matching settings';
 
   @override
+  String get dailyLearningProgramsTitle => "Today's programs";
+
+  @override
+  String get dailyLearningProgramsSubtitle =>
+      "Read today's scheduled learning in the app.";
+
+  @override
+  String get dailyLearningProgramNoSchedule =>
+      'Not scheduled by this calendar today.';
+
+  @override
+  String get dailyLearningProgramNoOfflineText =>
+      "This reading isn't available in the offline text library.";
+
+  @override
   String get searchHintEnterTerm => 'Enter a search term above';
 
   @override

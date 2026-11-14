@@ -6178,6 +6178,18 @@ abstract class AppLocalizations {
   /// Empty-state message shown when Settings search has no matches.
   String get settingsSearchNoResults;
 
+  /// Heading for the Learn tab's list of calendar readings.
+  String get dailyLearningProgramsTitle;
+
+  /// Subtitle for the Learn tab's list of calendar readings.
+  String get dailyLearningProgramsSubtitle;
+
+  /// Status for a program without a calendar entry for the selected day.
+  String get dailyLearningProgramNoSchedule;
+
+  /// Status when a scheduled reference has no matching offline text.
+  String get dailyLearningProgramNoOfflineText;
+
   /// No description provided for @searchHintEnterTerm.
   ///
   /// In en, this message translates to:

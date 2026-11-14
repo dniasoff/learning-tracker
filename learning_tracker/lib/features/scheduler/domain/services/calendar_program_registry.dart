@@ -209,6 +209,24 @@ class CalendarProgramRegistry {
       apiKey: 'Dirshu Kinyan Yerushalmi',
       curriculumType: 'yerushalmi',
     ),
+    CalendarProgramDefinition(
+      id: 'weekly_parsha',
+      displayNameEn: 'Weekly Parsha',
+      displayNameHe: 'פרשת השבוע',
+      apiSource: 'local',
+      apiKey: 'Weekly Parsha',
+      curriculumType: 'chumash',
+      hebcalCategory: 'parsha',
+    ),
+    CalendarProgramDefinition(
+      id: 'haftarah',
+      displayNameEn: 'Haftarah',
+      displayNameHe: 'הפטרה',
+      apiSource: 'local',
+      apiKey: 'Haftarah',
+      curriculumType: 'nach',
+      hebcalCategory: 'haftarah',
+    ),
   ];
 
   /// Look up a program definition by ID.
