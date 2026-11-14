@@ -18,6 +18,7 @@ library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
@@ -689,7 +690,7 @@ Future<void> openMishnaCorrections(
 }) async {
   final l10n = AppLocalizations.of(context)!;
   final corrections = ref.read(mishnaHistoryCorrectionsProvider(args).notifier);
-  final choice = await showModalBottomSheet<MishnaCorrection>(
+  final choice = await showSafeModalBottomSheet<MishnaCorrection>(
     context: context,
     builder: (sheetContext) => SafeArea(
       child: Column(

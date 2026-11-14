@@ -18,6 +18,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -110,11 +111,10 @@ Future<UpToSelection?> showUpToPicker(
       ),
     );
   }
-  return showModalBottomSheet<UpToSelection>(
+  return showSafeModalBottomSheet<UpToSelection>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    useSafeArea: true,
     clipBehavior: Clip.antiAlias,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),

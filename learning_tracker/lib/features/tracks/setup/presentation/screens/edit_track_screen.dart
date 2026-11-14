@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -829,7 +830,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         ? _pendingDelays()
         : _currentChazaraDelays;
 
-    await showModalBottomSheet<void>(
+    await showSafeModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: context.colors.surfaceF5,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
@@ -28,7 +29,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// action flows (which run after this sheet is popped) operate on a context that
 /// outlives the modal sheet.
 Future<void> showAccountActionsSheet(BuildContext context, WidgetRef ref) {
-  return showModalBottomSheet<void>(
+  return showSafeModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,

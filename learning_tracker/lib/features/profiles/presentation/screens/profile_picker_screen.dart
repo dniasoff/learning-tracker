@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
@@ -228,7 +229,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
     LearnerProfileEntity profile,
     int profileCount,
   ) async {
-    final action = await showModalBottomSheet<String>(
+    final action = await showSafeModalBottomSheet<String>(
       context: context,
       builder: (ctx) {
         final l10n = AppLocalizations.of(ctx)!;

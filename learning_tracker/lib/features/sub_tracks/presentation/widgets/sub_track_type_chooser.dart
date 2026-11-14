@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -31,7 +32,7 @@ class SubTrackTypeChooser extends StatelessWidget {
     BuildContext context, {
     required VoidCallback onSchoolYear,
     VoidCallback? onOngoing,
-  }) => showModalBottomSheet<void>(
+  }) => showSafeModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     builder: (sheetContext) => SafeArea(

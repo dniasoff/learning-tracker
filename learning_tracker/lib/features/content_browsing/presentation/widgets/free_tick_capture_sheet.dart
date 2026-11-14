@@ -8,6 +8,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
@@ -81,7 +82,7 @@ Future<FreeTickChoice?> showFreeTickCaptureSheet(
   required int count,
   required DateTime today,
   List<FreeTickSourceOption> extraSources = const [],
-}) => showModalBottomSheet<FreeTickChoice>(
+}) => showSafeModalBottomSheet<FreeTickChoice>(
   context: context,
   isScrollControlled: true,
   showDragHandle: true,

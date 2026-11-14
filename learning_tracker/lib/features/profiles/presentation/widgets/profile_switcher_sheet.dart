@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
@@ -27,7 +28,7 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// current account. Triggered by tapping the profile NAME/header (Settings) —
 /// see [UserProfileHeaderCard].
 Future<void> showProfileSwitcherSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showSafeModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,

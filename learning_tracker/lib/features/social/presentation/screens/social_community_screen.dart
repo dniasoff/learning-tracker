@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
@@ -359,7 +360,7 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
     String? summaryId,
   }) async {
     final l10n = AppLocalizations.of(context)!;
-    final action = await showModalBottomSheet<String>(
+    final action = await showSafeModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
@@ -385,7 +386,7 @@ class _SocialCommunityScreenState extends ConsumerState<SocialCommunityScreen>
 
   Future<void> _openFindPeople() async {
     final l10n = AppLocalizations.of(context)!;
-    await showModalBottomSheet<void>(
+    await showSafeModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => Padding(

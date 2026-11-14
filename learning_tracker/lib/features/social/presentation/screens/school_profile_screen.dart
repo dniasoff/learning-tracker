@@ -1,5 +1,6 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/social/presentation/providers/school_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -68,7 +69,7 @@ class SchoolProfileScreen extends ConsumerWidget {
     WidgetRef ref,
     AppLocalizations l10n,
   ) async {
-    final category = await showModalBottomSheet<String>(
+    final category = await showSafeModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(
