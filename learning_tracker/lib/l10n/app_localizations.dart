@@ -9121,6 +9121,18 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get today;
 
+  /// No description provided for @todayReadings.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s readings'**
+  String get todayReadings;
+
+  /// No description provided for @readingUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This reading isn\'t available in the app yet.'**
+  String get readingUnavailable;
+
   /// Title-case 'Streak' label — distinct from the existing all-caps `streak` key. Used in recent-activity screen section headers.
   ///
   /// In en, this message translates to:
@@ -12533,6 +12545,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t save the sub-track. Try again.'**
   String get subTrackLifecycleSaveFailed;
+
+  /// Search field hint on the Settings screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Search settings'**
+  String get settingsSearchHint;
+
+  /// Empty-state message on the Settings screen when a search has no matches.
+  ///
+  /// In en, this message translates to:
+  /// **'No settings match your search.'**
+  String get settingsSearchNoResults;
 }
 
 class _AppLocalizationsDelegate

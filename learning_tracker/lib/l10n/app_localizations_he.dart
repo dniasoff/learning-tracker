@@ -5432,6 +5432,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get today => 'היום';
 
   @override
+  String get todayReadings => 'הלימוד היומי';
+
+  @override
+  String get readingUnavailable => 'הטקסט הזה עדיין אינו זמין באפליקציה.';
+
+  @override
   String get streakLabel => 'רצף';
 
   @override
@@ -7638,4 +7644,10 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get subTrackLifecycleSaveFailed =>
       'לא ניתן היה לשמור את מסלול המשנה. נסו שוב.';
+
+  @override
+  String get settingsSearchHint => 'חיפוש בהגדרות';
+
+  @override
+  String get settingsSearchNoResults => 'לא נמצאו הגדרות התואמות לחיפוש.';
 }

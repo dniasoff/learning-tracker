@@ -43,12 +43,30 @@ final _diagnosticLogRepositoryProvider =
     );
 
 @RoutePage()
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final query = _searchQuery.trim().toLowerCase();
+    bool matches(Iterable<String> values) =>
+        query.isEmpty ||
+        values.any((value) => value.toLowerCase().contains(query));
     final user = ref.watch(authRepositoryProvider).currentUser;
     final theme = Theme.of(context);
 
@@ -76,12 +94,144 @@ class SettingsScreen extends ConsumerWidget {
     final tutorPerms = ref.watch(activeTutorPermissionsProvider);
     final isTutorElevated = isTutoredSession;
 
+    final appPermissionsMatches = matches([
+      l10n.settingsAppPermissions,
+      l10n.settingsAppPermissionsSubtitle,
+    ]);
+    final sacredTimeMatches = matches([
+      l10n.sacredTimeChooseCity,
+      l10n.sacredTimeDetect,
+      l10n.sacredTimeInIsraelTitle,
+      l10n.sacredTimeInIsraelSubtitle,
+      l10n.sacredTimeNoLocation,
+      l10n.sacredTimeLocationSourceManualCity,
+    ]);
+    final manageTracksMatches = matches([
+      l10n.manageTracks,
+      l10n.manageTracksDetail,
+    ]);
+    final manageProfilesMatches = matches([
+      l10n.manageProfiles,
+      l10n.manageProfilesSubtitle,
+    ]);
+    final calendarMatches = matches([
+      l10n.calendarPreference,
+      l10n.calendarPreferenceSubtitle,
+      l10n.calendarGregorian,
+      l10n.calendarHebrew,
+    ]);
+    final hebrewTermsMatches = matches([
+      l10n.hebrewTermsPreference,
+      l10n.hebrewTermsPreferenceSubtitle,
+    ]);
+    final pronunciationMatches = matches([
+      l10n.settingsPronunciation,
+      l10n.settingsPronunciationSubtitle,
+      l10n.settingsPronunciationAshkenazi,
+      l10n.settingsPronunciationSephardi,
+    ]);
+    final nikudMatches = matches([
+      l10n.settingsNikud,
+      l10n.settingsNikudSubtitle,
+      l10n.settingsNikudWithout,
+      l10n.settingsNikudWith,
+    ]);
+    final addLearnedMatches = matches([
+      l10n.addWhatYouLearned,
+      l10n.addWhatYouLearnedSettingsSubtitle,
+    ]);
+    final notificationsMatch = matches([
+      l10n.notificationSettings,
+      l10n.notificationSettingsSubtitle,
+    ]);
+    final backupMatch = matches([
+      l10n.backupSyncCardTitle,
+      l10n.backupSyncCardBody,
+      l10n.backupExportAction,
+      l10n.backupImportAction,
+    ]);
+    final parentalControlsMatch = matches([
+      l10n.sectionParentalControls,
+      l10n.parentMode,
+      l10n.parentModeSubtitle,
+      l10n.parentModeActiveSubtitle,
+      l10n.parentPin,
+      l10n.parentPinSubtitle,
+      l10n.changeHistoryTitle,
+      l10n.changeHistorySettingsSubtitle,
+    ]);
+    final diagnosticLogsMatch = matches([
+      l10n.settingsSendDiagnosticLogs,
+      l10n.settingsSendDiagnosticLogsSubtitle,
+    ]);
+    final tutorManagementMatch = matches([
+      l10n.parentSettingsTitle,
+      l10n.manageChildLearningSubtitle,
+    ]);
+    final canManageTracks = !isTutoredSession && !isChildProfile;
+    final canManageAsTutor =
+        isTutorElevated &&
+        (tutorPerms == null ||
+            tutorPerms.canEditLearning ||
+            tutorPerms.canEditPoints ||
+            tutorPerms.canEditRewards);
+    final canBackup = !isChildProfile && !isTutoredSession;
+    final hasProfileSearchResult =
+        (canManageAsTutor && tutorManagementMatch) ||
+        (canManageTracks && (manageTracksMatches || manageProfilesMatches)) ||
+        calendarMatches ||
+        (Localizations.localeOf(context).languageCode != 'he' &&
+            hebrewTermsMatches) ||
+        pronunciationMatches ||
+        nikudMatches ||
+        (!isChildProfile && !isTutoredSession && addLearnedMatches) ||
+        notificationsMatch ||
+        (canBackup && backupMatch) ||
+        (!isTutoredSession && parentalControlsMatch) ||
+        (!isTutoredSession && diagnosticLogsMatch);
+    final hasSearchResults =
+        query.isEmpty ||
+        (!isTutoredSession && (appPermissionsMatches || sacredTimeMatches)) ||
+        hasProfileSearchResult;
+
     return Scaffold(
       body: SafeArea(
         top: true,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
           children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: l10n.settingsSearchHint,
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).deleteButtonTooltip,
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+            if (query.isNotEmpty && !hasSearchResults)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: Text(l10n.settingsSearchNoResults)),
+              ),
             // Profile header is the canonical learner + login-account switcher
             // (avatar, name, account email; tap → account actions sheet). Daniel
             // requires children to be able to switch learner and login account
@@ -93,7 +243,7 @@ class SettingsScreen extends ConsumerWidget {
             // must not leak into the talmid's student-scope context. The
             // persistent role switcher in the app shell remains the path out of
             // the tutored session.
-            if (!isTutoredSession)
+            if (!isTutoredSession && query.isEmpty)
               UserProfileHeaderCard(
                 user: user,
                 activeProfile: activeProfile,
@@ -103,8 +253,9 @@ class SettingsScreen extends ConsumerWidget {
             // ── Pending tutor invitations ──────────────────────────────────────
             // Shown automatically when a parent has sent an invite addressed to
             // this account's email — no link sharing required.
-            if (!isTutoredSession) const _PendingInvitesSection(),
-            const SizedBox(height: 24),
+            if (!isTutoredSession && query.isEmpty)
+              const _PendingInvitesSection(),
+            if (query.isEmpty) const SizedBox(height: 24),
             // ── DEVICE section (D2/WS4.settings) ──────────────────────────────
             // Device-scoped settings: applies to this physical device, shared by
             // every login and profile on it (OS permissions, location access).
@@ -117,20 +268,25 @@ class SettingsScreen extends ConsumerWidget {
             // ruling is to show ONLY student/profile-scope items and HIDE the
             // tutor's own account/device items, so the entire DEVICE section is
             // omitted when viewing a talmid.
-            if (!isTutoredSession) ...[
+            if (!isTutoredSession &&
+                (query.isEmpty ||
+                    appPermissionsMatches ||
+                    sacredTimeMatches)) ...[
               _SectionHeader(title: l10n.sectionDevice),
-              const SizedBox(height: 10),
-              _SurfaceCard(
-                child: PreferenceListTile.withIcon(
-                  icon: Icons.security_rounded,
-                  iconColor: const Color(0xFF1E7B5A),
-                  iconBackground: const Color(0xFFDDF3EB),
-                  title: l10n.settingsAppPermissions,
-                  subtitle: l10n.settingsAppPermissionsSubtitle,
-                  onTap: () => context.pushRoute(PermissionPromptRoute()),
+              if (query.isEmpty) const SizedBox(height: 10),
+              if (query.isEmpty || appPermissionsMatches)
+                _SurfaceCard(
+                  child: PreferenceListTile.withIcon(
+                    icon: Icons.security_rounded,
+                    iconColor: const Color(0xFF1E7B5A),
+                    iconBackground: const Color(0xFFDDF3EB),
+                    title: l10n.settingsAppPermissions,
+                    subtitle: l10n.settingsAppPermissionsSubtitle,
+                    onTap: () => context.pushRoute(PermissionPromptRoute()),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+              if (query.isEmpty || sacredTimeMatches)
+                const SizedBox(height: 16),
               // DEC-26: Sacred Time / location is DEVICE-scoped, so its card lives
               // under the DEVICE section (it was previously mis-placed under
               // PROFILE).
@@ -144,17 +300,22 @@ class SettingsScreen extends ConsumerWidget {
               // their own profile preferences.
               // Passed unresolved: the card disables its actions until the
               // guard settles (fail closed on loading / error).
-              SacredTimeSettingsCard(
-                pinGuard: ref.watch(sacredTimeLocationPinGuardRequiredProvider),
-                activeProfileId: deviceOwnerProfileId,
-              ),
-              const SizedBox(height: 24),
+              if (query.isEmpty || sacredTimeMatches)
+                SacredTimeSettingsCard(
+                  pinGuard: ref.watch(
+                    sacredTimeLocationPinGuardRequiredProvider,
+                  ),
+                  activeProfileId: deviceOwnerProfileId,
+                ),
+              if (query.isEmpty) const SizedBox(height: 24),
             ],
             // ── PROFILE section (D2/WS4.settings) ─────────────────────────────
             // Profile-scoped settings: per-learner preferences, tracks,
             // notifications (reminder schedules), and parental controls.
-            _SectionHeader(title: l10n.sectionProfile),
-            const SizedBox(height: 10),
+            if (query.isEmpty || hasProfileSearchResult) ...[
+              _SectionHeader(title: l10n.sectionProfile),
+              if (query.isEmpty) const SizedBox(height: 10),
+            ],
             // TUT-06: in a tutored session the tutor has FULL parent-equivalent
             // management over the talmid (manage tracks, points, rewards, goals,
             // bulk/lifetime marking — only LIVE marking is barred). Surface the
@@ -167,7 +328,8 @@ class SettingsScreen extends ConsumerWidget {
             // canEditLearning (AD-53, DNI-487) replaced the five legacy edit
             // flags; it covers tracks, goals, study days and learning
             // records. The hub itself re-gates each individual tile.
-            if (isTutorElevated &&
+            if (canManageAsTutor &&
+                (query.isEmpty || tutorManagementMatch) &&
                 (tutorPerms == null ||
                     tutorPerms.canEditLearning ||
                     tutorPerms.canEditPoints ||
@@ -192,83 +354,112 @@ class SettingsScreen extends ConsumerWidget {
             // Tutored sessions reach tracks via the parent-management hub tile
             // above, so the standalone Manage Tracks / Manage Profiles card is
             // own-profile (non-tutored) only.
-            if (!isTutoredSession && !isChildProfile) ...[
+            if (canManageTracks &&
+                (query.isEmpty ||
+                    manageTracksMatches ||
+                    manageProfilesMatches)) ...[
               _SurfaceCard(
                 child: Column(
                   children: [
-                    PreferenceListTile.withIcon(
-                      icon: Icons.route_rounded,
-                      iconColor: context.colors.brandBlueBright,
-                      iconBackground: context.colors.brandBlueSoft,
-                      title: l10n.manageTracks,
-                      subtitle: l10n.manageTracksDetail,
-                      onTap: () => context.pushRoute(TrackManagementHubRoute()),
-                    ),
-                    _tileDivider(theme),
-                    PreferenceListTile.withIcon(
-                      icon: Icons.people_alt_rounded,
-                      iconColor: context.colors.brandBlueBright,
-                      iconBackground: context.colors.brandBlueSoft,
-                      title: l10n.manageProfiles,
-                      subtitle: l10n.manageProfilesSubtitle,
-                      onTap: () =>
-                          context.pushRoute(const ManageLearnersRoute()),
-                    ),
+                    if (query.isEmpty || manageTracksMatches)
+                      PreferenceListTile.withIcon(
+                        icon: Icons.route_rounded,
+                        iconColor: context.colors.brandBlueBright,
+                        iconBackground: context.colors.brandBlueSoft,
+                        title: l10n.manageTracks,
+                        subtitle: l10n.manageTracksDetail,
+                        onTap: () =>
+                            context.pushRoute(TrackManagementHubRoute()),
+                      ),
+                    if (query.isEmpty ||
+                        (manageTracksMatches && manageProfilesMatches))
+                      _tileDivider(theme),
+                    if (query.isEmpty || manageProfilesMatches)
+                      PreferenceListTile.withIcon(
+                        icon: Icons.people_alt_rounded,
+                        iconColor: context.colors.brandBlueBright,
+                        iconBackground: context.colors.brandBlueSoft,
+                        title: l10n.manageProfiles,
+                        subtitle: l10n.manageProfilesSubtitle,
+                        onTap: () =>
+                            context.pushRoute(const ManageLearnersRoute()),
+                      ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
             ],
-            _SurfaceCard(
-              child: Column(
-                children: [
-                  const _HebrewDateTile(),
-                  if (Localizations.localeOf(context).languageCode != 'he') ...[
-                    _tileDivider(theme),
-                    const _HebrewTermsTile(),
-                  ],
-                  _TransliterationVariantTileSection(theme: theme),
-                  _tileDivider(theme),
-                  _NikudTile(theme: theme),
-                  // Hidden for tutors: bulk lifetime marking goes through CF (S4).
-                  if (!isChildProfile && !isTutoredSession) ...[
-                    _tileDivider(theme),
-                    PreferenceListTile.withIcon(
-                      icon: Icons.menu_book_rounded,
-                      iconColor: context.colors.brandGoldDeep,
-                      iconBackground: context.colors.brandGoldSoft,
-                      title: l10n.addWhatYouLearned,
-                      subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const LifetimeMarkingScreen(),
+            if (query.isEmpty ||
+                calendarMatches ||
+                (Localizations.localeOf(context).languageCode != 'he' &&
+                    hebrewTermsMatches) ||
+                pronunciationMatches ||
+                nikudMatches ||
+                (!isChildProfile && !isTutoredSession && addLearnedMatches))
+              _SurfaceCard(
+                child: Column(
+                  children: [
+                    if (query.isEmpty || calendarMatches)
+                      const _HebrewDateTile(),
+                    if (Localizations.localeOf(context).languageCode != 'he' &&
+                        (query.isEmpty || hebrewTermsMatches)) ...[
+                      if (query.isEmpty || calendarMatches) _tileDivider(theme),
+                      const _HebrewTermsTile(),
+                    ],
+                    if (query.isEmpty || pronunciationMatches)
+                      _TransliterationVariantTileSection(theme: theme),
+                    if ((query.isEmpty || pronunciationMatches) &&
+                        (query.isEmpty || nikudMatches))
+                      _tileDivider(theme),
+                    if (query.isEmpty || nikudMatches) _NikudTile(theme: theme),
+                    // Hidden for tutors: bulk lifetime marking goes through CF (S4).
+                    if (!isChildProfile &&
+                        !isTutoredSession &&
+                        (query.isEmpty || addLearnedMatches)) ...[
+                      if (query.isEmpty ||
+                          calendarMatches ||
+                          hebrewTermsMatches ||
+                          pronunciationMatches ||
+                          nikudMatches)
+                        _tileDivider(theme),
+                      PreferenceListTile.withIcon(
+                        icon: Icons.menu_book_rounded,
+                        iconColor: context.colors.brandGoldDeep,
+                        iconBackground: context.colors.brandGoldSoft,
+                        title: l10n.addWhatYouLearned,
+                        subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const LifetimeMarkingScreen(),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            _SurfaceCard(
-              child: PreferenceListTile.withIcon(
-                icon: Icons.notifications_active_outlined,
-                iconColor: context.colors.brandCoralDeep,
-                iconBackground: theme.colorScheme.errorContainer,
-                title: l10n.notificationSettings,
-                subtitle: l10n.notificationSettingsSubtitle,
-                onTap: () => context.pushRoute(const NotificationsRoute()),
+            if (query.isEmpty) const SizedBox(height: 12),
+            if (query.isEmpty || notificationsMatch)
+              _SurfaceCard(
+                child: PreferenceListTile.withIcon(
+                  icon: Icons.notifications_active_outlined,
+                  iconColor: context.colors.brandCoralDeep,
+                  iconBackground: theme.colorScheme.errorContainer,
+                  title: l10n.notificationSettings,
+                  subtitle: l10n.notificationSettingsSubtitle,
+                  onTap: () => context.pushRoute(const NotificationsRoute()),
+                ),
               ),
-            ),
             // T3.gating: backup/sync controls are write-path in tutored sessions.
-            if (!isChildProfile && !isTutoredSession) ...[
+            if (canBackup && (query.isEmpty || backupMatch)) ...[
               const SizedBox(height: 16),
               const BackupSyncSection(),
             ],
-            const SizedBox(height: 24),
+            if (query.isEmpty) const SizedBox(height: 24),
             // T3.gating: parental controls and account management are hidden in
             // tutored sessions — the tutor is viewing the child's context only.
-            if (!isTutoredSession) ...[
+            if (!isTutoredSession &&
+                (query.isEmpty || parentalControlsMatch)) ...[
               _ParentalControlsSection(
                 user: user,
                 isChildProfile: isChildProfile,
@@ -278,12 +469,12 @@ class SettingsScreen extends ConsumerWidget {
             // out, delete account) lives ONLY in the profile header sheet at the
             // top of this screen (tap the header card). It is intentionally NOT
             // duplicated here so there is a single home for account actions.
-            const SizedBox(height: 24),
+            if (query.isEmpty) const SizedBox(height: 24),
             // Bug 12: diagnostic logs are the TUTOR's own device/account logs
             // (uploaded to the tutor's Firestore under their own auth) — an
             // account/device-scope action that must be hidden when viewing a
             // talmid. Shown only in a non-tutored (own) session.
-            if (!isTutoredSession)
+            if (!isTutoredSession && (query.isEmpty || diagnosticLogsMatch))
               _SurfaceCard(
                 child: PreferenceListTile.withIcon(
                   icon: Icons.bug_report_outlined,
@@ -308,73 +499,76 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-            const SizedBox(height: 24),
-            FutureBuilder<PackageInfo>(
-              future: PackageInfo.fromPlatform(),
-              builder: (context, snapshot) {
-                final info = snapshot.data;
-                if (info == null || info.version.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-                final buildLabel = info.buildNumber.isNotEmpty
-                    ? 'v${info.version} (${info.buildNumber})'
-                    : 'v${info.version}';
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Text(
-                        buildLabel,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontSize: 15,
+            if (query.isEmpty) const SizedBox(height: 24),
+            if (query.isEmpty)
+              FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final info = snapshot.data;
+                  if (info == null || info.version.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  final buildLabel = info.buildNumber.isNotEmpty
+                      ? 'v${info.version} (${info.buildNumber})'
+                      : 'v${info.version}';
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Center(
+                        child: Text(
+                          buildLabel,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                  ],
-                );
-              },
-            ),
-            Center(
-              child: Text(
-                l10n.appTitle,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontStyle: FontStyle.italic,
-                  fontSize: 14,
+                      const SizedBox(height: 2),
+                    ],
+                  );
+                },
+              ),
+            if (query.isEmpty)
+              Center(
+                child: Text(
+                  l10n.appTitle,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.change_history_rounded,
-                  size: 14,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.5,
+            if (query.isEmpty) const SizedBox(height: 8),
+            if (query.isEmpty)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.change_history_rounded,
+                    size: 14,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.forum_outlined,
-                  size: 14,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.5,
+                  const SizedBox(width: 12),
+                  Icon(
+                    Icons.forum_outlined,
+                    size: 14,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.star_rounded,
-                  size: 14,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.5,
+                  const SizedBox(width: 12),
+                  Icon(
+                    Icons.star_rounded,
+                    size: 14,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),
@@ -741,7 +935,7 @@ class _ParentalControlsSectionState
             ),
           ),
         ],
-        const SizedBox(height: 24),
+        if (query.isEmpty) const SizedBox(height: 24),
       ],
     );
   }

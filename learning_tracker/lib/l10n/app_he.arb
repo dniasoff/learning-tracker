@@ -3049,6 +3049,8 @@
     "description": "Canonical vocabulary: lifetime label for dual-track-label dashboards."
   },
   "today": "היום",
+  "todayReadings": "הלימוד היומי",
+  "readingUnavailable": "הטקסט הזה עדיין אינו זמין באפליקציה.",
   "@today": {
     "description": "Today label."
   },
@@ -4278,5 +4280,7 @@
   "subTrackLifecycleNameRequired": "יש להזין שם",
   "subTrackLifecyclePositiveNumber": "יש להזין מספר גדול מ-0",
   "subTrackLifecycleWindowReversed": "חודש הסיום לפני חודש ההתחלה",
-  "subTrackLifecycleSaveFailed": "לא ניתן היה לשמור את מסלול המשנה. נסו שוב."
+  "subTrackLifecycleSaveFailed": "לא ניתן היה לשמור את מסלול המשנה. נסו שוב.",
+  "settingsSearchHint": "חיפוש בהגדרות",
+  "settingsSearchNoResults": "לא נמצאו הגדרות התואמות לחיפוש."
 }

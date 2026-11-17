@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/dashboard/presentation/widgets/learner_today_card.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/catch_up_cards_provider.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/erev_planned_tasks_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/widgets/calendar_readings_section.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/erev_banner.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/also_learning_slot.dart';
 import 'package:learning_tracker/features/learning/presentation/widgets/learn_slots/catch_up_cards_slot.dart';
@@ -137,6 +138,7 @@ class LearningScreen extends ConsumerWidget {
                     // DNI-502: today against the daily target, with
                     // encouragement only (every role; no parent status).
                     const LearnerTodaySection(),
+                    const CalendarReadingsSection(),
                     // Named Learn sections (DNI-500; catch-up is above):
                     // each slot is its own widget file and takes no space
                     // while empty, so the stories that fill them never edit

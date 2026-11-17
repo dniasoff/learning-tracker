@@ -5490,6 +5490,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get today => 'Today';
 
   @override
+  String get todayReadings => 'Today\'s readings';
+
+  @override
+  String get readingUnavailable =>
+      'This reading isn\'t available in the app yet.';
+
+  @override
   String get streakLabel => 'Streak';
 
   @override
@@ -7721,4 +7728,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get subTrackLifecycleSaveFailed =>
       'Couldn\'t save the sub-track. Try again.';
+
+  @override
+  String get settingsSearchHint => 'Search settings';
+
+  @override
+  String get settingsSearchNoResults => 'No settings match your search.';
 }

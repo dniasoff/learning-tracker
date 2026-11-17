@@ -4441,6 +4441,8 @@
     "description": "Canonical vocabulary: lifetime label as used in dual-track-label dashboards (Track progress vs Lifetime). Distinct from `tierLensLifetimeKnowledge` (the lens screen title)."
   },
   "today": "Today",
+  "todayReadings": "Today's readings",
+  "readingUnavailable": "This reading isn't available in the app yet.",
   "@today": {
     "description": "Today label — used in dashboard/recent activity sections."
   },
@@ -6448,5 +6450,13 @@
   "subTrackLifecycleSaveFailed": "Couldn't save the sub-track. Try again.",
   "@subTrackLifecycleSaveFailed": {
     "description": "Snackbar when the Add next year save fails; the form keeps its input. DRAFT copy, pending zc4."
+  },
+  "settingsSearchHint": "Search settings",
+  "@settingsSearchHint": {
+    "description": "Search field hint on the Settings screen."
+  },
+  "settingsSearchNoResults": "No settings match your search.",
+  "@settingsSearchNoResults": {
+    "description": "Empty-state message on the Settings screen when a search has no matches."
   }
 }
