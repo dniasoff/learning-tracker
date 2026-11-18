@@ -6,7 +6,6 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/social/presentation/widgets/groups_entry_tile.dart';
-import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/pump_app.dart';
@@ -90,8 +89,9 @@ void main() {
               ),
             ).captured.single
             as LearningGroupsRoute;
-    expect(route.profileId, _adultProfileId);
-    expect(route.isAdult, isTrue);
+    final args = route.args!;
+    expect(args.profileId, _adultProfileId);
+    expect(args.isAdult, isTrue);
   });
 
   testWidgets('Hebrew entry opens child groups in the child context', (
@@ -128,8 +128,9 @@ void main() {
               ),
             ).captured.single
             as LearningGroupsRoute;
-    expect(route.profileId, _childProfileId);
-    expect(route.isAdult, isFalse);
+    final args = route.args!;
+    expect(args.profileId, _childProfileId);
+    expect(args.isAdult, isFalse);
   });
 
   testWidgets('entry is hidden until a profile is selected', (tester) async {

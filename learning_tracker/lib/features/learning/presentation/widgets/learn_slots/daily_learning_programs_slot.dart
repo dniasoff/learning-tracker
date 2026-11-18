@@ -126,9 +126,8 @@ class _ProgramTile extends ConsumerWidget {
             title: Text(title),
             subtitle: Text(sefariaRef),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.router.push(
-              TextDisplayRoute(sefariaRef: sefariaRef),
-            ),
+            onTap: () =>
+                context.router.push(TextDisplayRoute(sefariaRef: sefariaRef)),
           ),
       ],
     );

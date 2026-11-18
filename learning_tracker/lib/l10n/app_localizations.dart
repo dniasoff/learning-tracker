@@ -6172,22 +6172,40 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get searchTitle;
 
-  /// Hint shown in the Settings search field.
+  /// No description provided for @settingsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search settings'**
   String get settingsSearchHint;
 
-  /// Empty-state message shown when Settings search has no matches.
+  /// No description provided for @settingsSearchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching settings'**
   String get settingsSearchNoResults;
 
-  /// Heading for the Learn tab's list of calendar readings.
+  /// No description provided for @dailyLearningProgramsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s programs'**
   String get dailyLearningProgramsTitle;
 
-  /// Subtitle for the Learn tab's list of calendar readings.
+  /// No description provided for @dailyLearningProgramsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read today\'s scheduled learning in the app.'**
   String get dailyLearningProgramsSubtitle;
 
-  /// Status for a program without a calendar entry for the selected day.
+  /// No description provided for @dailyLearningProgramNoSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Not scheduled by this calendar today.'**
   String get dailyLearningProgramNoSchedule;
 
-  /// Status when a scheduled reference has no matching offline text.
+  /// No description provided for @dailyLearningProgramNoOfflineText.
+  ///
+  /// In en, this message translates to:
+  /// **'This reading isn\'t available in the offline text library.'**
   String get dailyLearningProgramNoOfflineText;
 
   /// No description provided for @searchHintEnterTerm.

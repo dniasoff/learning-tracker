@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -13,6 +11,7 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:learning_tracker/features/dashboard/data/repositories/firestore_study_day_reader_adapter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';

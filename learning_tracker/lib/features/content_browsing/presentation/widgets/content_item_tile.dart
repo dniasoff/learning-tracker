@@ -1,6 +1,5 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -10,6 +9,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/item_review_breakdown.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/review_count_badge.dart';

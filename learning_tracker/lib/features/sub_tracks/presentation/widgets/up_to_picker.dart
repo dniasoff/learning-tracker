@@ -18,7 +18,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
@@ -27,6 +26,7 @@ import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/inline_async_error.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/models/up_to_selection.dart';
 import 'package:learning_tracker/features/sub_tracks/domain/services/up_to_selection_service.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/providers/sub_track_capture_providers.dart';

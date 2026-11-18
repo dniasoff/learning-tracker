@@ -250,8 +250,9 @@ void main() {
                 ),
               ).captured.single
               as LearningGroupsRoute;
-      expect(route.profileId, _adultProfileId);
-      expect(route.isAdult, isTrue);
+      final args = route.args!;
+      expect(args.profileId, _adultProfileId);
+      expect(args.isAdult, isTrue);
     });
 
     // WS4.settings (D2): Settings are grouped by scope (Device / Profile).

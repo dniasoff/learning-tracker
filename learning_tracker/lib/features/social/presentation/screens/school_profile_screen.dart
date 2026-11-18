@@ -1,7 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:learning_tracker/features/social/presentation/providers/school_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 

@@ -3610,7 +3610,8 @@ class AppLocalizationsHe extends AppLocalizations {
       'פתחו את הלימוד המתוכנן להיום בתוך האפליקציה.';
 
   @override
-  String get dailyLearningProgramNoSchedule => 'אין לימוד מתוכנן בתוכנית זו להיום.';
+  String get dailyLearningProgramNoSchedule =>
+      'אין לימוד מתוכנן בתוכנית זו להיום.';
 
   @override
   String get dailyLearningProgramNoOfflineText =>

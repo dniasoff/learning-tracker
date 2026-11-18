@@ -10,8 +10,7 @@ void main() {
       if (entity.path.endsWith('safe_modal_bottom_sheet.dart')) continue;
 
       final source = await entity.readAsString();
-      if (RegExp(r'\bshowModalBottomSheet(?:<[^>]+>)?\s*\(')
-          .hasMatch(source)) {
+      if (RegExp(r'\bshowModalBottomSheet(?:<[^>]+>)?\s*\(').hasMatch(source)) {
         violations.add(entity.path);
       }
     }

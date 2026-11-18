@@ -158,19 +158,22 @@ void main() {
       },
     );
 
-    test('chapter exact cache remains the fallback without child rows', () async {
-      await insertTextCache(
-        sefariaRef: 'Pirkei Avot 1',
-        hebrewText: 'whole chapter',
-        englishText: 'chapter en',
-      );
+    test(
+      'chapter exact cache remains the fallback without child rows',
+      () async {
+        await insertTextCache(
+          sefariaRef: 'Pirkei Avot 1',
+          hebrewText: 'whole chapter',
+          englishText: 'chapter en',
+        );
 
-      final result = await repository.getText('Pirkei Avot 1');
+        final result = await repository.getText('Pirkei Avot 1');
 
-      expect(result, isNotNull);
-      expect(result!.segments, hasLength(1));
-      expect(result.segments.first.hebrewText, 'whole chapter');
-    });
+        expect(result, isNotNull);
+        expect(result!.segments, hasLength(1));
+        expect(result.segments.first.hebrewText, 'whole chapter');
+      },
+    );
   });
 
   // ── Child-verse aggregation ───────────────────────────────────────────────

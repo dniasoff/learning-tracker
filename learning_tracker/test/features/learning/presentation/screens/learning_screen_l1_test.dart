@@ -63,9 +63,9 @@ import 'package:learning_tracker/features/learning/presentation/screens/learning
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/social/presentation/widgets/groups_entry_tile.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/social/presentation/widgets/groups_entry_tile.dart';
 import 'package:learning_tracker/features/sub_tracks/presentation/widgets/pending_capture_rollback.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';

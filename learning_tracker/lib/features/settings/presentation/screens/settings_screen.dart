@@ -87,7 +87,12 @@ class SettingsScreen extends ConsumerWidget {
       if (!isTutoredSession)
         _SettingsSearchEntry(
           title: l10n.settingsAppPermissions,
-          aliases: const ['permissions', 'app access', 'הרשאות', 'הרשאות אפליקציה'],
+          aliases: const [
+            'permissions',
+            'app access',
+            'הרשאות',
+            'הרשאות אפליקציה',
+          ],
           onSelected: () => context.pushRoute(PermissionPromptRoute()),
         ),
       if (isTutorElevated &&
@@ -97,25 +102,48 @@ class SettingsScreen extends ConsumerWidget {
               tutorPerms.canEditRewards))
         _SettingsSearchEntry(
           title: l10n.parentSettingsTitle,
-          aliases: const ['parent settings', 'manage learning', 'tracks', 'ניהול הורים', 'מסלולים'],
+          aliases: const [
+            'parent settings',
+            'manage learning',
+            'tracks',
+            'ניהול הורים',
+            'מסלולים',
+          ],
           onSelected: () => context.pushRoute(const ParentSettingsRoute()),
         ),
       if (hasActiveProfile && !isTutoredSession && !isChildProfile) ...[
         _SettingsSearchEntry(
           title: l10n.manageTracks,
-          aliases: const ['learning tracks', 'curriculum', 'מסלולים', 'תוכניות לימוד'],
+          aliases: const [
+            'learning tracks',
+            'curriculum',
+            'מסלולים',
+            'תוכניות לימוד',
+          ],
           onSelected: () => context.pushRoute(TrackManagementHubRoute()),
         ),
         _SettingsSearchEntry(
           title: l10n.manageProfiles,
-          aliases: const ['learners', 'students', 'profiles', 'תלמידים', 'פרופילים'],
+          aliases: const [
+            'learners',
+            'students',
+            'profiles',
+            'תלמידים',
+            'פרופילים',
+          ],
           onSelected: () => context.pushRoute(const ManageLearnersRoute()),
         ),
       ],
-      if (hasActiveProfile && activeProfile != null)
+      if (hasActiveProfile)
         _SettingsSearchEntry(
           title: l10n.groupTitle,
-          aliases: const ['learning groups', 'group tasks', 'קבוצות', 'קבוצה', 'משימות קבוצתיות'],
+          aliases: const [
+            'learning groups',
+            'group tasks',
+            'קבוצות',
+            'קבוצה',
+            'משימות קבוצתיות',
+          ],
           onSelected: () => context.pushRoute(
             LearningGroupsRoute(
               profileId: activeProfile.profileId,
@@ -125,70 +153,112 @@ class SettingsScreen extends ConsumerWidget {
         ),
       _SettingsSearchEntry(
         title: '${l10n.calendarPreference}: ${l10n.calendarHebrew}',
-        aliases: const ['calendar', 'hebrew date', 'לוח שנה', 'תאריך עברי', 'לוח עברי'],
-        onSelected: () => unawaited(
-          ref.read(useHebrewDateProvider.notifier).set(true),
-        ),
+        aliases: const [
+          'calendar',
+          'hebrew date',
+          'לוח שנה',
+          'תאריך עברי',
+          'לוח עברי',
+        ],
+        onSelected: () =>
+            unawaited(ref.read(useHebrewDateProvider.notifier).set(true)),
       ),
       _SettingsSearchEntry(
         title: '${l10n.calendarPreference}: ${l10n.calendarGregorian}',
         aliases: const ['calendar', 'gregorian', 'לוח שנה', 'לוח לועזי'],
-        onSelected: () => unawaited(
-          ref.read(useHebrewDateProvider.notifier).set(false),
-        ),
+        onSelected: () =>
+            unawaited(ref.read(useHebrewDateProvider.notifier).set(false)),
       ),
-      if (Localizations.localeOf(context).languageCode != 'he')
-        ...[
-          _SettingsSearchEntry(
-            title: '${l10n.hebrewTermsPreference}: ${l10n.calendarHebrew}',
-            aliases: const ['hebrew terms', 'learning terms', 'chazara', 'mishnah', 'מונחים', 'מילים בעברית'],
-            onSelected: () => unawaited(
-              ref.read(useHebrewTermsProvider.notifier).set(true),
-            ),
+      if (Localizations.localeOf(context).languageCode != 'he') ...[
+        _SettingsSearchEntry(
+          title: '${l10n.hebrewTermsPreference}: ${l10n.calendarHebrew}',
+          aliases: const [
+            'hebrew terms',
+            'learning terms',
+            'chazara',
+            'mishnah',
+            'מונחים',
+            'מילים בעברית',
+          ],
+          onSelected: () =>
+              unawaited(ref.read(useHebrewTermsProvider.notifier).set(true)),
+        ),
+        _SettingsSearchEntry(
+          title: '${l10n.hebrewTermsPreference}: ${l10n.settingsPronunciation}',
+          aliases: const [
+            'transliteration',
+            'latin terms',
+            'hebrew terms',
+            'מונחים באנגלית',
+            'תעתיק',
+          ],
+          onSelected: () =>
+              unawaited(ref.read(useHebrewTermsProvider.notifier).set(false)),
+        ),
+      ],
+      if (!useHebrewTerms) ...[
+        _SettingsSearchEntry(
+          title:
+              '${l10n.settingsPronunciation}: ${l10n.settingsPronunciationAshkenazi}',
+          aliases: const [
+            'pronunciation',
+            'ashkenazi',
+            'ashkenaz',
+            'הגייה',
+            'אשכנז',
+          ],
+          onSelected: () => unawaited(
+            ref
+                .read(currentTransliterationVariantProvider.notifier)
+                .set(TransliterationVariant.ashkenazi),
           ),
-          _SettingsSearchEntry(
-            title: '${l10n.hebrewTermsPreference}: ${l10n.settingsPronunciation}',
-            aliases: const ['transliteration', 'latin terms', 'hebrew terms', 'מונחים באנגלית', 'תעתיק'],
-            onSelected: () => unawaited(
-              ref.read(useHebrewTermsProvider.notifier).set(false),
-            ),
+        ),
+        _SettingsSearchEntry(
+          title:
+              '${l10n.settingsPronunciation}: ${l10n.settingsPronunciationSephardi}',
+          aliases: const [
+            'pronunciation',
+            'sephardi',
+            'sefardi',
+            'הגייה',
+            'ספרד',
+          ],
+          onSelected: () => unawaited(
+            ref
+                .read(currentTransliterationVariantProvider.notifier)
+                .set(TransliterationVariant.sephardi),
           ),
-        ],
-      if (!useHebrewTerms)
-        ...[
-          _SettingsSearchEntry(
-            title: '${l10n.settingsPronunciation}: ${l10n.settingsPronunciationAshkenazi}',
-            aliases: const ['pronunciation', 'ashkenazi', 'ashkenaz', 'הגייה', 'אשכנז'],
-            onSelected: () => unawaited(
-              ref
-                  .read(currentTransliterationVariantProvider.notifier)
-                  .set(TransliterationVariant.ashkenazi),
-            ),
-          ),
-          _SettingsSearchEntry(
-            title: '${l10n.settingsPronunciation}: ${l10n.settingsPronunciationSephardi}',
-            aliases: const ['pronunciation', 'sephardi', 'sefardi', 'הגייה', 'ספרד'],
-            onSelected: () => unawaited(
-              ref
-                  .read(currentTransliterationVariantProvider.notifier)
-                  .set(TransliterationVariant.sephardi),
-            ),
-          ),
-        ],
+        ),
+      ],
       _SettingsSearchEntry(
         title: '${l10n.settingsNikud}: ${l10n.settingsNikudWith}',
-        aliases: const ['vowels', 'vowel marks', 'nikud', 'nekudot', 'ניקוד', 'נקודות'],
-        onSelected: () => unawaited(ref.read(showNikudProvider.notifier).set(true)),
+        aliases: const [
+          'vowels',
+          'vowel marks',
+          'nikud',
+          'nekudot',
+          'ניקוד',
+          'נקודות',
+        ],
+        onSelected: () =>
+            unawaited(ref.read(showNikudProvider.notifier).set(true)),
       ),
       _SettingsSearchEntry(
         title: '${l10n.settingsNikud}: ${l10n.settingsNikudWithout}',
         aliases: const ['vowels', 'nikud', 'no vowels', 'ללא ניקוד'],
-        onSelected: () => unawaited(ref.read(showNikudProvider.notifier).set(false)),
+        onSelected: () =>
+            unawaited(ref.read(showNikudProvider.notifier).set(false)),
       ),
       if (hasActiveProfile && !isChildProfile && !isTutoredSession)
         _SettingsSearchEntry(
           title: l10n.addWhatYouLearned,
-          aliases: const ['lifetime learning', 'backfill', 'past learning', 'הוספת לימוד', 'לימוד קודם'],
+          aliases: const [
+            'lifetime learning',
+            'backfill',
+            'past learning',
+            'הוספת לימוד',
+            'לימוד קודם',
+          ],
           onSelected: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => const LifetimeMarkingScreen(),
@@ -198,18 +268,36 @@ class SettingsScreen extends ConsumerWidget {
       if (hasActiveProfile)
         _SettingsSearchEntry(
           title: l10n.notificationSettings,
-          aliases: const ['notifications', 'reminders', 'alerts', 'התראות', 'תזכורות'],
+          aliases: const [
+            'notifications',
+            'reminders',
+            'alerts',
+            'התראות',
+            'תזכורות',
+          ],
           onSelected: () => context.pushRoute(const NotificationsRoute()),
         ),
       if (hasActiveProfile && !isTutoredSession && isChildProfile)
         _SettingsSearchEntry(
           title: l10n.parentMode,
-          aliases: const ['parent controls', 'parent pin', 'parent mode', 'הגדרות הורים', 'קוד הורים'],
+          aliases: const [
+            'parent controls',
+            'parent pin',
+            'parent mode',
+            'הגדרות הורים',
+            'קוד הורים',
+          ],
           onSelected: () => context.pushRoute(const ParentSettingsRoute()),
         ),
       _SettingsSearchEntry(
         title: l10n.aboutTitle,
-        aliases: const ['about', 'app info', 'version', 'אודות', 'מידע על האפליקציה'],
+        aliases: const [
+          'about',
+          'app info',
+          'version',
+          'אודות',
+          'מידע על האפליקציה',
+        ],
         onSelected: () => context.pushRoute(const AboutRoute()),
       ),
     ];
@@ -259,319 +347,331 @@ class SettingsScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                 children: [
-            // Profile header is the canonical learner + login-account switcher
-            // (avatar, name, account email; tap → account actions sheet). Daniel
-            // requires children to be able to switch learner and login account
-            // from here, so it is shown for every OWN profile (child, adult).
-            //
-            // In a TUTORED session it is HIDDEN: the header + its tap-through
-            // account-actions sheet are the TUTOR's own device/account surface
-            // (switch login, change password, sign out, delete account), which
-            // must not leak into the talmid's student-scope context. The
-            // persistent role switcher in the app shell remains the path out of
-            // the tutored session.
-            if (!isTutoredSession)
-              UserProfileHeaderCard(
-                user: user,
-                activeProfile: activeProfile,
-                surface: UserProfileHeaderSurface.settings,
-                contextRole: UserProfileContextRole.selfLearner,
-              ),
-            // ── Pending tutor invitations ──────────────────────────────────────
-            // Shown automatically when a parent has sent an invite addressed to
-            // this account's email — no link sharing required.
-            if (hasActiveProfile && !isTutoredSession)
-              const _PendingInvitesSection(),
-            const SizedBox(height: 24),
-            // ── DEVICE section (D2/WS4.settings) ──────────────────────────────
-            // Device-scoped settings: applies to this physical device, shared by
-            // every login and profile on it (OS permissions, location access).
-            // WS4.login-sect: Login scope is omitted — the only Login-scoped
-            // datum (debug toggle) does not yet exist, so no empty heading is shown.
-            //
-            // Bug 12: in a tutored (talmid) session every item here is tied to
-            // the TUTOR's own device/account — App Permissions (OS prompts) and
-            // Sacred Time / location ("I am in Israel", Shabbos Mode). The owner
-            // ruling is to show ONLY student/profile-scope items and HIDE the
-            // tutor's own account/device items, so the entire DEVICE section is
-            // omitted when viewing a talmid.
-            if (!isTutoredSession) ...[
-              _SectionHeader(title: l10n.sectionDevice),
-              const SizedBox(height: 10),
-              _SurfaceCard(
-                child: PreferenceListTile.withIcon(
-                  icon: Icons.security_rounded,
-                  iconColor: const Color(0xFF1E7B5A),
-                  iconBackground: const Color(0xFFDDF3EB),
-                  title: l10n.settingsAppPermissions,
-                  subtitle: l10n.settingsAppPermissionsSubtitle,
-                  onTap: () => context.pushRoute(PermissionPromptRoute()),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // DEC-26: Sacred Time / location is DEVICE-scoped, so its card lives
-              // under the DEVICE section (it was previously mis-placed under
-              // PROFILE).
-              //
-              // AUD-sacred_time-08: SettingsRoute carries no PIN/child-mode
-              // route guard (see app_router.dart), so a child on a shared
-              // device could otherwise trigger the card's location actions
-              // with no parent authentication. Gate the card's own
-              // escalating actions (AN-2 pattern) instead of gating the
-              // whole Settings screen, which children legitimately need for
-              // their own profile preferences.
-              // Passed unresolved: the card disables its actions until the
-              // guard settles (fail closed on loading / error).
-              SacredTimeSettingsCard(
-                pinGuard: ref.watch(sacredTimeLocationPinGuardRequiredProvider),
-                activeProfileId: deviceOwnerProfileId,
-              ),
-              const SizedBox(height: 24),
-            ],
-            // ── PROFILE section (D2/WS4.settings) ─────────────────────────────
-            // Profile-scoped settings: per-learner preferences, tracks,
-            // notifications (reminder schedules), and parental controls.
-            _SectionHeader(title: l10n.sectionProfile),
-            const SizedBox(height: 10),
-            // TUT-06: in a tutored session the tutor has FULL parent-equivalent
-            // management over the talmid (manage tracks, points, rewards, goals,
-            // bulk/lifetime marking — only LIVE marking is barred). Surface the
-            // single entry into the parent-management hub (ParentSettingsScreen),
-            // which already renders every management tile gated by the active
-            // TutorPermissions. Without this, a tutor session showed only the bare
-            // learner shell with no management access at all (TUT-02/TUT-06).
-            //
-            // Shown whenever the tutor has ANY management permission.
-            // canEditLearning (AD-53, DNI-487) replaced the five legacy edit
-            // flags; it covers tracks, goals, study days and learning
-            // records. The hub itself re-gates each individual tile.
-            if (isTutorElevated &&
-                (tutorPerms == null ||
-                    tutorPerms.canEditLearning ||
-                    tutorPerms.canEditPoints ||
-                    tutorPerms.canEditRewards)) ...[
-              _SurfaceCard(
-                child: PreferenceListTile.withIcon(
-                  icon: Icons.admin_panel_settings_outlined,
-                  iconColor: context.colors.brandBlueBright,
-                  iconBackground: context.colors.brandBlueSoft,
-                  title: l10n.parentSettingsTitle,
-                  // Bug 10: a tutor has full parent-equivalent powers — the hub
-                  // surfaces tracks, points, rewards and goals (each re-gated by
-                  // the tutor's permissions inside ParentSettingsScreen), so the
-                  // subtitle must advertise the broader scope, not tracks only.
-                  subtitle: l10n.manageChildLearningSubtitle,
-                  onTap: () => context.pushRoute(const ParentSettingsRoute()),
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            // Own adult: Manage Tracks + Manage Profiles.
-            // Tutored sessions reach tracks via the parent-management hub tile
-            // above, so the standalone Manage Tracks / Manage Profiles card is
-            // own-profile (non-tutored) only.
-            if (hasActiveProfile && !isTutoredSession && !isChildProfile) ...[
-              _SurfaceCard(
-                child: Column(
-                  children: [
-                    PreferenceListTile.withIcon(
-                      icon: Icons.route_rounded,
-                      iconColor: context.colors.brandBlueBright,
-                      iconBackground: context.colors.brandBlueSoft,
-                      title: l10n.manageTracks,
-                      subtitle: l10n.manageTracksDetail,
-                      onTap: () => context.pushRoute(TrackManagementHubRoute()),
+                  // Profile header is the canonical learner + login-account switcher
+                  // (avatar, name, account email; tap → account actions sheet). Daniel
+                  // requires children to be able to switch learner and login account
+                  // from here, so it is shown for every OWN profile (child, adult).
+                  //
+                  // In a TUTORED session it is HIDDEN: the header + its tap-through
+                  // account-actions sheet are the TUTOR's own device/account surface
+                  // (switch login, change password, sign out, delete account), which
+                  // must not leak into the talmid's student-scope context. The
+                  // persistent role switcher in the app shell remains the path out of
+                  // the tutored session.
+                  if (!isTutoredSession)
+                    UserProfileHeaderCard(
+                      user: user,
+                      activeProfile: activeProfile,
+                      surface: UserProfileHeaderSurface.settings,
+                      contextRole: UserProfileContextRole.selfLearner,
                     ),
-                    _tileDivider(theme),
-                    PreferenceListTile.withIcon(
-                      icon: Icons.people_alt_rounded,
-                      iconColor: context.colors.brandBlueBright,
-                      iconBackground: context.colors.brandBlueSoft,
-                      title: l10n.manageProfiles,
-                      subtitle: l10n.manageProfilesSubtitle,
-                      onTap: () =>
-                          context.pushRoute(const ManageLearnersRoute()),
+                  // ── Pending tutor invitations ──────────────────────────────────────
+                  // Shown automatically when a parent has sent an invite addressed to
+                  // this account's email — no link sharing required.
+                  if (hasActiveProfile && !isTutoredSession)
+                    const _PendingInvitesSection(),
+                  const SizedBox(height: 24),
+                  // ── DEVICE section (D2/WS4.settings) ──────────────────────────────
+                  // Device-scoped settings: applies to this physical device, shared by
+                  // every login and profile on it (OS permissions, location access).
+                  // WS4.login-sect: Login scope is omitted — the only Login-scoped
+                  // datum (debug toggle) does not yet exist, so no empty heading is shown.
+                  //
+                  // Bug 12: in a tutored (talmid) session every item here is tied to
+                  // the TUTOR's own device/account — App Permissions (OS prompts) and
+                  // Sacred Time / location ("I am in Israel", Shabbos Mode). The owner
+                  // ruling is to show ONLY student/profile-scope items and HIDE the
+                  // tutor's own account/device items, so the entire DEVICE section is
+                  // omitted when viewing a talmid.
+                  if (!isTutoredSession) ...[
+                    _SectionHeader(title: l10n.sectionDevice),
+                    const SizedBox(height: 10),
+                    _SurfaceCard(
+                      child: PreferenceListTile.withIcon(
+                        icon: Icons.security_rounded,
+                        iconColor: const Color(0xFF1E7B5A),
+                        iconBackground: const Color(0xFFDDF3EB),
+                        title: l10n.settingsAppPermissions,
+                        subtitle: l10n.settingsAppPermissionsSubtitle,
+                        onTap: () => context.pushRoute(PermissionPromptRoute()),
+                      ),
                     ),
+                    const SizedBox(height: 16),
+                    // DEC-26: Sacred Time / location is DEVICE-scoped, so its card lives
+                    // under the DEVICE section (it was previously mis-placed under
+                    // PROFILE).
+                    //
+                    // AUD-sacred_time-08: SettingsRoute carries no PIN/child-mode
+                    // route guard (see app_router.dart), so a child on a shared
+                    // device could otherwise trigger the card's location actions
+                    // with no parent authentication. Gate the card's own
+                    // escalating actions (AN-2 pattern) instead of gating the
+                    // whole Settings screen, which children legitimately need for
+                    // their own profile preferences.
+                    // Passed unresolved: the card disables its actions until the
+                    // guard settles (fail closed on loading / error).
+                    SacredTimeSettingsCard(
+                      pinGuard: ref.watch(
+                        sacredTimeLocationPinGuardRequiredProvider,
+                      ),
+                      activeProfileId: deviceOwnerProfileId,
+                    ),
+                    const SizedBox(height: 24),
                   ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (hasActiveProfile) ...[
-              _SurfaceCard(child: const GroupsEntryTile()),
-              const SizedBox(height: 12),
-            ],
-            _SurfaceCard(
-              child: Column(
-                children: [
-                  const _HebrewDateTile(),
-                  if (Localizations.localeOf(context).languageCode != 'he') ...[
-                    _tileDivider(theme),
-                    const _HebrewTermsTile(),
+                  // ── PROFILE section (D2/WS4.settings) ─────────────────────────────
+                  // Profile-scoped settings: per-learner preferences, tracks,
+                  // notifications (reminder schedules), and parental controls.
+                  _SectionHeader(title: l10n.sectionProfile),
+                  const SizedBox(height: 10),
+                  // TUT-06: in a tutored session the tutor has FULL parent-equivalent
+                  // management over the talmid (manage tracks, points, rewards, goals,
+                  // bulk/lifetime marking — only LIVE marking is barred). Surface the
+                  // single entry into the parent-management hub (ParentSettingsScreen),
+                  // which already renders every management tile gated by the active
+                  // TutorPermissions. Without this, a tutor session showed only the bare
+                  // learner shell with no management access at all (TUT-02/TUT-06).
+                  //
+                  // Shown whenever the tutor has ANY management permission.
+                  // canEditLearning (AD-53, DNI-487) replaced the five legacy edit
+                  // flags; it covers tracks, goals, study days and learning
+                  // records. The hub itself re-gates each individual tile.
+                  if (isTutorElevated &&
+                      (tutorPerms == null ||
+                          tutorPerms.canEditLearning ||
+                          tutorPerms.canEditPoints ||
+                          tutorPerms.canEditRewards)) ...[
+                    _SurfaceCard(
+                      child: PreferenceListTile.withIcon(
+                        icon: Icons.admin_panel_settings_outlined,
+                        iconColor: context.colors.brandBlueBright,
+                        iconBackground: context.colors.brandBlueSoft,
+                        title: l10n.parentSettingsTitle,
+                        // Bug 10: a tutor has full parent-equivalent powers — the hub
+                        // surfaces tracks, points, rewards and goals (each re-gated by
+                        // the tutor's permissions inside ParentSettingsScreen), so the
+                        // subtitle must advertise the broader scope, not tracks only.
+                        subtitle: l10n.manageChildLearningSubtitle,
+                        onTap: () =>
+                            context.pushRoute(const ParentSettingsRoute()),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                   ],
-                  _TransliterationVariantTileSection(theme: theme),
-                  _tileDivider(theme),
-                  _NikudTile(theme: theme),
-                  // Hidden for tutors: bulk lifetime marking goes through CF (S4).
+                  // Own adult: Manage Tracks + Manage Profiles.
+                  // Tutored sessions reach tracks via the parent-management hub tile
+                  // above, so the standalone Manage Tracks / Manage Profiles card is
+                  // own-profile (non-tutored) only.
+                  if (hasActiveProfile &&
+                      !isTutoredSession &&
+                      !isChildProfile) ...[
+                    _SurfaceCard(
+                      child: Column(
+                        children: [
+                          PreferenceListTile.withIcon(
+                            icon: Icons.route_rounded,
+                            iconColor: context.colors.brandBlueBright,
+                            iconBackground: context.colors.brandBlueSoft,
+                            title: l10n.manageTracks,
+                            subtitle: l10n.manageTracksDetail,
+                            onTap: () =>
+                                context.pushRoute(TrackManagementHubRoute()),
+                          ),
+                          _tileDivider(theme),
+                          PreferenceListTile.withIcon(
+                            icon: Icons.people_alt_rounded,
+                            iconColor: context.colors.brandBlueBright,
+                            iconBackground: context.colors.brandBlueSoft,
+                            title: l10n.manageProfiles,
+                            subtitle: l10n.manageProfilesSubtitle,
+                            onTap: () =>
+                                context.pushRoute(const ManageLearnersRoute()),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (hasActiveProfile) ...[
+                    const _SurfaceCard(child: GroupsEntryTile()),
+                    const SizedBox(height: 12),
+                  ],
+                  _SurfaceCard(
+                    child: Column(
+                      children: [
+                        const _HebrewDateTile(),
+                        if (Localizations.localeOf(context).languageCode !=
+                            'he') ...[
+                          _tileDivider(theme),
+                          const _HebrewTermsTile(),
+                        ],
+                        _TransliterationVariantTileSection(theme: theme),
+                        _tileDivider(theme),
+                        _NikudTile(theme: theme),
+                        // Hidden for tutors: bulk lifetime marking goes through CF (S4).
+                        if (hasActiveProfile &&
+                            !isChildProfile &&
+                            !isTutoredSession) ...[
+                          _tileDivider(theme),
+                          PreferenceListTile.withIcon(
+                            icon: Icons.menu_book_rounded,
+                            iconColor: context.colors.brandGoldDeep,
+                            iconBackground: context.colors.brandGoldSoft,
+                            title: l10n.addWhatYouLearned,
+                            subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const LifetimeMarkingScreen(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (hasActiveProfile)
+                    _SurfaceCard(
+                      child: PreferenceListTile.withIcon(
+                        icon: Icons.notifications_active_outlined,
+                        iconColor: context.colors.brandCoralDeep,
+                        iconBackground: theme.colorScheme.errorContainer,
+                        title: l10n.notificationSettings,
+                        subtitle: l10n.notificationSettingsSubtitle,
+                        onTap: () =>
+                            context.pushRoute(const NotificationsRoute()),
+                      ),
+                    ),
+                  // T3.gating: backup/sync controls are write-path in tutored sessions.
                   if (hasActiveProfile &&
                       !isChildProfile &&
                       !isTutoredSession) ...[
-                    _tileDivider(theme),
-                    PreferenceListTile.withIcon(
-                      icon: Icons.menu_book_rounded,
-                      iconColor: context.colors.brandGoldDeep,
-                      iconBackground: context.colors.brandGoldSoft,
-                      title: l10n.addWhatYouLearned,
-                      subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const LifetimeMarkingScreen(),
+                    const SizedBox(height: 16),
+                    const BackupSyncSection(),
+                  ],
+                  const SizedBox(height: 24),
+                  // T3.gating: parental controls and account management are hidden in
+                  // tutored sessions — the tutor is viewing the child's context only.
+                  if (hasActiveProfile && !isTutoredSession) ...[
+                    _ParentalControlsSection(
+                      user: user,
+                      isChildProfile: isChildProfile,
+                    ),
+                  ],
+                  // Account management (switch / add login, change password, sign
+                  // out, delete account) lives ONLY in the profile header sheet at the
+                  // top of this screen (tap the header card). It is intentionally NOT
+                  // duplicated here so there is a single home for account actions.
+                  const SizedBox(height: 24),
+                  // Bug 12: diagnostic logs are the TUTOR's own device/account logs
+                  // (uploaded to the tutor's Firestore under their own auth) — an
+                  // account/device-scope action that must be hidden when viewing a
+                  // talmid. Shown only in a non-tutored (own) session.
+                  if (!isTutoredSession)
+                    _SurfaceCard(
+                      child: PreferenceListTile.withIcon(
+                        icon: Icons.bug_report_outlined,
+                        iconColor: context.colors.brandInkMuted,
+                        // AUD dark-mode sweep: was a hardcoded Color(0xFFF0F1F5)
+                        // pale-grey chip under the already brightness-aware
+                        // brandInkMuted icon (which LIGHTENS in dark) — the icon
+                        // and its own background stopped matching, measured
+                        // 2.28:1 in dark. brandCreamSoft is the paired recessed-
+                        // surface token (equals the old literal almost exactly in
+                        // light — 0xFFEFF2F7 vs 0xFFF0F1F5 — and darkens with the
+                        // icon in dark), 5.97:1 in dark.
+                        iconBackground: context.colors.brandCreamSoft,
+                        title: l10n.settingsSendDiagnosticLogs,
+                        subtitle: l10n.settingsSendDiagnosticLogsSubtitle,
+                        trailing: const SizedBox.shrink(),
+                        onTap: () => sendLogsToFirebase(
+                          context: context,
+                          logger: ref.read(appLoggerProvider),
+                          repository: ref.read(
+                            _diagnosticLogRepositoryProvider,
+                          ),
+                          auth: ref.read(authRepositoryProvider),
                         ),
                       ),
                     ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (hasActiveProfile)
-              _SurfaceCard(
-                child: PreferenceListTile.withIcon(
-                  icon: Icons.notifications_active_outlined,
-                  iconColor: context.colors.brandCoralDeep,
-                  iconBackground: theme.colorScheme.errorContainer,
-                  title: l10n.notificationSettings,
-                  subtitle: l10n.notificationSettingsSubtitle,
-                  onTap: () => context.pushRoute(const NotificationsRoute()),
-                ),
-              ),
-            // T3.gating: backup/sync controls are write-path in tutored sessions.
-            if (hasActiveProfile && !isChildProfile && !isTutoredSession) ...[
-              const SizedBox(height: 16),
-              const BackupSyncSection(),
-            ],
-            const SizedBox(height: 24),
-            // T3.gating: parental controls and account management are hidden in
-            // tutored sessions — the tutor is viewing the child's context only.
-            if (hasActiveProfile && !isTutoredSession) ...[
-              _ParentalControlsSection(
-                user: user,
-                isChildProfile: isChildProfile,
-              ),
-            ],
-            // Account management (switch / add login, change password, sign
-            // out, delete account) lives ONLY in the profile header sheet at the
-            // top of this screen (tap the header card). It is intentionally NOT
-            // duplicated here so there is a single home for account actions.
-            const SizedBox(height: 24),
-            // Bug 12: diagnostic logs are the TUTOR's own device/account logs
-            // (uploaded to the tutor's Firestore under their own auth) — an
-            // account/device-scope action that must be hidden when viewing a
-            // talmid. Shown only in a non-tutored (own) session.
-            if (!isTutoredSession)
-              _SurfaceCard(
-                child: PreferenceListTile.withIcon(
-                  icon: Icons.bug_report_outlined,
-                  iconColor: context.colors.brandInkMuted,
-                  // AUD dark-mode sweep: was a hardcoded Color(0xFFF0F1F5)
-                  // pale-grey chip under the already brightness-aware
-                  // brandInkMuted icon (which LIGHTENS in dark) — the icon
-                  // and its own background stopped matching, measured
-                  // 2.28:1 in dark. brandCreamSoft is the paired recessed-
-                  // surface token (equals the old literal almost exactly in
-                  // light — 0xFFEFF2F7 vs 0xFFF0F1F5 — and darkens with the
-                  // icon in dark), 5.97:1 in dark.
-                  iconBackground: context.colors.brandCreamSoft,
-                  title: l10n.settingsSendDiagnosticLogs,
-                  subtitle: l10n.settingsSendDiagnosticLogsSubtitle,
-                  trailing: const SizedBox.shrink(),
-                  onTap: () => sendLogsToFirebase(
-                    context: context,
-                    logger: ref.read(appLoggerProvider),
-                    repository: ref.read(_diagnosticLogRepositoryProvider),
-                    auth: ref.read(authRepositoryProvider),
+                  const SizedBox(height: 24),
+                  const SizedBox(height: 10),
+                  _SurfaceCard(
+                    child: PreferenceListTile.withIcon(
+                      icon: Icons.info_outline_rounded,
+                      iconColor: context.colors.brandBlueBright,
+                      iconBackground: context.colors.brandBlueSoft,
+                      title: l10n.aboutTitle,
+                      subtitle: l10n.aboutDescription,
+                      onTap: () => context.pushRoute(const AboutRoute()),
+                    ),
                   ),
-                ),
-              ),
-            const SizedBox(height: 24),
-            const SizedBox(height: 10),
-            _SurfaceCard(
-              child: PreferenceListTile.withIcon(
-                icon: Icons.info_outline_rounded,
-                iconColor: context.colors.brandBlueBright,
-                iconBackground: context.colors.brandBlueSoft,
-                title: l10n.aboutTitle,
-                subtitle: l10n.aboutDescription,
-                onTap: () => context.pushRoute(const AboutRoute()),
-              ),
-            ),
-            const SizedBox(height: 24),
-            FutureBuilder<PackageInfo>(
-              future: PackageInfo.fromPlatform(),
-              builder: (context, snapshot) {
-                final info = snapshot.data;
-                if (info == null || info.version.isEmpty) {
-                  return const SizedBox.shrink();
-                }
-                final buildLabel = info.buildNumber.isNotEmpty
-                    ? 'v${info.version} (${info.buildNumber})'
-                    : 'v${info.version}';
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Center(
-                      child: Text(
-                        buildLabel,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontSize: 15,
-                        ),
+                  const SizedBox(height: 24),
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (context, snapshot) {
+                      final info = snapshot.data;
+                      if (info == null || info.version.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      final buildLabel = info.buildNumber.isNotEmpty
+                          ? 'v${info.version} (${info.buildNumber})'
+                          : 'v${info.version}';
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Center(
+                            child: Text(
+                              buildLabel,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                        ],
+                      );
+                    },
+                  ),
+                  Center(
+                    child: Text(
+                      l10n.appTitle,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                        fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                  ],
-                );
-              },
-            ),
-            Center(
-              child: Text(
-                l10n.appTitle,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontStyle: FontStyle.italic,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.change_history_rounded,
-                  size: 14,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.5,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.forum_outlined,
-                  size: 14,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.5,
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.change_history_rounded,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.forum_outlined,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.star_rounded,
+                        size: 14,
+                        color: theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.star_rounded,
-                  size: 14,
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.5,
-                  ),
-                ),
-              ],
-            ),
                 ],
               ),
             ),

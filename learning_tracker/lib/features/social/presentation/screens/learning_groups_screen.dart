@@ -1,9 +1,9 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/widgets/safe_modal_bottom_sheet.dart';
 import 'package:learning_tracker/features/profiles/profiles.dart';
 import 'package:learning_tracker/features/social/data/learning_group_repository.dart';
 import 'package:learning_tracker/features/social/domain/learning_group.dart';
