@@ -118,6 +118,17 @@ class _ProgramTile extends ConsumerWidget {
         .where((item) => refs.contains(item.sefariaRef))
         .map((item) => item.sefariaRef)
         .toList(growable: false);
+    if (orderedRefs.length > 7) {
+      return ListTile(
+        dense: true,
+        title: Text(title),
+        subtitle: Text(entry!.todayRef),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.router.push(
+          TextDisplayRoute(sefariaRef: orderedRefs.first),
+        ),
+      );
+    }
     return Column(
       children: [
         for (final sefariaRef in orderedRefs)

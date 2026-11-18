@@ -37,6 +37,7 @@ Set<String> resolveProgramTodayRefs(
   };
 
   final matches = <String>{};
+  matches.addAll(resolveMultiChapterVerseRange(todayRef, contentItems));
   for (final candidate in candidates) {
     final resolved = normalizedLeaf[normalizeRef(candidate)];
     if (resolved != null) {
@@ -61,6 +62,54 @@ Set<String> resolveProgramTodayRefs(
     }
   }
   return matches;
+}
+
+/// Resolves a multi-chapter verse range (for example, `Genesis 28:10-32:3`)
+/// to the bundled leaf verses between its endpoints.
+///
+/// Calendar readings such as the weekly parsha use this form, while the
+/// simpler range expander below only handles ranges within one chapter.
+Set<String> resolveMultiChapterVerseRange(
+  String ref,
+  List<ContentItem> contentItems,
+) {
+  final match = RegExp(
+    r'^(.*?)\s+(\d+)[:.](\d+)\s*-\s*(\d+)[:.](\d+)$',
+  ).firstMatch(ref.replaceAll('–', '-').trim());
+  if (match == null) return const {};
+
+  final title = match.group(1)!.trim();
+  final startRef = normalizeRef('$title ${match.group(2)}:${match.group(3)}');
+  final endRef = normalizeRef('$title ${match.group(4)}:${match.group(5)}');
+  final leaves = contentItems.where((item) => item.isLeaf).toList();
+  ContentItem? findLeaf(String normalizedRef) {
+    for (final item in leaves) {
+      if (normalizeRef(item.sefariaRef) == normalizedRef) return item;
+    }
+    return null;
+  }
+
+  final start = findLeaf(startRef);
+  final end = findLeaf(endRef);
+  if (start == null || end == null || start.curriculumId != end.curriculumId) {
+    return const {};
+  }
+
+  final curriculumLeaves = leaves
+      .where((item) => item.curriculumId == start.curriculumId)
+      .toList()
+    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  final curriculumStart = curriculumLeaves.indexWhere(
+    (item) => normalizeRef(item.sefariaRef) == startRef,
+  );
+  final curriculumEnd = curriculumLeaves.indexWhere(
+    (item) => normalizeRef(item.sefariaRef) == endRef,
+  );
+  if (curriculumStart < 0 || curriculumEnd < curriculumStart) return const {};
+  return curriculumLeaves
+      .sublist(curriculumStart, curriculumEnd + 1)
+      .map((item) => item.sefariaRef)
+      .toSet();
 }
 
 /// Resolves [todayRef] to canonical refs, or returns a display-safe fallback
