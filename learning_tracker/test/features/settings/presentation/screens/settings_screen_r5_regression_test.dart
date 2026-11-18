@@ -482,7 +482,12 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('Parent PIN'),
           400,
-          scrollable: find.byType(Scrollable).first,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
         );
         await tester.pump(const Duration(milliseconds: 500));
 

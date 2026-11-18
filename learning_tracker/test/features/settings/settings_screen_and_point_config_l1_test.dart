@@ -517,7 +517,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Manage Profiles'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
 
       expect(find.text('Manage Profiles'), findsOneWidget);
@@ -545,7 +550,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Manage Tracks'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
 
       expect(find.text('Manage Tracks'), findsOneWidget);
@@ -867,7 +877,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Calendar Preference'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(find.text('Calendar Preference'), findsOneWidget);
 
@@ -922,7 +937,12 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('Pronunciation'),
           300,
-          scrollable: find.byType(Scrollable).first,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
         );
         expect(find.text('Pronunciation'), findsOneWidget);
         expect(find.text('Ashkenazi'), findsOneWidget);
@@ -977,7 +997,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Nikud'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(find.text('Nikud'), findsOneWidget);
 
@@ -1018,7 +1043,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Notification Settings'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(find.text('Notification Settings'), findsOneWidget);
 

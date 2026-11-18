@@ -880,7 +880,12 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('Send Diagnostic Logs'),
           300,
-          scrollable: find.byType(Scrollable).first,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
         );
 
         final pill = tester.widget<Container>(
@@ -912,7 +917,12 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('Send Diagnostic Logs'),
           300,
-          scrollable: find.byType(Scrollable).first,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
         );
 
         final pill = tester.widget<Container>(
@@ -965,7 +975,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Parent Mode'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
 
       final pill = tester.widget<Container>(
@@ -1006,7 +1021,12 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('Parent Mode'),
           300,
-          scrollable: find.byType(Scrollable).first,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
         );
 
         final pill = tester.widget<Container>(

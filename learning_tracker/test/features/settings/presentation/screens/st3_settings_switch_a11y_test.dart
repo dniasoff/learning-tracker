@@ -112,7 +112,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text(l10n.hebrewTermsPreference),
         200,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
 
       // Locate the *specific* PreferenceListTile that carries the

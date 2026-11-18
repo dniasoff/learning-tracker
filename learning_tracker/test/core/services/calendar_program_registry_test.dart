@@ -3,8 +3,8 @@ import 'package:learning_tracker/features/scheduler/domain/services/calendar_pro
 
 void main() {
   group('CalendarProgramRegistry', () {
-    test('has exactly 20 programs', () {
-      expect(CalendarProgramRegistry.programs.length, 20);
+    test('has exactly 22 programs', () {
+      expect(CalendarProgramRegistry.programs.length, 22);
     });
 
     group('byApiKey - Hebcal programs', () {
@@ -107,11 +107,13 @@ void main() {
         expect(hebcal.any((p) => p.id == 'kitzur_shulchan_aruch_yomi'), isTrue);
       });
 
-      test('local returns 2 programs', () {
+      test('local returns 4 programs', () {
         final local = CalendarProgramRegistry.bySource('local');
-        expect(local.length, 2);
+        expect(local.length, 4);
         expect(local.any((p) => p.id == 'dirshu_kinyan_torah'), isTrue);
         expect(local.any((p) => p.id == 'dirshu_kinyan_yerushalmi'), isTrue);
+        expect(local.any((p) => p.id == 'weekly_parsha'), isTrue);
+        expect(local.any((p) => p.id == 'haftarah'), isTrue);
       });
     });
 

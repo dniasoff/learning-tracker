@@ -170,8 +170,10 @@ void main() {
       await tester.enterText(find.byType(TextField).first, 'מסלולים');
       await tester.pumpAndSettle();
 
-      expect(find.text('Manage Tracks'), findsOneWidget);
-      await tester.tap(find.text('Manage Tracks'));
+      // The settings list may already have this tile in its cache extent;
+      // select the matching result in the SearchAnchor overlay.
+      expect(find.text('Manage Tracks'), findsNWidgets(2));
+      await tester.tap(find.text('Manage Tracks').last);
       await tester.pump();
       verify(
         () => router.push<Object?>(
@@ -208,7 +210,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('About'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       await tester.tap(find.text('About'));
       await tester.pump();
@@ -237,7 +244,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Learning groups'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       await tester.tap(find.text('Learning groups'));
       await tester.pump();
@@ -312,7 +324,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Manage Tracks'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(find.text('Manage Tracks'), findsOneWidget);
       expect(find.text('Create and edit your learning tracks'), findsOneWidget);
@@ -330,7 +347,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Manage Tracks'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(find.text('Manage Tracks'), findsOneWidget);
 
@@ -342,7 +364,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Calendar Preference'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
       expect(find.text('Calendar Preference'), findsOneWidget);
 
@@ -361,7 +388,12 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('Notification Settings'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
       );
 
       expect(find.text('Notification Settings'), findsOneWidget);
@@ -456,7 +488,12 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('Parent Settings'),
           300,
-          scrollable: find.byType(Scrollable).first,
+          scrollable: find
+              .descendant(
+                of: find.byType(ListView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
         );
         expect(find.text('Parent Settings'), findsOneWidget);
         // Broadened subtitle (not the tracks-only one).
