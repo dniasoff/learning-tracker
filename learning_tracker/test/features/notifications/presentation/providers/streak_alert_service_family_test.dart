@@ -31,6 +31,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
@@ -160,7 +161,7 @@ void main() {
           false,
       NotificationPreferencesRepository.streakAlertEnabledKey(
         inactiveProfileId,
-      ): true,
+      ): false,
       NotificationPreferencesRepository.streakAlertHourKey(inactiveProfileId):
           21,
       NotificationPreferencesRepository.streakAlertMinuteKey(inactiveProfileId):
@@ -174,6 +175,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         selectedProfileIdProvider.overrideWithValue(activeProfileId),
+        ownAccountPathUidProvider.overrideWith((ref) async => null),
         currentAppLocaleProvider.overrideWithValue(const Locale('en')),
         notificationServiceProvider.overrideWithValue(gateway),
         notificationSchedulerProvider.overrideWithValue(
@@ -219,6 +221,105 @@ void main() {
     // The daily-reminder branch (unrelated to this finding) confirms the
     // inactive profile's OTHER scheduling still ran normally alongside it.
     expect(gateway.cancelledDailyProfiles, contains(inactiveProfileId));
+  });
+
+  test('inactive profile streak alerts use that profile state, independent '
+      'of which profile is selected', () async {
+    const profileA = activeProfileId;
+    const profileB = inactiveProfileId;
+    final now = DateTime.utc(2026, 3, 25, 16);
+    final history = constantHistory(lakewood);
+    final states = {
+      profileA: fakeLearnerState(
+        nowUtc: now,
+        curricula: {
+          'mishnayos': FakeCurriculumState(
+            curriculumId: 'mishnayos',
+            streak: const CurriculumStreak(
+              current: 0,
+              best: 5,
+              lastDay: '2026-03-24',
+            ),
+          ),
+        },
+      ),
+      profileB: fakeLearnerState(
+        nowUtc: now,
+        curricula: {
+          'mishnayos': FakeCurriculumState(
+            curriculumId: 'mishnayos',
+            streak: const CurriculumStreak(
+              current: 5,
+              best: 5,
+              lastDay: '2026-03-24',
+            ),
+          ),
+        },
+      ),
+    };
+
+    for (final (selected, expectedAlertProfile) in [
+      (profileA, profileB),
+      (profileB, null),
+    ]) {
+      SharedPreferences.setMockInitialValues({
+        NotificationPreferencesRepository.reminderEnabledKey(profileA): false,
+        NotificationPreferencesRepository.reminderEnabledKey(profileB): false,
+        NotificationPreferencesRepository.streakAlertEnabledKey(profileA): true,
+        NotificationPreferencesRepository.streakAlertEnabledKey(profileB): true,
+        NotificationPreferencesRepository.streakAlertHourKey(profileA): 21,
+        NotificationPreferencesRepository.streakAlertHourKey(profileB): 21,
+        NotificationPreferencesRepository.streakAlertMinuteKey(profileA): 0,
+        NotificationPreferencesRepository.streakAlertMinuteKey(profileB): 0,
+      });
+      final alerts = _RecordingStreakAlerts();
+      final markers = _MemoryStreakAlertMarkers();
+      final container = ProviderContainer(
+        overrides: [
+          selectedProfileIdProvider.overrideWithValue(selected),
+          currentAppLocaleProvider.overrideWithValue(const Locale('en')),
+          ownAccountPathUidProvider.overrideWith((ref) async => 'owner'),
+          localDayClockProvider.overrideWithValue(FakeLocalDayClock(now)),
+          profileListStreamProvider.overrideWith(
+            (ref) => Stream.value([_profile(profileA), _profile(profileB)]),
+          ),
+          notificationServiceProvider.overrideWithValue(
+            _RecordingNotificationGateway(),
+          ),
+          streakAlertNotificationsProvider.overrideWithValue(alerts),
+          streakAlertMarkersProvider.overrideWithValue(markers),
+          for (final profileId in [profileA, profileB])
+            streakAlertServiceProvider(profileId).overrideWith(
+              (ref) => StreakAlertService(
+                notifications: alerts,
+                markers: markers,
+                profileId: profileId,
+                clock: () => now,
+              ),
+            ),
+          learnerStateProvider.overrideWith(
+            (ref, scope) => Stream.value(states[scope.profileId]!),
+          ),
+          learnerLockSettingsProvider.overrideWith(
+            (ref, scope) => Stream.value(history),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final sub = container.listen(profileListStreamProvider, (_, _) {});
+      addTearDown(sub.close);
+
+      await container.read(allProfilesReminderBootstrapProvider.future);
+
+      expect(
+        alerts.scheduledProfiles,
+        expectedAlertProfile == null ? isEmpty : [expectedAlertProfile],
+      );
+      expect(
+        alerts.scheduled,
+        expectedAlertProfile == null ? isEmpty : ['mishnayos'],
+      );
+    }
   });
 
   group('streakAlertSyncEffect (DNI-479 AC-2)', () {
@@ -422,6 +523,7 @@ class _RecordingStreakAlerts implements StreakAlertNotifications {
   /// Holds every schedule until it completes, when given.
   final Future<void>? gate;
   final scheduled = <String>[];
+  final scheduledProfiles = <String>[];
   final cancelledAll = <String>[];
 
   /// Every schedule and cancel-all, in order.
@@ -437,6 +539,7 @@ class _RecordingStreakAlerts implements StreakAlertNotifications {
   }) async {
     await gate;
     scheduled.add(curriculumId);
+    scheduledProfiles.add(profileId);
     log.add('schedule $curriculumId');
   }
 

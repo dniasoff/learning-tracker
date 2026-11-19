@@ -7,9 +7,12 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart'
+    show ownAccountPathUidProvider;
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
+import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/notifications/data/repositories/shared_prefs_streak_alert_markers.dart';
@@ -603,6 +606,8 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
   final scheduler = ref.watch(notificationSchedulerProvider);
   ref.watch(isSacredTimeActiveProvider);
   final ownDeviceProfileId = ref.watch(selectedProfileIdProvider);
+  final ownerUid = await ref.watch(ownAccountPathUidProvider.future);
+  if (!ref.mounted) return;
 
   // L2: per-profile reminders get the SAME per-fire Sacred-Time suppression
   // the active path uses: the scheduler's lock predicate (DNI-481 AC-5).
@@ -678,12 +683,60 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
     }
 
     // --- Streak alert (inactive profile, DNI-479) ---
-    // AD-40: the alert is per curriculum, from that profile's own
-    // LearnerState. Only the active learner's state is loaded on this
-    // device, so an inactive profile's streak cannot be evaluated here;
-    // its alerts (and any legacy daily-repeating one) are cancelled rather
-    // than fired from another profile's streak.
-    await ref.read(streakAlertServiceProvider(profileId)).cancelAlert();
+    // Read the inactive learner's state by its explicit scope. Reusing the
+    // active learner's state here would schedule/cancel alerts according to
+    // whichever profile happened to be selected at startup.
+    final streakEnabled =
+        prefs.getBool(
+          NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
+        ) ??
+        true;
+    final streakService = ref.read(streakAlertServiceProvider(profileId));
+    if (!streakEnabled || ownerUid == null) {
+      await streakService.cancelAlert();
+      continue;
+    }
+    final scope = LearnerScope(ownerUid: ownerUid, profileId: profileId);
+    try {
+      final state = await ref.watch(learnerStateProvider(scope).future);
+      if (!ref.mounted) return;
+      final settings = await ref.watch(
+        learnerLockSettingsProvider(scope).future,
+      );
+      if (!ref.mounted) return;
+      final hour =
+          prefs.getInt(
+            NotificationPreferencesRepository.streakAlertHourKey(profileId),
+          ) ??
+          defaultStreakAlertHour;
+      final minute =
+          prefs.getInt(
+            NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
+          ) ??
+          defaultStreakAlertMinute;
+      final outcomes = await streakService.evaluateAll(
+        state: state,
+        settingsHistory: settings,
+        hour: hour,
+        minute: minute,
+        title: l10n.notificationStreakTitle,
+        localizedBody: l10n.notificationStreakBody,
+      );
+      if (outcomes.values.contains(StreakAlertOutcome.lockSuppressed)) {
+        unawaited(
+          ref
+              .read(analyticsServiceProvider)
+              .logNotificationSuppressedSacredTime(
+                notificationType: 'streak_alert',
+              ),
+        );
+      }
+    } catch (_) {
+      // Fail closed for this profile if its state or lock settings cannot be
+      // read. Do not leave an alert based on stale or cross-profile data.
+      await streakService.cancelAlert();
+      rethrow;
+    }
   }
 
   // Record the full present set for the next reconcile (H3).
