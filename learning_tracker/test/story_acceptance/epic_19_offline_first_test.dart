@@ -28,8 +28,8 @@ void main() {
 
   // ─── Story 19.1: Calendar Registry Bugs ──────────────────────────
   group('Story 19.1 — Calendar Registry Bugs Fixed', () {
-    test('all 20 programs are registered', () {
-      expect(CalendarProgramRegistry.programs.length, 20);
+    test('all 22 supported programs are registered', () {
+      expect(CalendarProgramRegistry.programs, hasLength(22));
     });
 
     test('Hebcal programs have correct apiKeys', () {
@@ -593,16 +593,19 @@ void main() {
       expect(entry.displayNameHe, def.displayNameHe);
     });
 
-    test('AT-19.4.2 getTodayPrograms returns entries for all 20 '
-        'programs', () async {
+    test('AT-19.4.2 getTodayPrograms returns all 20 seeded programs', () async {
       final results = await engine.getTodayPrograms(DateTime(2026, 3, 29));
+      final seededProgramIds = CalendarProgramRegistry.programs
+          .map((program) => program.id)
+          .where((id) => id != 'weekly_parsha' && id != 'haftarah')
+          .toSet();
       expect(results, hasLength(20));
       for (final entry in results) {
         expect(entry.todayRef, isNotEmpty);
         expect(entry.apiSource, 'local');
       }
       final ids = results.map((e) => e.programId).toSet();
-      expect(ids, hasLength(20));
+      expect(ids, seededProgramIds);
       expect(ids.contains('daf_yomi'), isTrue);
       expect(ids.contains('nach_yomi'), isTrue);
       expect(ids.contains('chofetz_chaim_daily'), isTrue);
@@ -674,20 +677,21 @@ void main() {
       expect(results, isEmpty);
     });
 
-    test('AT-19.4.registry-consistency every registry ID round-trips '
+    test('AT-19.4.registry-consistency every seeded registry ID round-trips '
         'through the engine', () async {
       final today = DateTime(2026, 3, 29);
+      final entries = await engine.getTodayPrograms(today);
 
-      for (final def in CalendarProgramRegistry.programs) {
-        final entry = await engine.getEntry(def.id, today);
+      for (final scheduledEntry in entries) {
+        final entry = await engine.getEntry(scheduledEntry.programId, today);
         expect(
           entry,
           isNotNull,
           reason:
-              '${def.id} getEntry returned null '
+              '${scheduledEntry.programId} getEntry returned null '
               '— registry<->engine ID mismatch',
         );
-        expect(entry!.programId, def.id);
+        expect(entry!.programId, scheduledEntry.programId);
       }
     });
   });

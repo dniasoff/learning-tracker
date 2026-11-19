@@ -20,9 +20,6 @@ class DailyLearningProgramsSlot extends ConsumerWidget {
     final contentIndexAsync = ref.watch(contentIndexProvider);
     final contentIndex = contentIndexAsync.asData?.value;
     final entries = calendar.asData?.value ?? const <CalendarProgramEntry>[];
-    final entriesById = {for (final entry in entries) entry.programId: entry};
-    final isHebrew = Localizations.localeOf(context).languageCode == 'he';
-
     return Card(
       child: ExpansionTile(
         leading: const Icon(Icons.calendar_month_outlined),
@@ -43,10 +40,9 @@ class DailyLearningProgramsSlot extends ConsumerWidget {
           else
             for (final program in _programsIncludingCalendarExtras(entries))
               _ProgramTile(
-                program: program,
-                entry: entriesById[program.id],
+                program: program.definition,
+                entry: program.entry,
                 contentIndex: contentIndex,
-                isHebrew: isHebrew,
               ),
         ],
       ),
@@ -54,26 +50,29 @@ class DailyLearningProgramsSlot extends ConsumerWidget {
   }
 }
 
-List<CalendarProgramDefinition> _programsIncludingCalendarExtras(
+List<_DailyProgram> _programsIncludingCalendarExtras(
   List<CalendarProgramEntry> entries,
 ) {
-  final definitions = [...CalendarProgramRegistry.programs];
+  final entriesById = {for (final entry in entries) entry.programId: entry};
+  final definitions = CalendarProgramRegistry.programs;
   final knownIds = definitions.map((program) => program.id).toSet();
+  final rows = [
+    for (final definition in definitions)
+      _DailyProgram(definition: definition, entry: entriesById[definition.id]),
+  ];
   for (final entry in entries) {
     if (knownIds.add(entry.programId)) {
-      definitions.add(
-        CalendarProgramDefinition(
-          id: entry.programId,
-          displayNameEn: entry.displayNameEn,
-          displayNameHe: entry.displayNameHe,
-          apiSource: entry.apiSource,
-          apiKey: entry.programId,
-          curriculumType: '',
-        ),
-      );
+      rows.add(_DailyProgram(entry: entry));
     }
   }
-  return definitions;
+  return rows;
+}
+
+class _DailyProgram {
+  const _DailyProgram({this.definition, this.entry});
+
+  final CalendarProgramDefinition? definition;
+  final CalendarProgramEntry? entry;
 }
 
 class _ProgramTile extends ConsumerWidget {
@@ -81,20 +80,18 @@ class _ProgramTile extends ConsumerWidget {
     required this.program,
     required this.entry,
     required this.contentIndex,
-    required this.isHebrew,
   });
 
-  final CalendarProgramDefinition program;
+  final CalendarProgramDefinition? program;
   final CalendarProgramEntry? entry;
   final ContentIndex? contentIndex;
-  final bool isHebrew;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final title = entry == null
-        ? (isHebrew ? program.displayNameHe : program.displayNameEn)
-        : calendarEntryLabelText(ref, entry: entry!);
+    final title = entry != null
+        ? calendarEntryLabelText(ref, entry: entry!)
+        : calendarProgramDefinitionLabelText(ref, program: program!);
     if (entry == null) {
       return ListTile(
         dense: true,

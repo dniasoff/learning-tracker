@@ -72,6 +72,10 @@ class ProgramLabelResolver {
   String calendarEntryLabel(CalendarProgramEntry entry) =>
       _labels.isHebrew ? entry.displayNameHe : entry.displayNameEn;
 
+  /// Returns the display name for a registered calendar program.
+  String calendarProgramLabel(CalendarProgramDefinition program) =>
+      _labels.isHebrew ? program.displayNameHe : program.displayNameEn;
+
   /// Returns the today's-ref label for a [CalendarProgramEntry] respecting
   /// the Hebrew Terms toggle. Falls back to the English
   /// [CalendarProgramEntry.todayRef] when the Hebrew form is unavailable.

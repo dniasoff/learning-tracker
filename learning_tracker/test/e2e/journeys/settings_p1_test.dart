@@ -117,6 +117,18 @@ Future<void> _scrollSettingsToBottom(WidgetTester tester) async {
   }
 }
 
+Finder _settingsListScrollable(WidgetTester tester) {
+  final settingsList = find
+      .descendant(
+        of: find.byType(SettingsScreen),
+        matching: find.byType(ListView),
+      )
+      .first;
+  return find
+      .descendant(of: settingsList, matching: find.byType(Scrollable))
+      .first;
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -242,7 +254,7 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('Calendar Preference'),
           200,
-          scrollable: find.byType(Scrollable).first,
+          scrollable: _settingsListScrollable(tester),
         );
         await h.pump(const Duration(milliseconds: 200));
 
@@ -296,7 +308,7 @@ void main() {
           await tester.scrollUntilVisible(
             find.text('Hebrew Terms'),
             200,
-            scrollable: find.byType(Scrollable).first,
+            scrollable: _settingsListScrollable(tester),
           );
           await h.pump(const Duration(milliseconds: 200));
 
@@ -337,7 +349,7 @@ void main() {
           await tester.scrollUntilVisible(
             find.text('Hebrew Terms'),
             200,
-            scrollable: find.byType(Scrollable).first,
+            scrollable: _settingsListScrollable(tester),
           );
           await h.pump(const Duration(milliseconds: 200));
 
@@ -538,10 +550,12 @@ void main() {
         );
 
         await _goToSettings(h);
-        // Diagnostic logs tile is at the very bottom — scroll twice to expose
-        // it (Settings list has DEVICE + PROFILE + ParentalControls above it).
-        await _scrollSettingsToBottom(tester);
-        await _scrollSettingsToBottom(tester);
+        // Diagnostic logs tile is at the very bottom of Settings.
+        await tester.scrollUntilVisible(
+          find.text('Send Diagnostic Logs'),
+          300,
+          scrollable: _settingsListScrollable(tester),
+        );
         await h.pump(const Duration(milliseconds: 300));
 
         // Diagnostic logs tile must be visible.
@@ -767,14 +781,16 @@ void main() {
 
         // Hebrew Terms is in the PROFILE section — scroll to expose it (or
         // confirm it is absent even after scrolling).
-        await _scrollSettingsToBottom(tester);
+        await tester.scrollUntilVisible(
+          find.text('העדפת לוח שנה'),
+          300,
+          scrollable: _settingsListScrollable(tester),
+        );
         await h.pump(const Duration(milliseconds: 200));
 
-        // The About tile at the end of Settings renders its l10n Hebrew
-        // translation — proving the MaterialApp is genuinely running under
-        // he, not silently still en. Calendar Preference is above the Hebrew
-        // Terms row and may be offscreen after scrolling to the list bottom.
-        h.expectOnScreen('מידע על האפליקציה');
+        // Calendar Preference renders in Hebrew, proving the MaterialApp is
+        // genuinely running under he rather than silently staying in en.
+        h.expectOnScreen('העדפת לוח שנה');
 
         // The Hebrew Terms tile itself must be entirely absent — not merely
         // toggled — because the he locale gate skips building it at all.

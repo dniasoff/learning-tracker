@@ -53,6 +53,8 @@ import 'package:learning_tracker/app/router/app_router.dart'
     show ParentSettingsRoute;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
+import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart'
+    show SettingsScreen;
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart'
     show CurriculumLifetimeSummary;
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart'
@@ -97,6 +99,18 @@ Future<void> _scrollSettingsToBottom(WidgetTester tester) async {
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump();
   }
+}
+
+Finder _settingsListScrollable(WidgetTester tester) {
+  final settingsList = find
+      .descendant(
+        of: find.byType(SettingsScreen),
+        matching: find.byType(ListView),
+      )
+      .first;
+  return find
+      .descendant(of: settingsList, matching: find.byType(Scrollable))
+      .first;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
@@ -350,7 +364,7 @@ void main() {
         await tester.scrollUntilVisible(
           find.text('Add Lifetime Learning'),
           200,
-          scrollable: find.byType(Scrollable).first,
+          scrollable: _settingsListScrollable(tester),
         );
         await h.pump(const Duration(milliseconds: 300));
 

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/scheduler/domain/labels/program_label_resolver.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
 
 /// Unified calendar entry combining data from any source.
@@ -55,6 +56,12 @@ String calendarEntryLabelText(
   WidgetRef ref, {
   required CalendarProgramEntry entry,
 }) => ProgramLabelResolver.of(ref).calendarEntryLabel(entry);
+
+/// Locale and Hebrew Terms aware label for a registered calendar program.
+String calendarProgramDefinitionLabelText(
+  WidgetRef ref, {
+  required CalendarProgramDefinition program,
+}) => ProgramLabelResolver.of(ref).calendarProgramLabel(program);
 
 /// Today's-ref label for a [CalendarProgramEntry] respecting the Hebrew
 /// Terms toggle. Falls back to the English [CalendarProgramEntry.todayRef]
