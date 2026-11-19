@@ -15,16 +15,26 @@ class ChildModeGuard extends AutoRouteGuard {
   ChildModeGuard({
     required Future<LearnerProfileEntity?> Function(String profileId)
     getProfileById,
+    Future<LearnerProfileEntity?> Function(String ownerUid, String profileId)?
+    getTutoredProfileById,
     required String? Function() getSelectedProfileId,
     String? Function()? getActiveProfileId,
+    String? Function()? getActiveOwnerUid,
     bool Function()? isTutoredSession,
   }) : _getProfileById = getProfileById,
+       _getTutoredProfileById = getTutoredProfileById,
        _getSelectedProfileId = getSelectedProfileId,
        _getActiveProfileId = getActiveProfileId,
+       _getActiveOwnerUid = getActiveOwnerUid,
        _isTutoredSession = isTutoredSession;
 
   final Future<LearnerProfileEntity?> Function(String profileId)
   _getProfileById;
+  final Future<LearnerProfileEntity?> Function(
+    String ownerUid,
+    String profileId,
+  )?
+  _getTutoredProfileById;
   final String? Function() _getSelectedProfileId;
 
   /// Resolves the *active* profile id — in a tutored session this is the
@@ -32,6 +42,10 @@ class ChildModeGuard extends AutoRouteGuard {
   /// [_getSelectedProfileId] (that stays null while tutoring). Optional so
   /// tests that don't wire tutoring can omit it.
   final String? Function()? _getActiveProfileId;
+
+  /// Owner namespace for the selected talmid. In a tutor session the signed-in
+  /// account is the tutor, so profile reads must use the grant's owner uid.
+  final String? Function()? _getActiveOwnerUid;
 
   /// True when a tutor has entered a talmid's context. Optional.
   final bool Function()? _isTutoredSession;
@@ -62,7 +76,9 @@ class ChildModeGuard extends AutoRouteGuard {
         return;
       }
 
-      final profile = await _getProfileById(profileId);
+      final profile = isTutored
+          ? await _readTutoredProfile(profileId)
+          : await _getProfileById(profileId);
       resolver.next(profile != null && profile.mode == ProfileMode.child);
     } catch (error, stack) {
       _log.error(
@@ -72,5 +88,14 @@ class ChildModeGuard extends AutoRouteGuard {
       );
       if (!resolver.isResolved) resolver.next(false);
     }
+  }
+
+  Future<LearnerProfileEntity?> _readTutoredProfile(String profileId) async {
+    final ownerUid = _getActiveOwnerUid?.call();
+    final getTutoredProfileById = _getTutoredProfileById;
+    if (ownerUid == null || ownerUid.isEmpty || getTutoredProfileById == null) {
+      return null;
+    }
+    return getTutoredProfileById(ownerUid, profileId);
   }
 }

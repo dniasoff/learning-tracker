@@ -51,9 +51,8 @@ void main() {
     resolver = MockNavigationResolver();
     router = MockStackRouter();
     when(() => resolver.isResolved).thenReturn(false);
-    when(
-      () => router.replace(any<PageRouteInfo>()),
-    ).thenAnswer((_) async => null);
+    when(() => router.replace(any<PageRouteInfo>()))
+        .thenAnswer((_) async => null);
   });
 
   // ── Branch 1: null profileId ─────────────────────────────────────────────
@@ -159,7 +158,7 @@ void main() {
     );
   });
 
-  // ── Tutored session: resolve the talmid, not selectedProfileId ───────────
+  // ── Tutored session: resolve the talmid through the grant owner ──────────
   //
   // TUT-02/TUT-06: in a tutored session selectedProfileId stays null while
   // the active profile is the talmid's own (child) profile. The guard must
@@ -169,25 +168,52 @@ void main() {
   // talmid.
 
   group('tutored session', () {
-    test('resolves the active talmid profile (child) → next(true) even when '
-        'selectedProfileId is null', () async {
+    test('resolves the active talmid under the grant owner → next(true) even '
+        'when selectedProfileId is null', () async {
       final talmid = _profile(
         profileId: 'talmid-child',
         mode: ProfileMode.child,
       );
+      String? requestedOwner;
+      String? requestedProfile;
 
       final guard = ChildModeGuard(
-        getProfileById: (id) async => id == talmid.profileId ? talmid : null,
+        getProfileById: (_) async =>
+            fail('tutored lookup must not use the signed-in account repo'),
+        getTutoredProfileById: (ownerUid, profileId) async {
+          requestedOwner = ownerUid;
+          requestedProfile = profileId;
+          return ownerUid == 'parent-owner' && profileId == talmid.profileId
+              ? talmid
+              : null;
+        },
         // Tutor sessions leave selectedProfileId null.
         getSelectedProfileId: () => null,
         getActiveProfileId: () => talmid.profileId,
+        getActiveOwnerUid: () => 'parent-owner',
         isTutoredSession: () => true,
       );
 
       await guard.onNavigation(resolver, router);
 
+      expect(requestedOwner, 'parent-owner');
+      expect(requestedProfile, talmid.profileId);
       verify(() => resolver.next(true)).called(1);
       verifyNever(() => resolver.next(false));
+    });
+
+    test('fails closed when the owner-scoped lookup is unavailable', () async {
+      final guard = ChildModeGuard(
+        getProfileById: (_) async => fail('must not use tutor account scope'),
+        getSelectedProfileId: () => null,
+        getActiveProfileId: () => 'talmid-child',
+        getActiveOwnerUid: () => 'parent-owner',
+        isTutoredSession: () => true,
+      );
+
+      await guard.onNavigation(resolver, router);
+
+      verify(() => resolver.next(false)).called(1);
     });
 
     test('tutored adult talmid → next(false)', () async {
@@ -197,9 +223,15 @@ void main() {
       );
 
       final guard = ChildModeGuard(
-        getProfileById: (id) async => id == talmid.profileId ? talmid : null,
+        getProfileById: (_) async =>
+            fail('tutored lookup must not use the signed-in account repo'),
+        getTutoredProfileById: (ownerUid, id) async =>
+            ownerUid == 'parent-owner' && id == talmid.profileId
+            ? talmid
+            : null,
         getSelectedProfileId: () => null,
         getActiveProfileId: () => talmid.profileId,
+        getActiveOwnerUid: () => 'parent-owner',
         isTutoredSession: () => true,
       );
 
