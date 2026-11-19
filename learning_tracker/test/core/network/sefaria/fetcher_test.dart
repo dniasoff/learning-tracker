@@ -244,9 +244,7 @@ void main() {
       final result = await fetcher.fetchAllContent();
 
       // Masechta containers (only level1 set).
-      final masechtot = result.items
-          .where((i) => i.level1 != null && i.level2 == null)
-          .toList();
+      final masechtot = result.items.where((i) => i.level2 == null).toList();
       for (final m in masechtot) {
         expect(m.isLeaf, false);
       }
@@ -269,7 +267,7 @@ void main() {
         expect(result.items.first.level1, 'Berakhot');
         expect(result.items.first.sefariaRef, 'Berakhot');
         expect(
-          result.items.any((item) => item.level1!.startsWith('Seder ')),
+          result.items.any((item) => item.level1.startsWith('Seder ')),
           isFalse,
         );
       },

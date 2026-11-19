@@ -16,8 +16,6 @@ import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/data/firestore/repository_providers.dart'
     show resolveActiveAccountAndProfile;
 import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
-import 'package:learning_tracker/data/repositories/parent_session_state.dart'
-    show parentSessionActorSourceProvider;
 import 'package:learning_tracker/features/notifications/data/fcm_parent_push_service.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';

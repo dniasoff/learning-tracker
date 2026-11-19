@@ -11,8 +11,8 @@ import 'package:learning_tracker/features/content_browsing/data/repositories/con
 import 'package:learning_tracker/features/content_browsing/domain/profile_visible_content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
-import 'package:learning_tracker/features/scheduler/domain/services/sefaria_ref_matcher.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
+import 'package:learning_tracker/features/scheduler/domain/services/sefaria_ref_matcher.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -64,20 +64,17 @@ void main() {
       );
       final firstAmudByMasechta = <String, String>{};
       for (final item in bavli.where((item) => item.isLeaf)) {
-        firstAmudByMasechta.putIfAbsent(
-          item.level1 ?? '',
-          () => item.sefariaRef,
-        );
+        firstAmudByMasechta.putIfAbsent(item.level1, () => item.sefariaRef);
       }
       expect(firstAmudByMasechta.length, greaterThan(30));
       expect(bavli.where((item) => item.isLeaf), hasLength(5349));
       expect(
-        bavli.where((item) => item.level1?.startsWith('Seder ') ?? false),
+        bavli.where((item) => item.level1.startsWith('Seder ')),
         isEmpty,
         reason: 'Bavli browser roots must be masechtos, not Mishnah sedarim',
       );
       expect(
-        bavli.where((item) => item.level1 != null && item.level2 == null),
+        bavli.where((item) => item.level2 == null),
         hasLength(greaterThan(30)),
         reason: 'Bavli top-level rows should be masechtos',
       );
