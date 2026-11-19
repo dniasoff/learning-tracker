@@ -51,8 +51,9 @@ void main() {
     resolver = MockNavigationResolver();
     router = MockStackRouter();
     when(() => resolver.isResolved).thenReturn(false);
-    when(() => router.replace(any<PageRouteInfo>()))
-        .thenAnswer((_) async => null);
+    when(
+      () => router.replace(any<PageRouteInfo>()),
+    ).thenAnswer((_) async => null);
   });
 
   // ── Branch 1: null profileId ─────────────────────────────────────────────

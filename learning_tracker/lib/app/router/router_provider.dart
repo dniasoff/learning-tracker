@@ -275,8 +275,9 @@ final routerProvider = Provider<AppRouter>((ref) {
           onVerificationSucceeded: (pin) =>
               establishParentSession(profileId, pin),
           analytics: ref.read(analyticsServiceProvider),
-          subtitle: AppLocalizations.of(context)
-              ?.pinDialogSubtitleLocationAccess,
+          subtitle: AppLocalizations.of(
+            context,
+          )?.pinDialogSubtitleLocationAccess,
         );
       },
     ),

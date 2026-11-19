@@ -214,8 +214,9 @@ class _LearnerLocationPromptListenerState
       final messenger = rootScaffoldMessengerKey.currentState;
       final l10n = AppLocalizations.of(context);
       if (messenger == null || l10n == null) return;
-      final shabbos = domainTermLabels(ref)
-          .shabbos(variant: ref.read(currentTransliterationVariantProvider));
+      final shabbos = domainTermLabels(
+        ref,
+      ).shabbos(variant: ref.read(currentTransliterationVariantProvider));
       messenger.showMaterialBanner(
         MaterialBanner(
           content: Text(

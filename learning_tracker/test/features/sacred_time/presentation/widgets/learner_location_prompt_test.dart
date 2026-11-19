@@ -146,16 +146,19 @@ void main() {
       expect(prompts.single.displayName, 'Bina');
     });
 
-    test('multi-learner: every own learner missing location after a prior lock is prompted', () async {
-      final prompts = await _read(
-        _overrides(
-          withSibling: true,
-          history: _historyAfterLocationRemoved,
-          siblingHistory: _historyAfterLocationRemoved,
-        ),
-      );
-      expect(prompts.map((p) => p.profileId), [profileUlid, _sibling]);
-    });
+    test(
+      'multi-learner: every own learner missing location after a prior lock is prompted',
+      () async {
+        final prompts = await _read(
+          _overrides(
+            withSibling: true,
+            history: _historyAfterLocationRemoved,
+            siblingHistory: _historyAfterLocationRemoved,
+          ),
+        );
+        expect(prompts.map((p) => p.profileId), [profileUlid, _sibling]);
+      },
+    );
 
     test('no prompt during a lock, or in a tutored session', () async {
       expect(
