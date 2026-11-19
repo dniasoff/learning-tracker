@@ -217,14 +217,6 @@ class CurriculumLabels {
     ],
     CurriculumId.bavli: [
       LevelLabels(
-        en: 'Seder',
-        enPlural: 'Sedarim',
-        he: 'סדר',
-        hePlural: 'סדרים',
-        valueKind: LevelValueKind.named,
-        prefixLabelInDisplay: false,
-      ),
-      LevelLabels(
         en: 'Masechta',
         enPlural: 'Masechtos',
         he: 'מסכת',
@@ -1028,8 +1020,8 @@ class CurriculumLabels {
   /// daily-task assignment screens still use the full `depth(id)` because
   /// they work at the leaf unit.
   ///
-  /// Bavli / Yerushalmi are the exception: their leaf is Daf, which is
-  /// already the natural browse target.
+  /// Bavli / Yerushalmi keep their daf-level containers in the browser;
+  /// tapping a daf or amud opens the reader directly.
   static int maxBrowseDepth(CurriculumId id) {
     if (id == CurriculumId.bavli || id == CurriculumId.yerushalmi) {
       return depth(id);
@@ -1049,7 +1041,7 @@ class CurriculumLabels {
   /// Amudim/Halachos, and Chumash counts Parshiyos rather than Pesukim.
   static String primaryUnitLabelPlural(CurriculumId id) {
     return switch (id) {
-      CurriculumId.bavli => level(id, 3).enPlural,
+      CurriculumId.bavli => level(id, 2).enPlural,
       CurriculumId.yerushalmi => level(id, 2).enPlural,
       CurriculumId.chumash => level(id, 2).enPlural,
       _ => leaf(id).enPlural,
@@ -1065,7 +1057,7 @@ class CurriculumLabels {
     return switch (id) {
       CurriculumId.bavli => level(
         id,
-        3,
+        2,
       ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
       CurriculumId.yerushalmi => level(
         id,
@@ -1089,7 +1081,7 @@ class CurriculumLabels {
       CurriculumId.yerushalmi ||
       CurriculumId.chumash ||
       CurriculumId.mishnehTorah => level(id, 1).enPlural,
-      CurriculumId.mishnayos || CurriculumId.bavli => level(id, 2).enPlural,
+      CurriculumId.mishnayos || CurriculumId.bavli => level(id, 1).enPlural,
       _ => 'Sections',
     };
   }
@@ -1107,9 +1099,13 @@ class CurriculumLabels {
         id,
         1,
       ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
-      CurriculumId.mishnayos || CurriculumId.bavli => level(
+      CurriculumId.mishnayos => level(
         id,
         2,
+      ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
+      CurriculumId.bavli => level(
+        id,
+        1,
       ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
       _ => useHebrew ? 'חלקים' : 'Sections',
     };
@@ -1146,8 +1142,8 @@ class CurriculumLabels {
         .toList();
   }
 
-  /// Plural label for the level-1 reorder section ("סדרים" in Hebrew
-  /// mode, "Sedarim" in English mode). Never bilingual.
+  /// Plural label for the level-1 reorder section. Mishnayos/Yerushalmi use
+  /// Sedarim, while Bavli uses Masechtos. Never bilingual.
   ///
   /// [variant] selects the English transliteration dialect (Sephardi maps
   /// e.g. "Seforim" → "Sefarim"); it is irrelevant in Hebrew mode.
@@ -1250,7 +1246,7 @@ class CurriculumLabels {
   }
 
   /// Combine a level label and a content value: e.g.
-  /// `(bavli, 3, '2a', useHebrew:false)` → "Daf 2a";
+  /// `(bavli, 2, '2', useHebrew:false)` → "Daf 2";
   /// `(bavli, 3, 'ב', useHebrew:true)` → "דף ב".
   static String valueWithLabel(
     CurriculumId id,
@@ -1264,8 +1260,8 @@ class CurriculumLabels {
 
   /// Build a full breadcrumb-style hierarchy path from raw level values.
   ///
-  /// `fullPath(bavli, [Zeraim, Berakhos, '2', 'a'], useHebrew:false)` →
-  /// "Seder Zeraim → Masechta Berakhos → Daf 2 → Amud a".
+  /// `fullPath(bavli, [Berakhos, '2', 'a'], useHebrew:false)` →
+  /// "Masechta Berakhos → Daf 2 → Amud a".
   ///
   /// Skips null entries so partial paths render cleanly. Pass
   /// [includeLevelLabel]: false to join just the values.

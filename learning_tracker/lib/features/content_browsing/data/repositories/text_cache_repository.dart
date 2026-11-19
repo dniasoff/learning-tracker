@@ -65,6 +65,36 @@ class TextCacheRepository {
       if (content != null) return content;
     }
 
+    // Talmud daf refs are parents of two amud refs ("Berakhot 2a" and
+    // "Berakhot 2b"), rather than colon-delimited verses. The generic child
+    // query above therefore cannot resolve a daf unless today's calendar
+    // happens to have an exact daily_content row for it. Preserve both amud
+    // segments when a daf-level request is opened from Learn or Browse.
+    if (RegExp(r'^.+ \d+$').hasMatch(sefariaRef)) {
+      final amudRows = [
+        await textCacheDao.getText('${sefariaRef}a'),
+        await textCacheDao.getText('${sefariaRef}b'),
+      ];
+      final segments = <TextSegment>[];
+      for (final row in amudRows) {
+        if (row == null) continue;
+        final he = HebrewUtils.decodeHtmlEntities(row.hebrewText);
+        final en = HebrewUtils.cleanSefariaText(row.englishText);
+        if (he.isEmpty && en.isEmpty) continue;
+        segments.add(
+          TextSegment(
+            sefariaRef: row.sefariaRef,
+            hebrewText: he,
+            englishText: en,
+            number: null,
+          ),
+        );
+      }
+      if (segments.isNotEmpty) {
+        return TextContent(sefariaRef: sefariaRef, segments: segments);
+      }
+    }
+
     // Last resort: daily_content blob (e.g. Talmud chapter or program refs
     // that have no individual child rows in text_cache).
     final daily = await dailyContentDao.getByRef(sefariaRef);

@@ -181,12 +181,18 @@ class _LifetimeKnowledgeScreenState
                     // Mishna history route. History reads the engine; this
                     // tree moves onto LearnerState in DNI-474, and both ship
                     // together in the DNI-490 cutover release (AD-49 hold).
-                    onLeafTap: (curriculumId, leafRef) => context.router.push(
-                      MishnaHistoryRoute(
-                        curriculumId: curriculumId.storageKey,
-                        leafRef: leafRef,
-                      ),
-                    ),
+                    onLeafTap: (curriculumId, leafRef) =>
+                        curriculumId == CurriculumId.bavli ||
+                            curriculumId == CurriculumId.yerushalmi
+                        ? context.router.push(
+                            TextDisplayRoute(sefariaRef: leafRef),
+                          )
+                        : context.router.push(
+                            MishnaHistoryRoute(
+                              curriculumId: curriculumId.storageKey,
+                              leafRef: leafRef,
+                            ),
+                          ),
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),

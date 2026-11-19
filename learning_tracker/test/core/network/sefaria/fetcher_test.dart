@@ -225,17 +225,12 @@ void main() {
       final result = await fetcher.fetchAllContent();
 
       expect(result.items, isNotEmpty);
-      expect(result.hierarchyConfig.levelLabels, [
-        'Seder',
-        'Masechta',
-        'Daf',
-        'Amud',
-      ]);
+      expect(result.hierarchyConfig.levelLabels, ['Masechta', 'Daf', 'Amud']);
 
-      // All leaves should have level4 (amud: 'a' or 'b').
+      // All leaves should have level3 (amud: 'a' or 'b').
       final leaves = result.items.where((i) => i.isLeaf).toList();
       for (final leaf in leaves) {
-        expect(leaf.level4, anyOf('a', 'b'));
+        expect(leaf.level3, anyOf('a', 'b'));
       }
 
       // Berakhot has 10 amudim in fixture = 10 leaf items.
@@ -248,50 +243,37 @@ void main() {
 
       final result = await fetcher.fetchAllContent();
 
-      // Seder containers (level2 == null).
-      final sedarim = result.items
-          .where((i) => i.level2 == null && !i.isLeaf)
-          .toList();
-      for (final s in sedarim) {
-        expect(s.isLeaf, false);
-      }
-
-      // Masechta containers (level2 set, level3 == null).
+      // Masechta containers (only level1 set).
       final masechtot = result.items
-          .where((i) => i.level2 != null && i.level3 == null)
+          .where((i) => i.level1 != null && i.level2 == null)
           .toList();
       for (final m in masechtot) {
         expect(m.isLeaf, false);
       }
 
-      // Daf containers (level3 set, level4 == null).
+      // Daf containers (level2 set, level3 == null).
       final dapim = result.items
-          .where((i) => i.level3 != null && i.level4 == null)
+          .where((i) => i.level2 != null && i.level3 == null)
           .toList();
       for (final d in dapim) {
         expect(d.isLeaf, false);
       }
     });
 
-    test('seder containers use the canonical Hebrew seder names', () async {
-      // Pins the exact Hebrew value produced by the seder-name lookup
-      // (AUD-guardrails-30: shared with MishnaFetcher via
-      // SefariaFetcherBase.sederHebrewName). Regression guard for the
-      // hoist out of a private per-fetcher table.
-      mockShapeResponse('/api/shape/Bavli', loadFixture('bavli_shape.json'));
+    test(
+      'Bavli hierarchy starts with masechtos and has no seder nodes',
+      () async {
+        mockShapeResponse('/api/shape/Bavli', loadFixture('bavli_shape.json'));
 
-      final result = await fetcher.fetchAllContent();
-
-      final sedarim = {
-        for (final item in result.items.where(
-          (i) => i.level2 == null && !i.isLeaf,
-        ))
-          item.level1: item.displayNameHe,
-      };
-
-      expect(sedarim['Seder Zeraim'], 'סדר זרעים');
-      expect(sedarim['Seder Moed'], 'סדר מועד');
-    });
+        final result = await fetcher.fetchAllContent();
+        expect(result.items.first.level1, 'Berakhot');
+        expect(result.items.first.sefariaRef, 'Berakhot');
+        expect(
+          result.items.any((item) => item.level1!.startsWith('Seder ')),
+          isFalse,
+        );
+      },
+    );
   });
 
   group('YerushalmiFetcher', () {

@@ -20,7 +20,7 @@ void main() {
     });
 
     test('Masechta singular + plural sephardi', () {
-      final masechta = CurriculumLabels.level(CurriculumId.bavli, 2);
+      final masechta = CurriculumLabels.level(CurriculumId.bavli, 1);
       expect(
         masechta.inLanguage(
           useHebrew: false,
@@ -41,7 +41,7 @@ void main() {
     });
 
     test('Dafim sephardi → Dapim, ashkenazi → Dafim, hebrew → דפים', () {
-      final daf = CurriculumLabels.level(CurriculumId.bavli, 3);
+      final daf = CurriculumLabels.level(CurriculumId.bavli, 2);
       expect(daf.inLanguage(useHebrew: false, plural: true), 'Dafim');
       expect(
         daf.inLanguage(
@@ -103,7 +103,7 @@ void main() {
     test(
       'pass-through words unchanged in sephardi (Daf, Perek, Pasuk, Seder)',
       () {
-        final daf = CurriculumLabels.level(CurriculumId.bavli, 3);
+        final daf = CurriculumLabels.level(CurriculumId.bavli, 2);
         expect(
           daf.inLanguage(
             useHebrew: false,
@@ -202,7 +202,7 @@ void main() {
       expect(
         CurriculumLabels.levelLabel(
           CurriculumId.bavli,
-          2,
+          1,
           useHebrew: false,
           plural: true,
           variant: TransliterationVariant.sephardi,
@@ -227,14 +227,14 @@ void main() {
         // Daf is identical across nuschaos; assert prefix renders cleanly.
         final ashk = CurriculumLabelRenderer.renderValue(
           curriculumId: CurriculumId.bavli,
-          level: 3,
+          level: 2,
           rawValue: '2',
           useHebrew: false,
         );
         expect(ashk, 'Daf 2');
         final seph = CurriculumLabelRenderer.renderValue(
           curriculumId: CurriculumId.bavli,
-          level: 3,
+          level: 2,
           rawValue: '2',
           useHebrew: false,
           transliterationVariant: TransliterationVariant.sephardi,

@@ -41,7 +41,13 @@ class ContentIndex {
 
   /// Returns the [ContentItem] for [sefariaRef] in O(1), or null if no
   /// match exists in any curriculum.
-  ContentItem? lookup(String sefariaRef) => _byRef[sefariaRef];
+  ContentItem? lookup(String sefariaRef) =>
+      _byRef[sefariaRef] ?? _byRef[_canonicalizeBavliRef(sefariaRef)];
+
+  /// The calendar feed uses the older `Arachin` transliteration while the
+  /// bundled Sefaria Bavli hierarchy and text cache use `Arakhin`.
+  static String _canonicalizeBavliRef(String ref) =>
+      ref.replaceFirst(RegExp(r'^Arachin(?=\s)'), 'Arakhin');
 
   /// Returns the sefariaRef of the first leaf in [curriculumId]'s leaf order
   /// (sorted by `sortOrder`), or null when the curriculum is unknown or has

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/content/content_tree.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -45,7 +46,11 @@ void main() {
   // push (StackRouterScope wraps [home] so `context.router` resolves to the
   // mocked StackRouter instead of throwing for want of an AutoRouter
   // ancestor). Tests that never navigate omit it and get a plain MaterialApp.
-  Widget createTestApp({required Widget home, _MockStackRouter? router}) {
+  Widget createTestApp({
+    required Widget home,
+    _MockStackRouter? router,
+    ContentTree? tree,
+  }) {
     return ProviderScope(
       overrides: [
         ...contentRepositoryOverrides(mockRepo),
@@ -53,6 +58,7 @@ void main() {
         dashboardCompletionPercentageProvider.overrideWith(
           (ref, curriculum) async => 0.0,
         ),
+        if (tree != null) contentTreeProvider.overrideWith((ref) async => tree),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -65,6 +71,150 @@ void main() {
   }
 
   group('Full hierarchy navigation flow', () {
+    testWidgets('Bavli daf tap opens its text directly', (tester) async {
+      const daf = ContentItem(
+        curriculumId: 'bavli',
+        level1: 'Berakhot',
+        level2: '2',
+        displayNameHe: 'ברכות דף ב',
+        displayNameEn: 'Berakhot 2',
+        sefariaRef: 'Berakhot 2',
+        sortOrder: 1,
+        isLeaf: false,
+      );
+      final tree = ContentTree.fromCurricula({
+        for (final curriculum in CurriculumId.values)
+          curriculum: curriculum == CurriculumId.bavli
+              ? [
+                  const ContentItem(
+                    curriculumId: 'bavli',
+                    level1: 'Berakhot',
+                    displayNameHe: 'מסכת ברכות',
+                    displayNameEn: 'Maseches Berakhot',
+                    sefariaRef: 'Berakhot',
+                    sortOrder: 0,
+                    isLeaf: false,
+                  ),
+                  daf,
+                ]
+              : const [],
+      });
+      when(() => mockRepo.getHierarchyConfig(CurriculumId.bavli)).thenAnswer(
+        (_) async => const CurriculumHierarchyConfig(
+          curriculumId: 'bavli',
+          levelLabels: ['Masechta', 'Daf', 'Amud'],
+          totalItems: 5349,
+        ),
+      );
+
+      await tester.pumpWidget(
+        createTestApp(
+          home: const ContentHierarchyScreen(
+            curriculumId: 'bavli',
+            level1: 'Berakhot',
+          ),
+          router: router,
+          tree: tree,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(ListTile).last);
+      await tester.pump();
+
+      verify(
+        () => router.push<Object?>(
+          any(
+            that: isA<TextDisplayRoute>().having(
+              (route) => route.args?.sefariaRef,
+              'sefariaRef',
+              'Berakhot 2',
+            ),
+          ),
+        ),
+      ).called(1);
+      verifyNever(
+        () => router.push<Object?>(any(that: isA<MishnaHistoryRoute>())),
+      );
+    });
+
+    testWidgets('Bavli amud tap opens its text directly', (tester) async {
+      const amud = ContentItem(
+        curriculumId: 'bavli',
+        level1: 'Berakhot',
+        level2: '2',
+        level3: 'a',
+        displayNameHe: 'ברכות דף ב עמוד א',
+        displayNameEn: 'Berakhot 2a',
+        sefariaRef: 'Berakhot 2a',
+        sortOrder: 2,
+        isLeaf: true,
+      );
+      final tree = ContentTree.fromCurricula({
+        for (final curriculum in CurriculumId.values)
+          curriculum: curriculum == CurriculumId.bavli
+              ? [
+                  const ContentItem(
+                    curriculumId: 'bavli',
+                    level1: 'Berakhot',
+                    displayNameHe: 'מסכת ברכות',
+                    displayNameEn: 'Maseches Berakhot',
+                    sefariaRef: 'Berakhot',
+                    sortOrder: 0,
+                    isLeaf: false,
+                  ),
+                  const ContentItem(
+                    curriculumId: 'bavli',
+                    level1: 'Berakhot',
+                    level2: '2',
+                    displayNameHe: 'ברכות דף ב',
+                    displayNameEn: 'Berakhot 2',
+                    sefariaRef: 'Berakhot 2',
+                    sortOrder: 1,
+                    isLeaf: false,
+                  ),
+                  amud,
+                ]
+              : const [],
+      });
+      when(() => mockRepo.getHierarchyConfig(CurriculumId.bavli)).thenAnswer(
+        (_) async => const CurriculumHierarchyConfig(
+          curriculumId: 'bavli',
+          levelLabels: ['Masechta', 'Daf', 'Amud'],
+          totalItems: 5349,
+        ),
+      );
+
+      await tester.pumpWidget(
+        createTestApp(
+          home: const ContentHierarchyScreen(
+            curriculumId: 'bavli',
+            level1: 'Berakhot',
+            level2: '2',
+          ),
+          router: router,
+          tree: tree,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(ListTile).last);
+      await tester.pump();
+
+      verify(
+        () => router.push<Object?>(
+          any(
+            that: isA<TextDisplayRoute>().having(
+              (route) => route.args?.sefariaRef,
+              'sefariaRef',
+              'Berakhot 2a',
+            ),
+          ),
+        ),
+      ).called(1);
+      verifyNever(
+        () => router.push<Object?>(any(that: isA<MishnaHistoryRoute>())),
+      );
+    });
+
     testWidgets(
       'navigates from curriculum list → seder → masechta → perek → mishna',
       (tester) async {

@@ -64,6 +64,7 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
   /// the text reader directly rather than drill into a (broken) intermediate
   /// hierarchy screen.
   bool _isChapterLevelRef(CurriculumId curriculum, ContentItem item) {
+    if (curriculum == CurriculumId.bavli && item.level2 != null) return true;
     final maxDepth = CurriculumLabels.maxBrowseDepth(curriculum);
     if (maxDepth >= CurriculumLabels.depth(curriculum)) return false;
     final itemDepth = item.level4 != null

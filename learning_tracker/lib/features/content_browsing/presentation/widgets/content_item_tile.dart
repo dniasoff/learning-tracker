@@ -21,19 +21,24 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// Opens Mishna history for the leaf [item] of [curriculum] (Story 1.13,
-/// UX-DR-60): the leaf-tap destination of every [ContentItemTile] caller.
-/// The history screen keeps the text reader one tap away.
+/// Opens the reader directly for Gemara leaves; other curricula open their
+/// learning history (Story 1.13, UX-DR-60).
 Future<void> openLeafHistory(
   BuildContext context,
   CurriculumId curriculum,
   ContentItem item,
-) => context.router.push(
-  MishnaHistoryRoute(
-    curriculumId: curriculum.storageKey,
-    leafRef: item.sefariaRef,
-  ),
-);
+) {
+  if (curriculum == CurriculumId.bavli ||
+      curriculum == CurriculumId.yerushalmi) {
+    return context.router.push(TextDisplayRoute(sefariaRef: item.sefariaRef));
+  }
+  return context.router.push(
+    MishnaHistoryRoute(
+      curriculumId: curriculum.storageKey,
+      leafRef: item.sefariaRef,
+    ),
+  );
+}
 
 /// Displays a single content item in the hierarchy browser.
 ///

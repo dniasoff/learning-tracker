@@ -67,8 +67,9 @@ Corpus corpusOf(CurriculumId curriculumId, List<ContentItem> items) =>
 ///   depth-2 level when every depth-2 value names its own node
 ///   (`level2 == sefariaRef`, e.g. a masechta), rather than being a
 ///   positional label such as a bare chapter number (the rule the legacy
-///   `hasNamedLevel2Unit` encoded per curriculum). Mishnayos, Bavli and
-///   Yerushalmi yield `[seder, masechta]`; Chumash yields `[sefer]`.
+///   `hasNamedLevel2Unit` encoded per curriculum). Mishnayos and Yerushalmi
+///   yield `[seder, masechta]`; Bavli yields `[masechta]`; Chumash yields
+///   `[sefer]`.
 Corpus contentIndexCorpus({
   required String curriculumId,
   required List<ContentItem> items,
