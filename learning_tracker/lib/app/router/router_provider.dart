@@ -13,6 +13,11 @@ import 'package:learning_tracker/core/navigation/guards/parent_session_guard.dar
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
+import 'package:learning_tracker/data/firestore/repository_providers.dart'
+    show resolveActiveAccountAndProfile;
+import 'package:learning_tracker/data/repositories/firestore_learner_profile_repository.dart';
+import 'package:learning_tracker/data/repositories/parent_session_state.dart'
+    show parentSessionActorSourceProvider;
 import 'package:learning_tracker/features/notifications/data/fcm_parent_push_service.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -118,11 +123,30 @@ final routerProvider = Provider<AppRouter>((ref) {
     childModeGuard: ChildModeGuard(
       getProfileById: (profileId) =>
           ref.read(profileRepositoryProvider).getProfileById(profileId),
+      getTutoredProfileById: (ownerUid, profileId) async {
+        // This resolver validates the current grant against Firestore and
+        // supplies its owner/profile scope. Never read a tutored profile from
+        // the signed-in tutor's account repository.
+        final resolved = await resolveActiveAccountAndProfile(ref);
+        if (resolved == null) return null;
+        final (handles, resolvedOwnerUid, resolvedProfileId) = resolved;
+        if (resolvedOwnerUid != ownerUid || resolvedProfileId != profileId) {
+          return null;
+        }
+        return FirestoreLearnerProfileRepository(
+          firestore: handles.firestore,
+          uid: ownerUid,
+          authUid: handles.authUid,
+          parentActorSource: ref.read(parentSessionActorSourceProvider),
+        ).getProfile(profileId);
+      },
       getSelectedProfileId: () => ref.read(selectedProfileIdProvider),
       // In a tutored session the active profile is the talmid's own id —
       // resolve it so the child-mode-gated parent-management routes open
       // for tutors (TUT-02/TUT-06).
       getActiveProfileId: () => ref.read(activeProfileIdProvider),
+      getActiveOwnerUid: () =>
+          ref.read(activeTutoredProfileSelectionProvider)?.ownerUid,
       isTutoredSession: () =>
           ref.read(activeTutoredProfileSelectionProvider) != null,
     ),
@@ -251,9 +275,8 @@ final routerProvider = Provider<AppRouter>((ref) {
           onVerificationSucceeded: (pin) =>
               establishParentSession(profileId, pin),
           analytics: ref.read(analyticsServiceProvider),
-          subtitle: AppLocalizations.of(
-            context,
-          )?.pinDialogSubtitleLocationAccess,
+          subtitle: AppLocalizations.of(context)
+              ?.pinDialogSubtitleLocationAccess,
         );
       },
     ),
