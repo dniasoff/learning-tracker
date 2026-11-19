@@ -54,7 +54,7 @@ List<_DailyProgram> _programsIncludingCalendarExtras(
   List<CalendarProgramEntry> entries,
 ) {
   final entriesById = {for (final entry in entries) entry.programId: entry};
-  final definitions = CalendarProgramRegistry.programs;
+  const definitions = CalendarProgramRegistry.programs;
   final knownIds = definitions.map((program) => program.id).toSet();
   final rows = [
     for (final definition in definitions)

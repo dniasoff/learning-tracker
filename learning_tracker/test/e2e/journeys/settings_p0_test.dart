@@ -53,12 +53,12 @@ import 'package:learning_tracker/app/router/app_router.dart'
     show ParentSettingsRoute;
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_settings_screen.dart'
     show activeProfilePointsBalanceProvider, pendingRedemptionsCountProvider;
-import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart'
-    show SettingsScreen;
 import 'package:learning_tracker/features/progress/domain/models/lifetime_knowledge.dart'
     show CurriculumLifetimeSummary;
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart'
     show lifetimeSummariesProvider;
+import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart'
+    show SettingsScreen;
 
 import '../harness/e2e_common_overrides.dart';
 import '../harness/e2e_harness.dart';
