@@ -10,7 +10,7 @@ Widget _app(Locale locale) => MaterialApp(
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
   ],
-  supportedLocales: const [Locale('en', 'US'), Locale('en', 'GB')],
+  supportedLocales: const [Locale('en'), Locale('he')],
   home: Builder(
     builder: (context) => Scaffold(
       body: TextButton(
@@ -19,7 +19,6 @@ Widget _app(Locale locale) => MaterialApp(
           initialDate: DateTime(2026, 1, 2),
           firstDate: DateTime(2000),
           lastDate: DateTime(2100),
-          initialEntryMode: DatePickerEntryMode.input,
         ),
         child: const Text('Open date picker'),
       ),
@@ -28,21 +27,33 @@ Widget _app(Locale locale) => MaterialApp(
 );
 
 void main() {
-  for (final testCase in const [
-    (locale: Locale('en', 'GB'), hint: 'dd/mm/yyyy'),
-    (locale: Locale('en', 'US'), hint: 'mm/dd/yyyy'),
-  ]) {
-    testWidgets(
-      'date input uses text keyboard and ${testCase.locale} date order',
-      (tester) async {
-        await tester.pumpWidget(_app(testCase.locale));
-        await tester.tap(find.text('Open date picker'));
-        await tester.pumpAndSettle();
+  for (final locale in const [Locale('en'), Locale('he')]) {
+    testWidgets('$locale opens the localized calendar without text input', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_app(locale));
+      await tester.tap(find.text('Open date picker'));
+      await tester.pumpAndSettle();
 
-        final field = tester.widget<TextField>(find.byType(TextField).first);
-        expect(field.keyboardType, TextInputType.text);
-        expect(field.decoration!.hintText, testCase.hint);
-      },
-    );
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(CalendarDatePicker), findsOneWidget);
+
+      final dialog = tester.widget<DatePickerDialog>(
+        find.byType(DatePickerDialog),
+      );
+      expect(dialog.initialDate, DateTime(2026, 1, 2));
+      expect(dialog.initialEntryMode, DatePickerEntryMode.calendar);
+      final pickerContext = tester.element(find.byType(DatePickerDialog));
+      final pickerLocalizations = MaterialLocalizations.of(pickerContext);
+      expect(
+        Localizations.localeOf(pickerContext).languageCode,
+        locale.languageCode,
+      );
+      expect(
+        find.text(pickerLocalizations.formatMediumDate(DateTime(2026, 1, 2))),
+        findsOneWidget,
+      );
+    });
   }
 }
