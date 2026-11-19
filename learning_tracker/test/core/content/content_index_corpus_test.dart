@@ -204,7 +204,7 @@ void main() {
     });
 
     test('other curricula resolve their equivalents from metadata', () {
-      expect(_bundled('bavli').unitLevels, ['seder', 'masechta']);
+      expect(_bundled('bavli').unitLevels, ['masechta']);
       expect(_bundled('yerushalmi').unitLevels, ['seder', 'masechta']);
       expect(_bundled('nach').unitLevels, ['section', 'sefer']);
       expect(_bundled('mishneh_torah').unitLevels, ['sefer', 'hilchot']);

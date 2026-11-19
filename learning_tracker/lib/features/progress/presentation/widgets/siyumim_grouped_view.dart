@@ -344,6 +344,13 @@ const Map<String, int> unitScopeContentLevel = {
   'sefer': 1,
 };
 
+/// Bavli Masechtos are level 1 in the current hierarchy; the other named
+/// unit scopes keep their curriculum-specific level positions.
+int? unitScopeContentLevelFor(String scope, CurriculumId curriculumId) {
+  if (scope == 'masechta' && curriculumId == CurriculumId.bavli) return 1;
+  return unitScopeContentLevel[scope];
+}
+
 /// Row for a standalone unit-level milestone (Siyum Masechta / Sefer /
 /// Siman / Hilchos). Used both inside grouped curriculum sections and in
 /// the timeline view.
@@ -370,7 +377,10 @@ class _UnitMilestoneTile extends ConsumerWidget {
     // while the "Siyum Masechta " frame stays under `terms`/[unitSiyumLabel].
     // Only structural named scopes are transliterated; unknown scopes (which
     // hit [unitSiyumLabel]'s generic fallback) keep the raw value.
-    final contentLevel = unitScopeContentLevel[scope];
+    final contentLevel = unitScopeContentLevelFor(
+      scope,
+      milestone.curriculumId,
+    );
     final unitName = (contentLevel != null && milestone.unitKey != null)
         ? renderMilestoneName(
             ref,

@@ -150,7 +150,7 @@ PaceUnitOptions paceUnitOptionsFor(CurriculumId id) {
     ),
     CurriculumId.bavli => PaceUnitOptions.dual(
       coarseKey: 'daf',
-      coarse: CurriculumLabels.level(id, 3),
+      coarse: CurriculumLabels.level(id, 2),
       fineKey: 'amud',
       fine: CurriculumLabels.leaf(id),
       defaultKey: 'daf',

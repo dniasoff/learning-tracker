@@ -49,8 +49,8 @@ class _FakeUseHebrewTerms extends UseHebrewTerms {
 
 const _profileId = '01J6Q2H4A8M7K3P9R5T6V8WXY7';
 
-/// Bavli-shaped content: level1=Seder, level2=Masechta, level3=Daf,
-/// level4=Amud, with explicit non-leaf rows at every intermediate depth so the
+/// Bavli-shaped content: level1=Masechta, level2=Daf, level3=Amud,
+/// with explicit non-leaf rows at every intermediate depth so the
 /// hierarchy is drillable (mirrors `assets/content/hierarchy/bavli.json`).
 ///
 /// [dafim] controls how many dafim each masechta has — use >4 to exercise the
@@ -80,15 +80,12 @@ List<ContentItem> _bavliLikeContent({required List<String> dafim}) {
     );
   }
 
-  items.add(mk(l1: 'Seder Zeraim', leaf: false));
   for (final masechta in ['Berakhot', 'Peah']) {
-    items.add(mk(l1: 'Seder Zeraim', l2: masechta, leaf: false));
+    items.add(mk(l1: masechta, leaf: false));
     for (final daf in dafim) {
-      items.add(mk(l1: 'Seder Zeraim', l2: masechta, l3: daf, leaf: false));
+      items.add(mk(l1: masechta, l2: daf, leaf: false));
       for (final amud in ['a', 'b']) {
-        items.add(
-          mk(l1: 'Seder Zeraim', l2: masechta, l3: daf, l4: amud, leaf: true),
-        );
+        items.add(mk(l1: masechta, l2: daf, l3: amud, leaf: true));
       }
     }
   }
@@ -138,9 +135,7 @@ void main() {
       );
       await _settle(tester);
 
-      // Drill: Seder Zeraim -> Berakhot, landing on the daf list.
-      await tester.tap(find.byIcon(Icons.navigate_next_rounded).first);
-      await _settle(tester);
+      // Drill: Berakhot, landing on the daf list.
       await tester.tap(find.byIcon(Icons.navigate_next_rounded).first);
       await _settle(tester);
 
@@ -191,8 +186,7 @@ void main() {
     );
     await _settle(tester);
 
-    await tester.tap(find.byIcon(Icons.navigate_next_rounded).first);
-    await _settle(tester);
+    // Drill from Berakhot to its daf list.
     await tester.tap(find.byIcon(Icons.navigate_next_rounded).first);
     await _settle(tester);
 

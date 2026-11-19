@@ -132,7 +132,7 @@ void main() {
         expect(
           CurriculumLabelRenderer.renderValue(
             curriculumId: CurriculumId.bavli,
-            level: 3,
+            level: 2,
             rawValue: '2',
             useHebrew: true,
           ),
@@ -144,7 +144,7 @@ void main() {
         expect(
           CurriculumLabelRenderer.renderValue(
             curriculumId: CurriculumId.bavli,
-            level: 4,
+            level: 3,
             rawValue: 'a',
             useHebrew: true,
           ),
@@ -153,7 +153,7 @@ void main() {
         expect(
           CurriculumLabelRenderer.renderValue(
             curriculumId: CurriculumId.bavli,
-            level: 4,
+            level: 3,
             rawValue: 'b',
             useHebrew: true,
           ),
@@ -162,7 +162,7 @@ void main() {
         expect(
           CurriculumLabelRenderer.renderValue(
             curriculumId: CurriculumId.bavli,
-            level: 4,
+            level: 3,
             rawValue: 'a',
             useHebrew: false,
           ),
@@ -278,11 +278,11 @@ void main() {
       expect(
         CurriculumLabelRenderer.renderBreadcrumb(
           curriculumId: CurriculumId.bavli,
-          rawSegmentValues: ['Seder Zeraim', 'Berakhot', '2', 'a'],
+          rawSegmentValues: ['Berakhot', '2', 'a'],
           useHebrew: true,
-          hebrewNamesPerSegment: ['סדר זרעים', 'מסכת ברכות', null, null],
+          hebrewNamesPerSegment: ['מסכת ברכות', null, null],
         ),
-        ['זרעים', 'ברכות', 'דף ב', 'עמוד א'],
+        ['ברכות', 'דף ב', 'עמוד א'],
       );
     });
   });

@@ -209,11 +209,11 @@ void main() {
     'contained-unit rows render the Hebrew masechta name in Hebrew-terms mode '
     '(no raw storage key leak)',
     (tester) async {
-      // Bavli aggregate (Seder Zeraim) containing one masechta whose raw
+      // Mishnayos aggregate (Seder Zeraim) containing one masechta whose raw
       // content key is "Berakhos". The curriculum content supplies the
       // Hebrew name "ברכות" for that level-2 key.
       const berakhos = ContentItem(
-        curriculumId: 'bavli',
+        curriculumId: 'mishnayos',
         level1: 'Zeraim',
         level2: 'Berakhos',
         displayNameHe: 'ברכות',
@@ -225,7 +225,7 @@ void main() {
       final viewModel = JourneyViewModel(
         curricula: [
           CurriculumJourney(
-            curriculumId: CurriculumId.bavli,
+            curriculumId: CurriculumId.mishnayos,
             completions: const [],
             uniqueUnitsCompleted: 1,
             totalUnitsAvailable: 63,
@@ -254,7 +254,7 @@ void main() {
           viewModel: viewModel,
           useHebrewTerms: true,
           content: const {
-            CurriculumId.bavli: [berakhos],
+            CurriculumId.mishnayos: [berakhos],
           },
         ),
       );
@@ -282,8 +282,7 @@ void main() {
     // rather than leaking the raw key into the label frame.
     const shabbos = ContentItem(
       curriculumId: 'bavli',
-      level1: 'Moed',
-      level2: 'Shabbat',
+      level1: 'Shabbat',
       displayNameHe: 'שבת',
       displayNameEn: 'Shabbos',
       sefariaRef: 'Shabbat',

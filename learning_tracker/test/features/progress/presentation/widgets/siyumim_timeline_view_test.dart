@@ -84,8 +84,7 @@ JourneyViewModel _unitViewModel() => JourneyViewModel(
 
 const _shabbosContent = ContentItem(
   curriculumId: 'bavli',
-  level1: 'Moed',
-  level2: 'Shabbat',
+  level1: 'Shabbat',
   // Hebrew name for the masechta is supplied by the curriculum content so
   // Hebrew-terms mode renders it instead of the raw storage key.
   displayNameHe: 'שבת',

@@ -41,50 +41,45 @@ ContentItem _item({
 );
 
 void main() {
-  // Bavli's level structure is Seder(1) > Masechta(2) > Daf(3) > Amud(4),
-  // so this fixture exercises all four groupItemsByNextLevel depths (0-3).
+  // Bavli's level structure is Masechta(1) > Daf(2) > Amud(3),
+  // so this fixture exercises each groupItemsByNextLevel depth (0-2).
   final items = [
     _item(
-      level1: 'Zeraim',
-      level2: 'Berakhot',
-      level3: '2',
-      level4: 'a',
+      level1: 'Berakhot',
+      level2: '2',
+      level3: 'a',
       ref: 'Berakhot 2a',
       isLeaf: true,
       sortOrder: 1,
     ),
     _item(
-      level1: 'Zeraim',
-      level2: 'Berakhot',
-      level3: '2',
-      level4: 'b',
+      level1: 'Berakhot',
+      level2: '2',
+      level3: 'b',
       ref: 'Berakhot 2b',
       isLeaf: true,
       sortOrder: 2,
     ),
     _item(
-      level1: 'Zeraim',
-      level2: 'Berakhot',
-      level3: '3',
-      level4: 'a',
+      level1: 'Berakhot',
+      level2: '3',
+      level3: 'a',
       ref: 'Berakhot 3a',
       isLeaf: true,
       sortOrder: 3,
     ),
     _item(
-      level1: 'Zeraim',
-      level2: 'Shabbos',
-      level3: '2',
-      level4: 'a',
+      level1: 'Shabbos',
+      level2: '2',
+      level3: 'a',
       ref: 'Shabbos 2a',
       isLeaf: true,
       sortOrder: 4,
     ),
     _item(
-      level1: 'Moed',
-      level2: 'Yoma',
-      level3: '2',
-      level4: 'a',
+      level1: 'Yoma',
+      level2: '2',
+      level3: 'a',
       ref: 'Yoma 2a',
       isLeaf: true,
       sortOrder: 5,
@@ -92,52 +87,44 @@ void main() {
   ];
 
   group('groupItemsByNextLevel depth-to-level mapping', () {
-    test('depth 0 groups by level1 (Seder)', () {
+    test('depth 0 groups by level1 (Masechta)', () {
       final result = groupItemsByNextLevel(
         items: items,
         currentDepth: 0,
         curriculumId: CurriculumId.bavli,
         variant: TransliterationVariant.ashkenazi,
       );
-      expect(result.map((i) => i.level1).toSet(), {'Zeraim', 'Moed'});
-      expect(result, hasLength(2));
+      expect(result.map((i) => i.level1).toSet(), {
+        'Berakhot',
+        'Shabbos',
+        'Yoma',
+      });
+      expect(result, hasLength(3));
     });
 
-    test('depth 1 groups by level2 (Masechta) within a Seder', () {
-      final zeraimItems = items.where((i) => i.level1 == 'Zeraim').toList();
+    test('depth 1 groups by level2 (Daf) within a Masechta', () {
+      final berakhotItems = items.where((i) => i.level1 == 'Berakhot').toList();
       final result = groupItemsByNextLevel(
-        items: zeraimItems,
+        items: berakhotItems,
         currentDepth: 1,
         curriculumId: CurriculumId.bavli,
         variant: TransliterationVariant.ashkenazi,
       );
-      expect(result.map((i) => i.level2).toSet(), {'Berakhot', 'Shabbos'});
+      expect(result.map((i) => i.level2).toSet(), {'2', '3'});
       expect(result, hasLength(2));
     });
 
-    test('depth 2 groups by level3 (Daf) within a Masechta', () {
-      final berakhotItems = items.where((i) => i.level2 == 'Berakhot').toList();
+    test('depth 2 groups by level3 (Amud) within a Daf', () {
+      final daf2Items = items
+          .where((i) => i.level1 == 'Berakhot' && i.level2 == '2')
+          .toList();
       final result = groupItemsByNextLevel(
-        items: berakhotItems,
+        items: daf2Items,
         currentDepth: 2,
         curriculumId: CurriculumId.bavli,
         variant: TransliterationVariant.ashkenazi,
       );
-      expect(result.map((i) => i.level3).toSet(), {'2', '3'});
-      expect(result, hasLength(2));
-    });
-
-    test('depth 3 groups by level4 (Amud) within a Daf', () {
-      final daf2Items = items
-          .where((i) => i.level2 == 'Berakhot' && i.level3 == '2')
-          .toList();
-      final result = groupItemsByNextLevel(
-        items: daf2Items,
-        currentDepth: 3,
-        curriculumId: CurriculumId.bavli,
-        variant: TransliterationVariant.ashkenazi,
-      );
-      expect(result.map((i) => i.level4).toSet(), {'a', 'b'});
+      expect(result.map((i) => i.level3).toSet(), {'a', 'b'});
       expect(result, hasLength(2));
     });
   });

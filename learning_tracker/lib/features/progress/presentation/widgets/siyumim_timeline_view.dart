@@ -8,7 +8,7 @@ import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_milestone_label.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_grouped_view.dart'
-    show formatMilestoneDate, renderMilestoneName, unitScopeContentLevel;
+    show formatMilestoneDate, renderMilestoneName, unitScopeContentLevelFor;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Chronological view of all siyumim (unit + aggregate + curriculum) across
@@ -154,7 +154,7 @@ class _TimelineCard extends ConsumerWidget {
         // resolved; unknown scopes keep the raw value (generic fallback frame).
         final scope = m.unitScope ?? 'masechta';
         final unitRaw = m.unitKey ?? m.displayName;
-        final contentLevel = unitScopeContentLevel[scope];
+        final contentLevel = unitScopeContentLevelFor(scope, m.curriculumId);
         final unitName = (contentLevel != null && m.unitKey != null)
             ? renderMilestoneName(
                 ref,
