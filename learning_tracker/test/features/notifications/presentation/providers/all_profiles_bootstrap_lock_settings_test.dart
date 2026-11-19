@@ -23,8 +23,11 @@ import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart'
+    show ownAccountPathUidProvider;
 import 'package:learning_tracker/domain/learner_state/learner_settings_history.dart';
 import 'package:learning_tracker/domain/learner_state/learner_state.dart';
+import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/domain/services/streak_alert_service.dart';
@@ -32,9 +35,13 @@ import 'package:learning_tracker/features/notifications/presentation/providers/n
 import 'package:learning_tracker/features/profiles/domain/models/learner_profile_entity.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz_lib;
+
+import '../../../../helpers/learner_state/fake_learner_state.dart';
+import '../../../../helpers/learner_state/lock_fixtures.dart';
 
 const _activeProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FAV';
 const _inactiveProfileId = '01ARZ3NDEKTSV4RRFFQ69G5FB0';
@@ -111,7 +118,7 @@ class _RecordingNotificationGateway implements NotificationGateway {
 
 /// Stands in for [StreakAlertService] the way production builds it: with
 /// the device lock predicate it was constructed with, handed to the gateway
-/// on every evaluate (the streak state / completion reads are out of scope).
+/// on every evaluated curriculum.
 class _PredicateStreakService implements StreakAlertService {
   _PredicateStreakService(this._gateway, this._profileId, this._isLockedAt);
 
@@ -139,6 +146,31 @@ class _PredicateStreakService implements StreakAlertService {
       isLockedAt: _isLockedAt,
     );
     return StreakAlertOutcome.scheduled;
+  }
+
+  @override
+  Future<Map<String, StreakAlertOutcome>> evaluateAll({
+    required LearnerState state,
+    required LearnerSettingsHistory settingsHistory,
+    required int hour,
+    required int minute,
+    String? title,
+    String Function(int currentStreak)? localizedBody,
+  }) async {
+    final outcomes = <String, StreakAlertOutcome>{};
+    for (final entry in state.curricula.entries) {
+      outcomes[entry.key] = await evaluate(
+        curriculumId: entry.key,
+        streak: entry.value.streak,
+        state: state,
+        settingsHistory: settingsHistory,
+        hour: hour,
+        minute: minute,
+        title: title,
+        localizedBody: localizedBody,
+      );
+    }
+    return outcomes;
   }
 
   @override
@@ -204,6 +236,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         selectedProfileIdProvider.overrideWithValue(_activeProfileId),
+        ownAccountPathUidProvider.overrideWith((ref) async => 'owner'),
         currentAppLocaleProvider.overrideWithValue(const Locale('en')),
         analyticsServiceProvider.overrideWithValue(
           const NullAnalyticsService(),
@@ -220,6 +253,25 @@ void main() {
             _profile(_activeProfileId),
             _profile(_inactiveProfileId),
           ]),
+        ),
+        learnerStateProvider.overrideWith(
+          (ref, scope) => Stream.value(
+            fakeLearnerState(
+              curricula: {
+                'mishnayos': FakeCurriculumState(
+                  curriculumId: 'mishnayos',
+                  streak: const CurriculumStreak(
+                    current: 5,
+                    best: 5,
+                    lastDay: '2026-03-24',
+                  ),
+                ),
+              },
+            ),
+          ),
+        ),
+        learnerLockSettingsProvider.overrideWith(
+          (ref, scope) => Stream.value(constantHistory(lakewood)),
         ),
         streakAlertServiceProvider(_inactiveProfileId).overrideWith(
           (ref) => _PredicateStreakService(
@@ -247,9 +299,9 @@ void main() {
     final before = gateway.reminderBatches[_inactiveProfileId]!;
     expect(before, hasLength(14));
     expect(before.any((t) => _isSaturday(t.toUtc())), isTrue);
-    // DNI-479 cancels streak alerts for inactive profiles because their
-    // streak state is not evaluated on this device.
-    expect(gateway.streakPredicates[_inactiveProfileId], isNull);
+    // Inactive streak alerts are evaluated against their own state and carry
+    // the current account lock predicate to the notification gateway.
+    expect(gateway.streakPredicates[_inactiveProfileId], isNotNull);
     // The active profile is owned by the reactive effects, never here.
     expect(gateway.reminderBatches.containsKey(_activeProfileId), isFalse);
 
@@ -268,6 +320,6 @@ void main() {
           'the NEW lock predicate: no reminder may fire inside the new lock.',
     );
     expect(after, hasLength(12));
-    expect(gateway.streakPredicates[_inactiveProfileId], isNull);
+    expect(gateway.streakPredicates[_inactiveProfileId], isNotNull);
   });
 }
