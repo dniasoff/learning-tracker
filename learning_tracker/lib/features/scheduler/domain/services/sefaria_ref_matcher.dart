@@ -99,6 +99,7 @@ Set<String> refVariants(String ref) {
     'midos': 'middot',
     'mishnayos': 'mishnah',
     'mishna ': 'mishnah ',
+    'arachin ': 'arakhin ',
   };
   var replacedLower = lower;
   aliasMap.forEach((from, to) {

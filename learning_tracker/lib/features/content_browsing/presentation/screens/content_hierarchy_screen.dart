@@ -702,7 +702,11 @@ class _ContentHierarchyScreenState
 
   void _handleItemTap(ContentItem item) {
     final curriculum = _curriculumOrNull;
-    if (item.isLeaf && curriculum != null) {
+    if (curriculum == CurriculumId.bavli && item.level2 != null) {
+      // A daf is the natural Bavli reading unit; open both daf containers
+      // and amud leaves directly in the reader instead of history or drill-in.
+      context.router.push(TextDisplayRoute(sefariaRef: item.sefariaRef));
+    } else if (item.isLeaf && curriculum != null) {
       // Story 1.13 (UX-DR-60): a leaf opens its Mishna history.
       openLeafHistory(context, curriculum, item);
     } else if (item.isLeaf || _isChapterLevelRef(item)) {

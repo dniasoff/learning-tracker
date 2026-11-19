@@ -85,14 +85,21 @@ void main() {
       ]);
     });
 
-    test('Bavli has 4-level hierarchy', () {
-      expect(CurriculumLabels.depth(CurriculumId.bavli), 4);
+    test('Bavli has its own 3-level Gemara hierarchy', () {
+      expect(CurriculumLabels.depth(CurriculumId.bavli), 3);
       expect(CurriculumLabels.labelsEn(CurriculumId.bavli), [
-        'Seder',
         'Masechta',
         'Daf',
         'Amud',
       ]);
+      expect(
+        CurriculumLabels.primaryUnitLabelPlural(CurriculumId.bavli),
+        'Dafim',
+      );
+      expect(
+        CurriculumLabels.containerCountLabelPlural(CurriculumId.bavli),
+        'Masechtos',
+      );
     });
 
     test('Yerushalmi has 3-level hierarchy (Seder/Masechta/Daf)', () {
@@ -189,11 +196,11 @@ void main() {
     test('topSectionHeader switches script with useHebrew flag', () {
       expect(
         CurriculumLabels.topSectionHeader(CurriculumId.bavli, useHebrew: true),
-        'סדרים',
+        'מסכתות',
       );
       expect(
         CurriculumLabels.topSectionHeader(CurriculumId.bavli, useHebrew: false),
-        'Sedarim',
+        'Masechtos',
       );
       expect(
         CurriculumLabels.topSectionHeader(

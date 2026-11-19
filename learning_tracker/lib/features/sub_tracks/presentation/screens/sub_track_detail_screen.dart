@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_palette.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/domain/learner_state/sub_track.dart';
@@ -167,9 +168,16 @@ class _DetailBody extends ConsumerWidget {
         const SizedBox(height: 10),
         SubTrackGroundTree(
           detail: detail,
-          onOpenLeaf: (leaf) => context.router.push(
-            MishnaHistoryRoute(curriculumId: track.curriculumId, leafRef: leaf),
-          ),
+          onOpenLeaf: (leaf) =>
+              track.curriculumId == CurriculumId.bavli.storageKey ||
+                  track.curriculumId == CurriculumId.yerushalmi.storageKey
+              ? context.router.push(TextDisplayRoute(sefariaRef: leaf))
+              : context.router.push(
+                  MishnaHistoryRoute(
+                    curriculumId: track.curriculumId,
+                    leafRef: leaf,
+                  ),
+                ),
         ),
         // DNI-498: a parent can add ground to an active sub-track.
         if (detail.canEdit) ...[

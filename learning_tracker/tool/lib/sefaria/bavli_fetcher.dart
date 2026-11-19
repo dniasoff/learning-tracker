@@ -7,8 +7,8 @@ import 'sefaria_fetcher_base.dart';
 
 /// Fetches Talmud Bavli content from Sefaria.
 ///
-/// Parses the Sefaria Bavli shape API into a 4-level hierarchy:
-/// seder -> masechta -> daf -> amud (~2,711 dapim / ~5,422 amudim).
+/// Parses the Sefaria Bavli shape API into a 3-level hierarchy:
+/// masechta -> daf -> amud (~2,711 dapim / ~5,422 amudim).
 ///
 /// Bavli daf numbering starts at 2a (there is no daf 1 in printed editions).
 /// Each daf has two amudim: a (recto) and b (verso).
@@ -26,11 +26,7 @@ class BavliFetcher extends SefariaFetcherBase {
     var sortOrder = 0;
     var leafCount = 0;
 
-    // Track sedarim we've already added as container items.
-    final addedSedarim = <String>{};
-
     for (final tractate in shapeData) {
-      final sederName = tractate['section'] as String? ?? '';
       final title = tractate['title'] as String? ?? '';
       final heTitle = tractate['heTitle'] as String? ?? '';
       final chapters = tractate['chapters'] as List<dynamic>? ?? [];
@@ -40,27 +36,11 @@ class BavliFetcher extends SefariaFetcherBase {
       // the total number of amudim in the tractate.
       final amudCount = chapters.length;
 
-      // Add seder container if new.
-      if (sederName.isNotEmpty && addedSedarim.add(sederName)) {
-        items.add(
-          ContentItem(
-            curriculumId: curriculumId,
-            level1: sederName,
-            displayNameHe: SefariaFetcherBase.sederHebrewName(sederName),
-            displayNameEn: sederName,
-            sefariaRef: sederName,
-            sortOrder: sortOrder++,
-            isLeaf: false,
-          ),
-        );
-      }
-
       // Add masechta container.
       items.add(
         ContentItem(
           curriculumId: curriculumId,
-          level1: sederName,
-          level2: title,
+          level1: title,
           displayNameHe: heTitle,
           displayNameEn: title,
           sefariaRef: title,
@@ -106,9 +86,8 @@ class BavliFetcher extends SefariaFetcherBase {
           items.add(
             ContentItem(
               curriculumId: curriculumId,
-              level1: sederName,
-              level2: title,
-              level3: dafNum.toString(),
+              level1: title,
+              level2: dafNum.toString(),
               displayNameHe: '$heTitle דף ${_toHebrewNumeral(dafNum)}',
               displayNameEn: '$title $dafNum',
               sefariaRef: '$title $dafNum',
@@ -122,10 +101,9 @@ class BavliFetcher extends SefariaFetcherBase {
         items.add(
           ContentItem(
             curriculumId: curriculumId,
-            level1: sederName,
-            level2: title,
-            level3: dafNum.toString(),
-            level4: amud,
+            level1: title,
+            level2: dafNum.toString(),
+            level3: amud,
             displayNameHe:
                 '$heTitle דף ${_toHebrewNumeral(dafNum)} עמוד ${amud == 'a' ? 'א' : 'ב'}',
             displayNameEn: '$title $dafRef',
@@ -142,7 +120,7 @@ class BavliFetcher extends SefariaFetcherBase {
       items: items,
       hierarchyConfig: CurriculumHierarchyConfig(
         curriculumId: curriculumId,
-        levelLabels: const ['Seder', 'Masechta', 'Daf', 'Amud'],
+        levelLabels: const ['Masechta', 'Daf', 'Amud'],
         totalItems: leafCount,
       ),
     );
