@@ -146,19 +146,16 @@ void main() {
       expect(prompts.single.displayName, 'Bina');
     });
 
-    test(
-      'multi-learner: every own learner missing location after a prior lock is prompted',
-      () async {
-        final prompts = await _read(
-          _overrides(
-            withSibling: true,
-            history: _historyAfterLocationRemoved,
-            siblingHistory: _historyAfterLocationRemoved,
-          ),
-        );
-        expect(prompts.map((p) => p.profileId), [profileUlid, _sibling]);
-      },
-    );
+    test('multi-learner: every own learner missing location after a prior lock is prompted', () async {
+      final prompts = await _read(
+        _overrides(
+          withSibling: true,
+          history: _historyAfterLocationRemoved,
+          siblingHistory: _historyAfterLocationRemoved,
+        ),
+      );
+      expect(prompts.map((p) => p.profileId), [profileUlid, _sibling]);
+    });
 
     test('no prompt during a lock, or in a tutored session', () async {
       expect(
@@ -197,8 +194,9 @@ void main() {
   group('LearnerLocationPromptListener', () {
     Future<List<LearnerLocationPrompt>> pumpListener(
       WidgetTester tester,
-      List<Override> overrides,
-    ) async {
+      List<Override> overrides, {
+      Widget? home,
+    }) async {
       final opened = <LearnerLocationPrompt>[];
       final container = ProviderContainer(overrides: overrides);
       addTearDown(container.dispose);
@@ -217,7 +215,7 @@ void main() {
               onSetLocation: (prompt) async => opened.add(prompt),
               child: child!,
             ),
-            home: const Scaffold(body: Text('HOME')),
+            home: home ?? const Scaffold(body: Text('HOME')),
           ),
         ),
       );
@@ -242,6 +240,44 @@ void main() {
         LearnerLocationPrompt(profileId: profileUlid, lockEndUtc: _lockEnd),
       ]);
     });
+
+    testWidgets(
+      'persistent prompt leaves Add Track and wizard Continue tappable',
+      (tester) async {
+        var addTrackTaps = 0;
+        var continueTaps = 0;
+        await pumpListener(
+          tester,
+          _overrides(history: _historyAfterLocationRemoved),
+          home: Scaffold(
+            body: const Center(child: Text('TRACK WIZARD')),
+            bottomNavigationBar: SafeArea(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton(
+                    onPressed: () => addTrackTaps++,
+                    child: const Text('Add Track'),
+                  ),
+                  TextButton(
+                    onPressed: () => continueTaps++,
+                    child: const Text('Continue'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        expect(find.textContaining("Avi's location isn't set"), findsOneWidget);
+        await tester.tap(find.text('Add Track'));
+        await tester.tap(find.text('Continue'));
+
+        expect(addTrackTaps, 1);
+        expect(continueTaps, 1);
+        expect(find.textContaining("Avi's location isn't set"), findsOneWidget);
+      },
+    );
 
     testWidgets("multi-learner: the sibling's prompt carries the sibling's "
         'identity to the location picker', (tester) async {

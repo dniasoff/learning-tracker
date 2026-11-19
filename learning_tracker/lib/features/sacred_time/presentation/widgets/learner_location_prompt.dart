@@ -150,7 +150,7 @@ Future<void> runLearnerLocationPromptAction(
   await openCityPicker();
 }
 
-/// Shows each due [LearnerLocationPrompt] once, as a snack bar on the root
+/// Shows each due [LearnerLocationPrompt] in a persistent banner on the root
 /// messenger naming its learner, whose action calls [onSetLocation] with
 /// that prompt (the app makes its learner the active one and opens the
 /// city picker, behind the parent PIN when one guards the settings).
@@ -177,31 +177,47 @@ class _LearnerLocationPromptListenerState
     extends ConsumerState<LearnerLocationPromptListener> {
   /// Prompts already shown this app session.
   final Set<LearnerLocationPrompt> _shown = {};
+  List<LearnerLocationPrompt> _prompts = const [];
+  LearnerLocationPrompt? _currentPrompt;
 
   @override
   void initState() {
     super.initState();
     ref.listenManual<List<LearnerLocationPrompt>>(
       learnerLocationPromptsProvider,
-      (_, next) => next.forEach(_show),
+      (_, next) {
+        _prompts = next;
+        _shown.removeWhere((prompt) => !next.contains(prompt));
+        if (_currentPrompt case final current? when !next.contains(current)) {
+          rootScaffoldMessengerKey.currentState?.hideCurrentMaterialBanner();
+          _currentPrompt = null;
+        }
+        _showNext();
+      },
       fireImmediately: true,
     );
   }
 
-  void _show(LearnerLocationPrompt prompt) {
+  void _showNext() {
+    if (_currentPrompt != null || _prompts.isEmpty) return;
+    final prompt = _prompts.firstWhere(
+      (candidate) => !_shown.contains(candidate),
+      orElse: () => _prompts.first,
+    );
     if (!_shown.add(prompt)) return;
+    _currentPrompt = prompt;
     // After this frame: the messenger and its localizations are built.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || _currentPrompt != prompt || !_prompts.contains(prompt)) {
+        return;
+      }
       final messenger = rootScaffoldMessengerKey.currentState;
       final l10n = AppLocalizations.of(context);
       if (messenger == null || l10n == null) return;
-      final shabbos = domainTermLabels(
-        ref,
-      ).shabbos(variant: ref.read(currentTransliterationVariantProvider));
-      messenger.showSnackBar(
-        SnackBar(
-          duration: const Duration(seconds: 12),
+      final shabbos = domainTermLabels(ref)
+          .shabbos(variant: ref.read(currentTransliterationVariantProvider));
+      messenger.showMaterialBanner(
+        MaterialBanner(
           content: Text(
             prompt.displayName.isEmpty
                 ? l10n.sacredTimeLocationPromptMessage(shabbos)
@@ -210,10 +226,12 @@ class _LearnerLocationPromptListenerState
                     shabbos,
                   ),
           ),
-          action: SnackBarAction(
-            label: l10n.sacredTimeLocationPromptAction,
-            onPressed: () => widget.onSetLocation(prompt),
-          ),
+          actions: [
+            TextButton(
+              onPressed: () => widget.onSetLocation(prompt),
+              child: Text(l10n.sacredTimeLocationPromptAction),
+            ),
+          ],
         ),
       );
     });
