@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/social/data/learning_group_repository.dart';
 import 'package:learning_tracker/features/social/domain/learning_group.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -72,7 +73,7 @@ class _GroupTasksSectionState extends ConsumerState<GroupTasksSection> {
 
   Future<DateTime?> _pickDate(DateTime initial) {
     final today = ref.read(localDayClockProvider).today();
-    return showDatePicker(
+    return showLearningAppDatePicker(
       context: context,
       initialDate: initial,
       firstDate: today,

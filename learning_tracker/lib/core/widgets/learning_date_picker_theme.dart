@@ -92,28 +92,51 @@ Future<DateTime?> showLearningAppDatePicker({
   required DateTime firstDate,
   required DateTime lastDate,
   String? helpText,
-  DatePickerEntryMode initialEntryMode = DatePickerEntryMode.calendar,
 }) {
-  final appLocale = Localizations.localeOf(context);
-  final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
-  // The app currently supports language-only locales (en/he), while the
-  // system locale may carry a regional date order such as en_GB. Keep the
-  // resolved app language, but retain the device region when it matches.
-  final pickerLocale = appLocale.countryCode?.isNotEmpty == true
-      ? appLocale
-      : deviceLocale.languageCode == appLocale.languageCode &&
-            deviceLocale.countryCode?.isNotEmpty == true
-      ? deviceLocale
-      : appLocale;
+  final pickerLocale = _learningDatePickerLocale(context);
   return showDatePicker(
     context: context,
     initialDate: initialDate,
     firstDate: firstDate,
     lastDate: lastDate,
     helpText: helpText,
-    initialEntryMode: initialEntryMode,
+    initialEntryMode: DatePickerEntryMode.calendar,
     locale: pickerLocale,
     keyboardType: TextInputType.text,
     builder: learningDatePickerThemeBuilder,
   );
+}
+
+/// Shows a date-range picker with the app locale and calendar entry mode.
+Future<DateTimeRange?> showLearningAppDateRangePicker({
+  required BuildContext context,
+  required DateTime firstDate,
+  required DateTime lastDate,
+  DateTimeRange? initialDateRange,
+  String? helpText,
+}) {
+  return showDateRangePicker(
+    context: context,
+    firstDate: firstDate,
+    lastDate: lastDate,
+    initialDateRange: initialDateRange,
+    helpText: helpText,
+    initialEntryMode: DatePickerEntryMode.calendar,
+    locale: _learningDatePickerLocale(context),
+    builder: learningDatePickerThemeBuilder,
+  );
+}
+
+Locale _learningDatePickerLocale(BuildContext context) {
+  final appLocale = Localizations.localeOf(context);
+  final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+  // The app currently supports language-only locales (en/he), while the
+  // system locale may carry a regional date order such as en_GB. Keep the
+  // resolved app language, but retain the device region when it matches.
+  return appLocale.countryCode?.isNotEmpty == true
+      ? appLocale
+      : deviceLocale.languageCode == appLocale.languageCode &&
+            deviceLocale.countryCode?.isNotEmpty == true
+      ? deviceLocale
+      : appLocale;
 }
