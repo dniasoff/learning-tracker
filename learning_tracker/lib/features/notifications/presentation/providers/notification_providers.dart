@@ -7,14 +7,14 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
-import 'package:learning_tracker/data/firestore/learner_state_repository_providers.dart'
-    show ownAccountPathUidProvider;
 import 'package:learning_tracker/domain/learner_state/civil_date.dart';
 import 'package:learning_tracker/domain/learner_state/learner_zone.dart';
 import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
+import 'package:learning_tracker/features/notifications/data/repositories/notification_account_sources.dart'
+    show ownAccountPathUidProvider;
 import 'package:learning_tracker/features/notifications/data/repositories/shared_prefs_streak_alert_markers.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
