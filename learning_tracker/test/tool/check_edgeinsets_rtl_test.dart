@@ -75,7 +75,8 @@ void main() {
           // :110 -> :123 by the dark-mode legibility burndown (recolour of
           // reward_configuration_screen.dart shifted the lines down); the
           // site itself is unchanged, only its line number moved.
-          contains('reward_configuration_screen.dart:123'),
+          // :123 -> :124 by the bottom-sheet SafeArea wrap (nav-insets fix).
+          contains('reward_configuration_screen.dart:124'),
           reason:
               'the pre-existing, out-of-scope baseline entry must still be '
               'suppressed (scope discipline — not this finding\'s site).',

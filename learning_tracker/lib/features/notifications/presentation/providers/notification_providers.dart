@@ -13,8 +13,6 @@ import 'package:learning_tracker/domain/learner_state/lock_windows.dart';
 import 'package:learning_tracker/domain/learner_state/ports/learner_scope.dart';
 import 'package:learning_tracker/features/learner_state/data/repositories/learner_state_sources.dart';
 import 'package:learning_tracker/features/learner_state/presentation/providers/learner_state_provider.dart';
-import 'package:learning_tracker/features/notifications/data/repositories/notification_account_sources.dart'
-    show ownAccountPathUidProvider;
 import 'package:learning_tracker/features/notifications/data/repositories/shared_prefs_streak_alert_markers.dart';
 import 'package:learning_tracker/features/notifications/domain/models/reminder_preferences.dart';
 import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart'
@@ -26,6 +24,8 @@ import 'package:learning_tracker/features/notifications/domain/services/streak_a
 import 'package:learning_tracker/features/notifications/domain/services/streak_saver_notifications.dart';
 import 'package:learning_tracker/features/notifications/domain/services/today_learning_done.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/sacred_time/data/repositories/learner_lock_settings_sources.dart'
+    show ownAccountPathUidProvider;
 import 'package:learning_tracker/features/sacred_time/presentation/providers/account_lock_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/learner_lock_settings_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
